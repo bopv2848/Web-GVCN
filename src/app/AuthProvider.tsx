@@ -1,65 +1,201 @@
-﻿import React, { useState } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import { AuthContext } from '../hooks/useAuthContext';
-import type { UserProfile, UserRole, ClassInfo } from '../types/auth';
+import { supabase } from '../services/supabaseClient';
+import { authService, type ClassMembershipData } from '../services/authService';
+import type { UserProfile, ClassInfo } from '../types/auth';
 
-const defaultClass: ClassInfo = {
-  id: 'class-12a1',
+const fallbackClass: ClassInfo = {
+  id: '33333333-3333-3333-3333-333333333333',
   name: 'LỚP 12A1',
   gradeLevel: 12,
   schoolName: 'THPT THANH XUÂN',
   academicYear: '2026 - 2027',
-  themeTitle: 'CHUYẾN TÀU THANH XUÂN',
+  themeTitle: 'CHUYẾN TÀU THANH XUÂN 12A1',
   themeMonth: 'CHỦ ĐIỂM THÁNG 9: MÁI TRƯỜNG MẾN YÊU',
 };
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [role, setCurrentRole] = useState<UserRole>('gvcn');
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [currentClass, setCurrentClass] = useState<ClassInfo | null>(fallbackClass);
+  const [membership, setMembership] = useState<ClassMembershipData | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isOffline, setIsOffline] = useState<boolean>(!navigator.onLine);
+  const [isSessionExpired, setIsSessionExpired] = useState<boolean>(false);
+  const [hasNoClass, setHasNoClass] = useState<boolean>(false);
 
-  const user: UserProfile = {
-    id: 'user-001',
-    email: 'giaovien.12a1@thpt-thanhxuan.edu.vn',
-    fullName:
-      role === 'gvcn'
-        ? 'Cô Nguyễn Mai Hương'
-        : role === 'bancansu'
-          ? 'Em Trần Minh Trí (Lớp trưởng)'
-          : role === 'bgh'
-            ? 'Thầy Hiệu Trưởng'
-            : role === 'parent'
-              ? 'Phụ huynh em Nguyễn Văn A'
-              : 'Em Nguyễn Văn A',
-    role: role,
-  };
+  // 1. Lắng nghe trạng thái kết nối mạng (Online/Offline)
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
 
-  const setRole = (newRole: UserRole) => {
-    setCurrentRole(newRole);
-  };
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
 
-  const login = (loginRole: UserRole = 'gvcn') => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setCurrentRole(loginRole);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // 2. Hàm nạp thông tin người dùng từ Database
+  const loadUserData = useCallback(async (userId: string, email: string) => {
+    try {
+      // Lấy Profile người dùng
+      const profile = await authService.fetchUserProfile(userId);
+      const userProfile: UserProfile = profile || {
+        id: userId,
+        email: email,
+        fullName: email.split('@')[0] || 'Người dùng',
+        role: 'gvcn', // mặc định GVCN khi vừa tạo
+      };
+
+      // Lấy phân công lớp từ bảng class_memberships
+      const mem = await authService.fetchClassMembership(userId);
+
+      if (mem) {
+        setMembership(mem);
+        userProfile.role = mem.role; // Vai trò lấy từ Database
+        setCurrentClass(mem.classInfo);
+        setHasNoClass(false);
+      } else {
+        setMembership(null);
+        setCurrentClass(fallbackClass);
+        // Nếu không có membership thì đánh dấu chưa phân lớp (đối với giáo viên mới)
+        setHasNoClass(false);
+      }
+
+      setUser(userProfile);
       setIsAuthenticated(true);
+      setIsSessionExpired(false);
+    } catch (error) {
+      console.error('Lỗi khi tải dữ liệu người dùng từ database:', error);
+      setUser({
+        id: userId,
+        email: email,
+        fullName: 'Giáo viên',
+        role: 'gvcn',
+      });
+      setIsAuthenticated(true);
+    } finally {
       setIsLoading(false);
-    }, 200);
+    }
+  }, []);
+
+  // 3. Khởi tạo và lắng nghe Supabase Auth Session
+  useEffect(() => {
+    let isMounted = true;
+
+    async function initializeAuth() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session && session.user) {
+          if (isMounted) {
+            await loadUserData(session.user.id, session.user.email || '');
+          }
+        } else {
+          if (isMounted) {
+            // Môi trường demo/dev ban đầu nếu chưa có user login
+            setIsAuthenticated(true);
+            setUser({
+              id: 'dev-gvcn-001',
+              email: 'giaovien.12a1@thpt-thanhxuan.edu.vn',
+              fullName: 'Cô Nguyễn Mai Hương',
+              role: 'gvcn',
+            });
+            setCurrentClass(fallbackClass);
+            setIsLoading(false);
+          }
+        }
+      } catch (err) {
+        console.warn('Không thể kiểm tra session Supabase:', err);
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    initializeAuth();
+
+    // Lắng nghe sự kiện đăng nhập/đăng xuất/hết hạn token
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_IN' && session?.user) {
+          await loadUserData(session.user.id, session.user.email || '');
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
+          setMembership(null);
+          setIsAuthenticated(false);
+          setIsLoading(false);
+        } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+          setIsSessionExpired(false);
+        } else if (event === 'USER_UPDATED' && session?.user) {
+          await loadUserData(session.user.id, session.user.email || '');
+        }
+      }
+    );
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, [loadUserData]);
+
+  // 4. Thao tác Đăng nhập qua Supabase Auth
+  const login = async (email: string, pass: string) => {
+    setIsLoading(true);
+    try {
+      const data = await authService.signIn(email, pass);
+      if (data.user) {
+        await loadUserData(data.user.id, data.user.email || email);
+      }
+    } catch (err) {
+      setIsLoading(false);
+      throw err;
+    }
   };
 
-  const logout = () => {
-    setIsAuthenticated(false);
+  // 5. Thao tác Đăng xuất
+  const logout = async () => {
+    setIsLoading(true);
+    try {
+      await authService.signOut();
+    } catch (err) {
+      console.warn('Lỗi đăng xuất Supabase:', err);
+    } finally {
+      setUser(null);
+      setMembership(null);
+      setIsAuthenticated(false);
+      setIsLoading(false);
+    }
+  };
+
+  // 6. Làm mới Session khi hết hạn
+  const refreshSession = async () => {
+    const { data: { session }, error } = await supabase.auth.refreshSession();
+    if (error || !session) {
+      setIsSessionExpired(true);
+      setIsAuthenticated(false);
+    } else {
+      setIsSessionExpired(false);
+      await loadUserData(session.user.id, session.user.email || '');
+    }
   };
 
   return (
     <AuthContext.Provider
       value={{
-        user: isAuthenticated ? user : null,
-        currentClass: defaultClass,
+        user,
+        currentClass,
+        membership,
         isAuthenticated,
         isLoading,
-        setRole,
+        isOffline,
+        isSessionExpired,
+        hasNoClass,
         login,
         logout,
+        refreshSession,
       }}
     >
       {children}

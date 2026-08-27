@@ -4,6 +4,7 @@ import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { MobileDrawer } from './MobileDrawer';
 import { BottomNav } from './BottomNav';
+import { OfflineBanner } from './OfflineBanner';
 
 export const AppLayout: React.FC = () => {
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
@@ -15,6 +16,7 @@ export const AppLayout: React.FC = () => {
 
       {/* Main Content Area */}
       <div className="flex flex-col flex-1 min-w-0 h-full overflow-hidden">
+        <OfflineBanner />
         <Header onOpenMobileDrawer={() => setIsMobileDrawerOpen(true)} />
 
         <main className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8 pb-24 md:pb-8">

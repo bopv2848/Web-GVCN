@@ -1,20 +1,52 @@
 ﻿import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
 import { Button } from '../../../components/common/Button';
-import type { UserRole } from '../../../types/auth';
 
 export const LoginPage: React.FC = () => {
   const { login, isLoading } = useAuth();
   const navigate = useNavigate();
-  const [selectedRole, setSelectedRole] = useState<UserRole>('gvcn');
-  const [email, setEmail] = useState('giaovien.12a1@thpt-thanhxuan.edu.vn');
-  const [password, setPassword] = useState('••••••••');
+  const location = useLocation();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [activeTab, setActiveTab] = useState<'teacher' | 'parent'>('teacher');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [parentToken, setParentToken] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+
+  // Lấy đường dẫn trước đó nếu bị redirect bởi ProtectedRoute
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const from = (location.state as any)?.from?.pathname || '/';
+
+  const handleTeacherSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    login(selectedRole);
-    navigate('/');
+    if (!email.trim() || !password) {
+      setErrorMessage('Vui lòng nhập đầy đủ Email và Mật khẩu.');
+      return;
+    }
+
+    setErrorMessage('');
+    try {
+      await login(email, password);
+      navigate(from, { replace: true });
+    } catch (err: unknown) {
+      const error = err as { message?: string };
+      if (error.message?.includes('Invalid login credentials')) {
+        setErrorMessage('Email hoặc mật khẩu không chính xác. Vui lòng thử lại.');
+      } else {
+        setErrorMessage(error.message || 'Đăng nhập thất bại. Vui lòng kiểm tra kết nối mạng.');
+      }
+    }
+  };
+
+  const handleParentTokenSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!parentToken.trim()) {
+      setErrorMessage('Vui lòng nhập mã liên kết phụ huynh.');
+      return;
+    }
+    navigate(`/invite/${parentToken.trim()}`);
   };
 
   return (
@@ -25,73 +57,143 @@ export const LoginPage: React.FC = () => {
           <div className="w-14 h-14 mx-auto mb-3 bg-accent text-slate-950 rounded-2xl flex items-center justify-center text-3xl font-black shadow-lg shadow-amber-500/30">
             🚂
           </div>
-          <h1 className="text-2xl font-black text-slate-800 tracking-tight">WEB GVCN 2.0</h1>
+          <h1 className="text-2xl font-black text-slate-850 tracking-tight">WEB GVCN</h1>
           <p className="text-xs font-semibold text-slate-500 mt-1">
             Nền tảng Quản trị Lớp học Thông minh & Đồng hành Học sinh
           </p>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">
-              Chọn vai trò trải nghiệm:
-            </label>
-            <select
-              value={selectedRole}
-              onChange={(e) => setSelectedRole(e.target.value as UserRole)}
-              className="w-full px-3.5 py-3 rounded-xl border border-slate-300 text-sm font-bold text-slate-800 bg-slate-50 focus:bg-white focus:border-primary outline-none transition-all shadow-xs"
-            >
-              <option value="gvcn">👩‍🏫 Giáo viên Chủ nhiệm (Toàn quyền)</option>
-              <option value="bancansu">🧑‍💼 Ban cán sự Lớp</option>
-              <option value="bgh">🏛️ Ban giám hiệu (Chỉ đọc báo cáo)</option>
-              <option value="parent">👨‍👩‍👦 Phụ huynh học sinh</option>
-              <option value="student">🎓 Học sinh</option>
-            </select>
-          </div>
+        {/* Tab Selection: Giáo viên / Phụ huynh */}
+        <div className="flex p-1 bg-slate-100 rounded-2xl mb-6 border border-slate-200">
+          <button
+            type="button"
+            onClick={() => { setActiveTab('teacher'); setErrorMessage(''); }}
+            className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all ${
+              activeTab === 'teacher'
+                ? 'bg-white text-primary shadow-sm font-black'
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            👩‍🏫 Giáo viên / BGH / BCS
+          </button>
+          <button
+            type="button"
+            onClick={() => { setActiveTab('parent'); setErrorMessage(''); }}
+            className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all ${
+              activeTab === 'parent'
+                ? 'bg-white text-primary shadow-sm font-black'
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            👨‍👩‍👦 Phụ huynh Tra cứu
+          </button>
+        </div>
 
-          <div>
-            <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">
-              Email đăng nhập:
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3.5 py-3 rounded-xl border border-slate-300 text-sm font-medium text-slate-800 bg-slate-50 focus:bg-white focus:border-primary outline-none transition-all"
-              placeholder="nhap-email@truong.edu.vn"
-            />
+        {/* Error Alert */}
+        {errorMessage && (
+          <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold mb-4 leading-relaxed flex items-center gap-2">
+            <span>⚠️</span>
+            <span>{errorMessage}</span>
           </div>
+        )}
 
-          <div>
-            <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">
-              Mật khẩu:
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3.5 py-3 rounded-xl border border-slate-300 text-sm font-medium text-slate-800 bg-slate-50 focus:bg-white focus:border-primary outline-none transition-all"
-              placeholder="••••••••"
-            />
-          </div>
+        {/* Form Giáo viên / Nhân sự trường */}
+        {activeTab === 'teacher' ? (
+          <form onSubmit={handleTeacherSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">
+                Email tài khoản:
+              </label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm font-medium text-slate-800 bg-slate-50 focus:bg-white focus:border-primary outline-none transition-all shadow-xs"
+                placeholder="giaovien@thpt-thanhxuan.edu.vn"
+              />
+            </div>
 
-          <div className="pt-2">
-            <Button
-              type="submit"
-              variant="primary"
-              size="lg"
-              className="w-full"
-              isLoading={isLoading}
-            >
-              VÀO HỆ THỐNG TRẢI NGHIỆM
-            </Button>
-          </div>
-        </form>
+            <div>
+              <div className="flex justify-between items-center mb-1.5">
+                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider">
+                  Mật khẩu:
+                </label>
+                <Link
+                  to="/reset-password"
+                  className="text-[11px] font-bold text-accent hover:underline"
+                >
+                  Quên mật khẩu?
+                </Link>
+              </div>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm font-medium text-slate-800 bg-slate-50 focus:bg-white focus:border-primary outline-none transition-all shadow-xs pr-11"
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 text-sm font-bold"
+                  aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                >
+                  {showPassword ? '🙈' : '👁️'}
+                </button>
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <Button
+                type="submit"
+                variant="primary"
+                size="lg"
+                className="w-full"
+                isLoading={isLoading}
+              >
+                ĐĂNG NHẬP HỆ THỐNG
+              </Button>
+            </div>
+          </form>
+        ) : (
+          /* Form Phụ huynh tra cứu qua Token */
+          <form onSubmit={handleParentTokenSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">
+                Mã liên kết / Token mời:
+              </label>
+              <input
+                type="text"
+                required
+                value={parentToken}
+                onChange={(e) => setParentToken(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm font-medium text-slate-800 bg-slate-50 focus:bg-white focus:border-primary outline-none transition-all shadow-xs"
+                placeholder="Nhập mã 16-32 ký tự nhận từ GVCN..."
+              />
+              <p className="text-[11px] text-slate-400 mt-1.5 leading-relaxed font-medium">
+                Mã mời được GVCN cấp riêng cho từng phụ huynh có thời hạn bảo mật 7 ngày.
+              </p>
+            </div>
+
+            <div className="pt-2">
+              <Button
+                type="submit"
+                variant="accent"
+                size="lg"
+                className="w-full font-black text-slate-950"
+              >
+                TIẾP TỤC TRA CỨU CON
+              </Button>
+            </div>
+          </form>
+        )}
 
         <div className="mt-6 pt-4 border-t border-slate-100 text-center">
-          <span className="text-[11px] font-bold text-amber-600 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
-            🔒 Supabase Auth & RLS sẽ kết nối ở Phase 3
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+            Bảo mật Supabase Auth & Row Level Security
           </span>
         </div>
       </div>
