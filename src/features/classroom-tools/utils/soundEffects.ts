@@ -3,9 +3,23 @@
  * hoạt động ổn định ngoại tuyến trên mọi trình duyệt hiện đại.
  */
 
+type MuteListener = (muted: boolean) => void;
+
 class SoundEffects {
   private ctx: AudioContext | null = null;
   private isMuted: boolean = false;
+  private listeners: Set<MuteListener> = new Set();
+
+  constructor() {
+    try {
+      const saved = localStorage.getItem('gvcn_sound_muted');
+      if (saved !== null) {
+        this.isMuted = saved === 'true';
+      }
+    } catch {
+      // Bỏ qua lỗi truy cập localStorage
+    }
+  }
 
   private getContext(): AudioContext | null {
     if (this.isMuted) return null;
@@ -21,8 +35,27 @@ class SoundEffects {
     return this.ctx;
   }
 
+  public subscribeMute(listener: MuteListener): () => void {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
   public setMuted(muted: boolean) {
     this.isMuted = muted;
+    try {
+      localStorage.setItem('gvcn_sound_muted', String(muted));
+    } catch {
+      // Bỏ qua lỗi localStorage
+    }
+    this.listeners.forEach((listener) => {
+      try {
+        listener(muted);
+      } catch {
+        // Bỏ qua lỗi listener
+      }
+    });
   }
 
   public getMuted(): boolean {

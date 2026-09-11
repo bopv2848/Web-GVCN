@@ -15,7 +15,14 @@ export const ClassroomTimer: React.FC = () => {
   const [stopwatchSeconds, setStopwatchSeconds] = useState<number>(0);
   const [isStopwatchRunning, setIsStopwatchRunning] = useState<boolean>(false);
 
-  const [isMuted, setIsMuted] = useState<boolean>(false);
+  const [isMuted, setIsMuted] = useState<boolean>(soundEffects.getMuted());
+
+  useEffect(() => {
+    const unsub = soundEffects.subscribeMute((muted) => {
+      setIsMuted(muted);
+    });
+    return unsub;
+  }, []);
 
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const stopwatchIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -136,9 +143,7 @@ export const ClassroomTimer: React.FC = () => {
 
         <button
           onClick={() => {
-            const next = !isMuted;
-            setIsMuted(next);
-            soundEffects.setMuted(next);
+            soundEffects.setMuted(!isMuted);
           }}
           className={`p-2 rounded-xl text-xs font-bold border transition-colors flex items-center gap-1.5 ${
             isMuted
