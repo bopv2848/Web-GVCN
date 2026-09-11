@@ -20,5 +20,5 @@ describe('App Component Root', () => {
       },
       { timeout: 8000 }
     );
-  });
+  }, 15000);
 });

@@ -8,6 +8,8 @@ interface TimetablePrintModalProps {
   onClose: () => void;
   entries: TimetableEntry[];
   classNameTitle: string;
+  schoolName?: string;
+  logoUrl?: string;
 }
 
 export const TimetablePrintModal: React.FC<TimetablePrintModalProps> = ({
@@ -15,6 +17,8 @@ export const TimetablePrintModal: React.FC<TimetablePrintModalProps> = ({
   onClose,
   entries,
   classNameTitle,
+  schoolName = 'TRƯỜNG THCS TÂN HẢI',
+  logoUrl = '/logo-truong-thcs-Tan-Hai.jpg',
 }) => {
   const days = [
     { day: 2, name: 'Thứ 2' },
@@ -40,16 +44,30 @@ export const TimetablePrintModal: React.FC<TimetablePrintModalProps> = ({
       <div className="space-y-4">
         {/* Vùng xem trước bản in */}
         <div className="p-6 bg-white border border-slate-300 rounded-2xl text-slate-900 font-sans print:p-0 print:border-none">
-          <div className="text-center pb-4 border-b border-slate-300 mb-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              TRƯỜNG THCS TÂN HẢI
-            </h3>
-            <h2 className="text-xl font-black text-slate-900 mt-1 uppercase tracking-tight">
-              THỜI KHÓA BIỂU {classNameTitle}
-            </h2>
-            <p className="text-xs text-slate-600 font-medium mt-1">
-              Năm học 2026 - 2027 • GVCN: Thầy Phan Văn Bộ
-            </p>
+          <div className="flex items-center justify-between pb-4 border-b border-slate-300 mb-4">
+            <div className="flex items-center gap-3">
+              <img
+                src={logoUrl}
+                alt="Logo Trường"
+                className="w-14 h-14 object-contain rounded-full border border-slate-300 shadow-xs"
+              />
+              <div className="text-left">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                  {schoolName}
+                </h3>
+                <h2 className="text-lg font-black text-slate-900 uppercase tracking-tight">
+                  THỜI KHÓA BIỂU {classNameTitle}
+                </h2>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-slate-600 font-semibold">
+                Năm học 2026 - 2027
+              </p>
+              <p className="text-xs text-slate-500 font-medium">
+                GVCN: Thầy Phan Văn Bộ
+              </p>
+            </div>
           </div>
 
           {/* Bảng thời khóa biểu dạng in */}

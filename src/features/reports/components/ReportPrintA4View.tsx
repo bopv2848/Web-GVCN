@@ -15,10 +15,17 @@ export const ReportPrintA4View: React.FC<ReportPrintA4ViewProps> = ({ report }) 
     <div className="hidden print:block font-serif text-slate-900 bg-white p-8 max-w-[210mm] mx-auto text-xs leading-relaxed">
       {/* 1. Quốc hiệu & Tiêu ngữ */}
       <div className="flex justify-between items-start pb-4 border-b border-slate-900 mb-6">
-        <div className="text-center font-bold">
-          <p className="uppercase tracking-wider text-[11px]">PHÒNG GD&ĐT QUẬN THANH XUÂN</p>
-          <p className="uppercase font-black tracking-wide text-[12px]">{report.schoolName}</p>
-          <p className="font-extrabold text-sm mt-0.5">{report.className}</p>
+        <div className="flex items-center gap-3">
+          <img
+            src={report.logoUrl || '/logo-truong-thcs-Tan-Hai.jpg'}
+            alt="Logo Trường"
+            className="w-14 h-14 object-contain rounded-full border border-slate-300 shadow-xs"
+          />
+          <div className="text-left font-bold">
+            <p className="uppercase tracking-wider text-[11px] text-slate-700">PHÒNG GIÁO DỤC VÀ ĐÀO TẠO</p>
+            <p className="uppercase font-black tracking-wide text-[12px] text-slate-900">{report.schoolName}</p>
+            <p className="font-extrabold text-sm mt-0.5 text-slate-900">{report.className}</p>
+          </div>
         </div>
 
         <div className="text-center font-bold">

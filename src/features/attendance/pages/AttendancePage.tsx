@@ -799,6 +799,7 @@ export const AttendancePage: React.FC = () => {
                 schoolName={currentClass?.schoolName || 'TRƯỜNG THCS TÂN HẢI'}
                 className={currentClass?.name || 'LỚP 6A6'}
                 teacherName="Thầy Phan Văn Bộ"
+                logoUrl={currentClass?.logoUrl}
               />
             </>
           )}

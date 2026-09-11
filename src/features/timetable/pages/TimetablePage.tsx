@@ -221,6 +221,8 @@ export const TimetablePage: React.FC = () => {
         onClose={() => setIsPrintModalOpen(false)}
         entries={entries}
         classNameTitle={currentClass?.name || 'LỚP 6A6'}
+        schoolName={currentClass?.schoolName || 'TRƯỜNG THCS TÂN HẢI'}
+        logoUrl={currentClass?.logoUrl || '/logo-truong-thcs-Tan-Hai.jpg'}
       />
     </div>
   );

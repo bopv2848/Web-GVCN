@@ -12,6 +12,7 @@ const fallbackClass: ClassInfo = {
   academicYear: '2026 - 2027',
   themeTitle: 'CHUYẾN TÀU THANH XUÂN 6A6 • GVCN THẦY PHAN VĂN BỘ',
   themeMonth: 'CHỦ ĐIỂM THÁNG 9: TRUYỀN THỐNG NHÀ TRƯỜNG',
+  logoUrl: '/logo-truong-thcs-Tan-Hai.jpg',
 };
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -182,6 +183,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const updateCurrentClass = useCallback((updated: Partial<ClassInfo>) => {
+    setCurrentClass((prev) => (prev ? { ...prev, ...updated } : prev));
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -196,6 +201,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         logout,
         refreshSession,
+        updateCurrentClass,
       }}
     >
       {children}

@@ -61,6 +61,7 @@ export interface ComprehensiveClassReport {
   classId: string;
   className: string;
   schoolName: string;
+  logoUrl?: string;
   teacherName: string;
   academicYear: string;
   filter: ReportFilterState;

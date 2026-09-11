@@ -38,18 +38,30 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileDrawer }) => {
           </svg>
         </button>
 
+        {/* Logo Trường THCS Tân Hải */}
+        <div className="flex-shrink-0">
+          <img
+            src={currentClass?.logoUrl || '/logo-truong-thcs-Tan-Hai.jpg'}
+            alt="Logo Trường THCS Tân Hải"
+            className="w-10 h-10 md:w-12 md:h-12 rounded-2xl object-contain bg-white border border-slate-200/90 p-0.5 shadow-xs transition-transform hover:scale-105"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = '/logo-truong-thcs-Tan-Hai.jpg';
+            }}
+          />
+        </div>
+
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-base md:text-xl font-black text-primary tracking-tight">
-              {currentClass?.name || 'LỚP 12A1'}
+              {currentClass?.name || 'LỚP 6A6'}
             </h1>
             <span className="hidden sm:inline-block text-xs font-bold text-slate-400">|</span>
-            <span className="hidden sm:inline-block text-xs font-semibold text-slate-500">
-              {currentClass?.schoolName || 'THPT THANH XUÂN'}
+            <span className="hidden sm:inline-block text-xs font-semibold text-slate-600">
+              {currentClass?.schoolName || 'TRƯỜNG THCS TÂN HẢI'}
             </span>
           </div>
           <p className="text-[11px] md:text-xs font-semibold text-accent truncate max-w-[200px] md:max-w-md">
-            ⭐ {currentClass?.themeMonth || 'CHỦ ĐIỂM THÁNG 9'}
+            ⭐ {currentClass?.themeMonth || 'CHỦ ĐIỂM THÁNG 9: TRUYỀN THỐNG NHÀ TRƯỜNG'}
           </p>
         </div>
       </div>

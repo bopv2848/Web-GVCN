@@ -7,12 +7,13 @@ import type { UserProfile, ClassInfo } from '../../types/auth';
 
 const mockClass: ClassInfo = {
   id: '66666666-6666-6666-6666-666666666666',
-  name: 'LỚP 12A1',
-  gradeLevel: 12,
-  schoolName: 'THPT THANH XUÂN',
+  name: 'LỚP 6A6',
+  gradeLevel: 6,
+  schoolName: 'TRƯỜNG THCS TÂN HẢI',
   academicYear: '2026 - 2027',
-  themeTitle: 'CHUYẾN TÀU THANH XUÂN',
+  themeTitle: 'CHUYẾN TÀU THANH XUÂN 6A6 • GVCN THẦY PHAN VĂN BỘ',
   themeMonth: 'CHỦ ĐIỂM THÁNG 9',
+  logoUrl: '/logo-truong-thcs-Tan-Hai.jpg',
 };
 
 describe('PermissionGuard Security Access Control', () => {
@@ -20,7 +21,7 @@ describe('PermissionGuard Security Access Control', () => {
     const gvcnUser: UserProfile = {
       id: 'u1',
       email: 'gvcn@test.edu.vn',
-      fullName: 'Cô GVCN',
+      fullName: 'Thầy GVCN',
       role: 'gvcn',
     };
 
@@ -39,6 +40,7 @@ describe('PermissionGuard Security Access Control', () => {
             login: async () => {},
             logout: async () => {},
             refreshSession: async () => {},
+            updateCurrentClass: () => {},
           }}
         >
           <PermissionGuard allowedRoles={['gvcn']}>
@@ -74,6 +76,7 @@ describe('PermissionGuard Security Access Control', () => {
             login: async () => {},
             logout: async () => {},
             refreshSession: async () => {},
+            updateCurrentClass: () => {},
           }}
         >
           <PermissionGuard allowedRoles={['gvcn']}>

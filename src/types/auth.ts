@@ -18,6 +18,7 @@ export interface ClassInfo {
   themeTitle: string;
   themeMonth: string;
   bannerUrl?: string;
+  logoUrl?: string;
 }
 
 export interface AuthState {

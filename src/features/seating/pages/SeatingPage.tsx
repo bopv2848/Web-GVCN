@@ -658,25 +658,39 @@ export const SeatingPage: React.FC = () => {
       ) : (
         <div className="bg-white p-5 md:p-8 rounded-3xl border border-slate-200/80 shadow-xs space-y-8 overflow-x-auto">
           {/* Tiêu đề in chuẩn A4 khi bấm In */}
-          <div className="hidden print:block text-center pb-4 border-b border-slate-300 mb-6 space-y-1">
-            <h1 className="text-lg font-black uppercase text-slate-900">
-              TRƯỜNG THCS TÂN HẢI — LỚP 6A6
-            </h1>
-            <h2 className="text-base font-black text-slate-850">
-              {isRotationEnabled
-                ? `SƠ ĐỒ CHỖ NGỒI HỌC SINH — ÁP DỤNG ${
-                    activeWeekMode === 'even'
-                      ? 'TUẦN CHẴN (TỔ 3 - 4 - 1 - 2)'
-                      : 'TUẦN LẺ (TỔ 4 - 3 - 2 - 1)'
-                  }`
-                : 'SƠ ĐỒ CHỖ NGỒI HỌC SINH'}
-            </h2>
-            <p className="text-[11px] text-slate-500 font-semibold">
-              GVCN: Thầy Phan Văn Bộ • Năm học: 2026 - 2027 •{' '}
-              {isRotationEnabled
-                ? `Tuần hiện tại: Tuần ${schoolWeekInfo.weekNumber}`
-                : 'Chế độ: Chỗ ngồi cố định'}
-            </p>
+          <div className="hidden print:block pb-4 border-b border-slate-300 mb-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <img
+                  src={currentClass?.logoUrl || '/logo-truong-thcs-Tan-Hai.jpg'}
+                  alt="Logo Trường"
+                  className="w-14 h-14 object-contain rounded-full border border-slate-300"
+                />
+                <div className="text-left">
+                  <h1 className="text-sm font-black uppercase text-slate-900">
+                    {currentClass?.schoolName || 'TRƯỜNG THCS TÂN HẢI'}
+                  </h1>
+                  <p className="text-xs font-bold text-slate-700">{currentClass?.name || 'LỚP 6A6'}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <h2 className="text-sm font-black text-slate-850">
+                  {isRotationEnabled
+                    ? `SƠ ĐỒ CHỖ NGỒI — ÁP DỤNG ${
+                        activeWeekMode === 'even'
+                          ? 'TUẦN CHẴN (TỔ 3 - 4 - 1 - 2)'
+                          : 'TUẦN LẺ (TỔ 4 - 3 - 2 - 1)'
+                      }`
+                    : 'SƠ ĐỒ CHỖ NGỒI HỌC SINH'}
+                </h2>
+                <p className="text-[11px] text-slate-500 font-semibold mt-0.5">
+                  GVCN: Thầy Phan Văn Bộ • Năm học: 2026 - 2027 •{' '}
+                  {isRotationEnabled
+                    ? `Tuần hiện tại: Tuần ${schoolWeekInfo.weekNumber}`
+                    : 'Chế độ: Chỗ ngồi cố định'}
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* 3.1. BỤC GIẢNG & BÀN GIÁO VIÊN (PHÍA TRƯỚC) */}

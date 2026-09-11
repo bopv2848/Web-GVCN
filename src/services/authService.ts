@@ -113,7 +113,8 @@ export const authService = {
           grade_level,
           theme_config,
           school:school_id (
-            name
+            name,
+            logo_url
           ),
           academic_year:academic_year_id (
             name
@@ -140,10 +141,11 @@ export const authService = {
         id: c.id,
         name: c.name || 'LỚP',
         gradeLevel: c.grade_level || 12,
-        schoolName: c.school?.name || 'TRƯỜNG HỌC',
+        schoolName: c.school?.name || 'TRƯỜNG THCS TÂN HẢI',
         academicYear: c.academic_year?.name || '2026 - 2027',
         themeTitle: theme.title || 'CHUYẾN TÀU THANH XUÂN',
         themeMonth: theme.month || 'CHỦ ĐIỂM THÁNG',
+        logoUrl: c.school?.logo_url || '/logo-truong-thcs-Tan-Hai.jpg',
       },
     };
   },

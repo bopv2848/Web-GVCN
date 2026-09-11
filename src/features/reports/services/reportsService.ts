@@ -93,7 +93,7 @@ export const reportsService = {
 
     // 1. Tải thông tin Lớp, Trường, Học sinh, Tổ
     const [classRes, studentsRes, groupsRes, pointTxRes, sessionsRes] = await Promise.all([
-      supabase.from('classes').select('name, school_id, schools(name)').eq('id', classId).single(),
+      supabase.from('classes').select('name, school_id, schools(name, logo_url)').eq('id', classId).single(),
       supabase
         .from('students')
         .select('*')
@@ -116,8 +116,9 @@ export const reportsService = {
     ]);
 
     const className = classRes.data?.name || 'LỚP 6A6';
-    const schoolData = classRes.data?.schools as unknown as { name?: string } | null;
+    const schoolData = classRes.data?.schools as unknown as { name?: string; logo_url?: string } | null;
     const schoolName = schoolData?.name || 'TRƯỜNG THCS TÂN HẢI';
+    const logoUrl = schoolData?.logo_url || '/logo-truong-thcs-Tan-Hai.jpg';
     const studentsData = studentsRes.data || [];
     const groupsData = groupsRes.data || [];
     const transactions = pointTxRes.data || [];
@@ -299,6 +300,7 @@ export const reportsService = {
       classId,
       className,
       schoolName,
+      logoUrl,
       teacherName: 'Thầy Phan Văn Bộ',
       academicYear: `${filter.year} - ${filter.year + 1}`,
       filter,
