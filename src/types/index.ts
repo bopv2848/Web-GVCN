@@ -5,6 +5,7 @@ export * from './student';
 export * from './points';
 export * from './attendance';
 export * from './dashboard';
+export * from './timetable';
 
 export interface MenuItem {
   id: string;
