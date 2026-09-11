@@ -88,11 +88,14 @@ export const SeatingPage: React.FC = () => {
 
       let assigns = await seatingService.getSeatAssignmentsWithStudents(currentLayout.id, classId);
 
-      // Nếu chưa có phân công nào thì tự động gán mặc định từ 47 học sinh
-      if (assigns.length === 0) {
+      // Nếu chưa có phân công nào hoặc toàn bộ ghế trống, tự động gán mặc định từ 47 học sinh
+      const hasAnyStudent = assigns.some((a) => !!a.student);
+      if (assigns.length === 0 || !hasAnyStudent) {
         const students = await studentService.getStudents(classId);
         assigns = await seatingService.seedDefaultAssignments(currentLayout.id, students);
       }
+
+      setAssignments(assigns);
 
       // 1.2. Lấy cấu hình lớp từ Cloud (Chế độ xoay & Ngày bắt đầu năm học)
       const cloudConfig = await seatingService.getClassSeatingConfig(classId);

@@ -1,4 +1,5 @@
 import { supabase } from '../../../services/supabaseClient';
+import { studentService } from '../../students/services/studentService';
 import type { Student } from '../../../types/student';
 import type {
   SeatLayout,
@@ -72,36 +73,9 @@ export const seatingService = {
 
     if (assignError) throw assignError;
 
-    // 2. Lấy học sinh
-    const { data: students, error: studentError } = await supabase
-      .from('students')
-      .select('*')
-      .eq('class_id', classId)
-      .is('deleted_at', null);
-
-    if (studentError) throw studentError;
-
-    const studentMap = new Map<string, Student>();
-    (students || []).forEach((s) => {
-      studentMap.set(s.id, {
-        id: s.id,
-        classId: s.class_id,
-        groupId: s.group_id,
-        fullName: s.full_name,
-        gender: s.gender,
-        birthDate: s.birth_date,
-        classRole: s.class_role || 'Học sinh',
-        avatarUrl: s.avatar_url,
-        goals: s.goals,
-        talents: s.talents,
-        boardingType: s.boarding_type,
-        code: s.code,
-        points: s.points || 0,
-        stars: s.stars || 0,
-        groupName: s.group_name || 'Tổ —',
-        groupColorClass: 'text-primary',
-      });
-    });
+    // 2. Lấy học sinh đầy đủ thông tin (Tổ, chức vụ, avatar...)
+    const students = await studentService.getStudents(classId);
+    const studentMap = new Map<string, Student>(students.map((s) => [s.id, s]));
 
     return (assignments || []).map((a) => ({
       id: a.id,
