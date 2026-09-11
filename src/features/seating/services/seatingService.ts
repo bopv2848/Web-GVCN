@@ -13,49 +13,62 @@ export const seatingService = {
    * Lấy hoặc tạo mới Sơ đồ Chỗ ngồi chính cho lớp (6 Hàng x 8 Cột = 48 chỗ cho 47 học sinh)
    */
   async getOrCreateClassLayout(classId: string): Promise<SeatLayout> {
-    const { data: existing, error } = await supabase
-      .from('seat_layouts')
-      .select('*')
-      .eq('class_id', classId)
-      .eq('is_current', true)
-      .maybeSingle();
+    try {
+      const { data: existing, error } = await supabase
+        .from('seat_layouts')
+        .select('*')
+        .eq('class_id', classId)
+        .eq('is_current', true)
+        .maybeSingle();
 
-    if (existing && !error) {
+      if (existing && !error) {
+        return {
+          id: existing.id,
+          classId: existing.class_id,
+          layoutName: existing.layout_name,
+          rows: existing.rows,
+          cols: existing.cols,
+          isCurrent: existing.is_current,
+          createdAt: existing.created_at,
+        };
+      }
+
+      // Tạo sơ đồ chuẩn cho lớp 6A6: 6 hàng x 8 cột (4 Tổ thi đua)
+      const { data: created, error: createError } = await supabase
+        .from('seat_layouts')
+        .insert({
+          class_id: classId,
+          layout_name: 'Sơ đồ Bàn học 4 Tổ 6A6',
+          rows: 6,
+          cols: 8,
+          is_current: true,
+        })
+        .select()
+        .single();
+
+      if (createError) throw createError;
+
       return {
-        id: existing.id,
-        classId: existing.class_id,
-        layoutName: existing.layout_name,
-        rows: existing.rows,
-        cols: existing.cols,
-        isCurrent: existing.is_current,
-        createdAt: existing.created_at,
+        id: created.id,
+        classId: created.class_id,
+        layoutName: created.layout_name,
+        rows: created.rows,
+        cols: created.cols,
+        isCurrent: created.is_current,
+        createdAt: created.created_at,
       };
-    }
-
-    // Tạo sơ đồ chuẩn cho lớp 6A6: 6 hàng x 8 cột (4 Tổ thi đua)
-    const { data: created, error: createError } = await supabase
-      .from('seat_layouts')
-      .insert({
-        class_id: classId,
-        layout_name: 'Sơ đồ Bàn học 4 Tổ 6A6',
+    } catch (err) {
+      console.warn('Không thể nạp/tạo layout từ Supabase, dùng layout chuẩn lớp 6A6:', err);
+      return {
+        id: '6a600000-0000-0000-0003-000000000001',
+        classId: classId,
+        layoutName: 'Sơ đồ Bàn học 4 Tổ 6A6',
         rows: 6,
         cols: 8,
         isCurrent: true,
-      })
-      .select()
-      .single();
-
-    if (createError) throw createError;
-
-    return {
-      id: created.id,
-      classId: created.class_id,
-      layoutName: created.layout_name,
-      rows: created.rows,
-      cols: created.cols,
-      isCurrent: created.is_current,
-      createdAt: created.created_at,
-    };
+        createdAt: new Date().toISOString(),
+      };
+    }
   },
 
   /**
@@ -65,28 +78,35 @@ export const seatingService = {
     layoutId: string,
     classId: string
   ): Promise<SeatAssignmentWithStudent[]> {
-    // 1. Lấy assignments
-    const { data: assignments, error: assignError } = await supabase
-      .from('seat_assignments')
-      .select('*')
-      .eq('layout_id', layoutId);
+    try {
+      // 1. Lấy assignments
+      const { data: assignments, error: assignError } = await supabase
+        .from('seat_assignments')
+        .select('*')
+        .eq('layout_id', layoutId);
 
-    if (assignError) throw assignError;
+      if (assignError) {
+        console.warn('Lỗi truy vấn seat_assignments từ Supabase:', assignError.message);
+      }
 
-    // 2. Lấy học sinh đầy đủ thông tin (Tổ, chức vụ, avatar...)
-    const students = await studentService.getStudents(classId);
-    const studentMap = new Map<string, Student>(students.map((s) => [s.id, s]));
+      // 2. Lấy học sinh đầy đủ thông tin (Tổ, chức vụ, avatar...)
+      const students = await studentService.getStudents(classId);
+      const studentMap = new Map<string, Student>(students.map((s) => [s.id, s]));
 
-    return (assignments || []).map((a) => ({
-      id: a.id,
-      layoutId: a.layout_id,
-      studentId: a.student_id,
-      rowIndex: a.row_index,
-      colIndex: a.col_index,
-      isHidden: a.is_hidden,
-      createdAt: a.created_at,
-      student: studentMap.get(a.student_id),
-    }));
+      return (assignments || []).map((a) => ({
+        id: a.id,
+        layoutId: a.layout_id,
+        studentId: a.student_id,
+        rowIndex: a.row_index,
+        colIndex: a.col_index,
+        isHidden: a.is_hidden,
+        createdAt: a.created_at,
+        student: studentMap.get(a.student_id),
+      }));
+    } catch (err) {
+      console.warn('Lỗi trong getSeatAssignmentsWithStudents:', err);
+      return [];
+    }
   },
 
   /**
@@ -143,26 +163,42 @@ export const seatingService = {
       });
     });
 
-    const { data: inserted, error } = await supabase
-      .from('seat_assignments')
-      .upsert(newRows, { onConflict: 'layout_id,row_index,col_index' })
-      .select();
+    try {
+      const { data: inserted, error } = await supabase
+        .from('seat_assignments')
+        .upsert(newRows, { onConflict: 'layout_id,row_index,col_index' })
+        .select();
 
-    if (error) {
-      console.warn('Lưu phân công chỗ ngồi mặc định:', error);
+      if (error) {
+        console.warn('Lưu phân công chỗ ngồi mặc định:', error);
+      }
+
+      const studentMap = new Map<string, Student>(students.map((s) => [s.id, s]));
+      const sourceList = inserted && inserted.length > 0 ? inserted : newRows;
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return sourceList.map((a: any, idx: number) => ({
+        id: a.id || `temp-${idx}`,
+        layoutId: a.layout_id,
+        studentId: a.student_id,
+        rowIndex: a.row_index,
+        colIndex: a.col_index,
+        isHidden: a.is_hidden || false,
+        student: studentMap.get(a.student_id),
+      }));
+    } catch (err) {
+      console.warn('Lỗi upsert seat_assignments, dùng danh sách tính toán:', err);
+      const studentMap = new Map<string, Student>(students.map((s) => [s.id, s]));
+      return newRows.map((a, idx) => ({
+        id: `temp-${idx}`,
+        layoutId: a.layout_id,
+        studentId: a.student_id,
+        rowIndex: a.row_index,
+        colIndex: a.col_index,
+        isHidden: a.is_hidden,
+        student: studentMap.get(a.student_id),
+      }));
     }
-
-    const studentMap = new Map<string, Student>(students.map((s) => [s.id, s]));
-
-    return (inserted || newRows).map((a, idx) => ({
-      id: a.id || `temp-${idx}`,
-      layoutId: a.layout_id,
-      studentId: a.student_id,
-      rowIndex: a.row_index,
-      colIndex: a.col_index,
-      isHidden: a.is_hidden,
-      student: studentMap.get(a.student_id),
-    }));
   },
 
   /**

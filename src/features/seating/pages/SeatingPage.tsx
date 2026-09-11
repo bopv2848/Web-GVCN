@@ -88,6 +88,19 @@ export const SeatingPage: React.FC = () => {
 
       let assigns = await seatingService.getSeatAssignmentsWithStudents(currentLayout.id, classId);
 
+      // 1.1b. Nếu Supabase chưa có hoặc đang chờ cấp quyền RLS, thử khôi phục từ bộ nhớ trình duyệt (LocalStorage)
+      const savedLocal = localStorage.getItem(`seating_assignments_${classId}`);
+      if ((!assigns || assigns.length === 0 || !assigns.some((a) => !!a.student)) && savedLocal) {
+        try {
+          const parsed = JSON.parse(savedLocal);
+          if (Array.isArray(parsed) && parsed.length > 0 && parsed.some((a: any) => !!a.student)) {
+            assigns = parsed;
+          }
+        } catch {
+          // Bỏ qua nếu dữ liệu lưu cũ lỗi cú pháp
+        }
+      }
+
       // Nếu chưa có phân công nào hoặc toàn bộ ghế trống, tự động gán mặc định từ 47 học sinh
       const hasAnyStudent = assigns.some((a) => !!a.student);
       if (assigns.length === 0 || !hasAnyStudent) {
@@ -96,6 +109,9 @@ export const SeatingPage: React.FC = () => {
       }
 
       setAssignments(assigns);
+      if (assigns.length > 0) {
+        localStorage.setItem(`seating_assignments_${classId}`, JSON.stringify(assigns));
+      }
 
       // 1.2. Lấy cấu hình lớp từ Cloud (Chế độ xoay & Ngày bắt đầu năm học)
       const cloudConfig = await seatingService.getClassSeatingConfig(classId);
@@ -185,21 +201,21 @@ export const SeatingPage: React.FC = () => {
     if (!layout) return;
 
     // 1. Cập nhật giao diện tức thì (Optimistic UI)
-    const prevAssignments = [...assignments];
     const sourceName = source.assignment.student?.fullName || 'Học sinh';
     const targetName = targetAssignment?.student?.fullName;
 
-    setAssignments((prev) => {
-      return prev.map((a) => {
-        if (a.id === source.assignment.id) {
-          return { ...a, rowIndex: targetRow, colIndex: targetCol };
-        }
-        if (targetAssignment && a.id === targetAssignment.id) {
-          return { ...a, rowIndex: source.rowIndex, colIndex: source.colIndex };
-        }
-        return a;
-      });
+    const newAssignments = assignments.map((a) => {
+      if (a.id === source.assignment.id) {
+        return { ...a, rowIndex: targetRow, colIndex: targetCol };
+      }
+      if (targetAssignment && a.id === targetAssignment.id) {
+        return { ...a, rowIndex: source.rowIndex, colIndex: source.colIndex };
+      }
+      return a;
     });
+
+    setAssignments(newAssignments);
+    localStorage.setItem(`seating_assignments_${classId}`, JSON.stringify(newAssignments));
 
     // Thông báo Toast thân thiện
     if (targetName) {
@@ -220,10 +236,7 @@ export const SeatingPage: React.FC = () => {
         targetAssignment
       );
     } catch (err) {
-      console.error('Lỗi hoán đổi chỗ ngồi trên Supabase:', err);
-      setAssignments(prevAssignments);
-      setToastMessage('❌ Lỗi kết nối Supabase. Đã hoàn tác vị trí cũ!');
-      setTimeout(() => setToastMessage(null), 4000);
+      console.warn('Lưu vị trí lên Supabase (chưa chạy SQL RLS hoặc lỗi mạng), đã lưu vào bộ nhớ máy:', err);
     }
   };
 
