@@ -12,8 +12,8 @@ async function runSeed() {
     const schoolId = '6a600000-0000-0000-0000-000000000001';
     const { error: errSchool } = await supabase.from('schools').upsert({
         id: schoolId,
-        name: 'TRƯỜNG THCS NGUYỄN VĂN TRỖI',
-        code: 'THCS-NVT',
+        name: 'TRƯỜNG THCS TÂN HẢI',
+        code: 'THCS-TH',
         address: 'Việt Nam'
     });
     if (errSchool) console.error('Lỗi tạo trường:', errSchool.message);

@@ -8,7 +8,7 @@ const fallbackClass: ClassInfo = {
   id: '66666666-6666-6666-6666-666666666666',
   name: 'LỚP 6A6',
   gradeLevel: 6,
-  schoolName: 'TRƯỜNG THCS NGUYỄN VĂN TRỖI',
+  schoolName: 'TRƯỜNG THCS TÂN HẢI',
   academicYear: '2026 - 2027',
   themeTitle: 'CHUYẾN TÀU THANH XUÂN 6A6 • GVCN THẦY PHAN VĂN BỘ',
   themeMonth: 'CHỦ ĐIỂM THÁNG 9: TRUYỀN THỐNG NHÀ TRƯỜNG',

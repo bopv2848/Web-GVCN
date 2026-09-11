@@ -208,7 +208,7 @@ export const ParentPortalPage: React.FC = () => {
       {!isTeacher && (
         <div className="text-center space-y-1.5 pb-2">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100/80 border border-amber-200/70 text-amber-900 text-xs font-black mb-1">
-            <span>🏫</span> TRƯỜNG THCS NGUYỄN VĂN TRỖI
+            <span>🏫</span> TRƯỜNG THCS TÂN HẢI
           </div>
           <h1 className="text-xl md:text-2xl font-black text-slate-850 tracking-tight">
             Sổ Liên Lạc Điện Tử • Lớp 6A6

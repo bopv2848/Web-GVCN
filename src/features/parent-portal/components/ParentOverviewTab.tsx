@@ -169,7 +169,7 @@ export const ParentOverviewTab: React.FC<ParentOverviewTabProps> = ({ data, onSe
 
         <div className="text-[11px] text-slate-400 sm:text-right">
           <p>Giờ tiếp nhận trao đổi: Sau 17h00 hàng ngày</p>
-          <p>Trường THCS Nguyễn Văn Trỗi</p>
+          <p>Trường THCS Tân Hải</p>
         </div>
       </div>
     </div>

@@ -145,7 +145,7 @@ export const ParentLookupForm: React.FC<ParentLookupFormProps> = ({
       {/* Support footer */}
       <div className="pt-3 border-t border-slate-100 text-center text-[11px] font-medium text-slate-400 space-y-1">
         <p>Thầy GVCN: <strong className="text-slate-600">Phan Văn Bộ</strong></p>
-        <p className="text-[10px]">Trường THCS Nguyễn Văn Trỗi • Năm học 2026 - 2027</p>
+        <p className="text-[10px]">Trường THCS Tân Hải • Năm học 2026 - 2027</p>
       </div>
     </div>
   );

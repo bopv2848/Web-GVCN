@@ -796,7 +796,7 @@ export const AttendancePage: React.FC = () => {
               {/* Mẫu Báo Cáo Chuẩn In A4 (Chỉ xuất hiện khi bấm In Ctrl+P) */}
               <AttendancePrintReport
                 report={monthlyReport}
-                schoolName={currentClass?.schoolName || 'TRƯỜNG THCS NGUYỄN VĂN TRỖI'}
+                schoolName={currentClass?.schoolName || 'TRƯỜNG THCS TÂN HẢI'}
                 className={currentClass?.name || 'LỚP 6A6'}
                 teacherName="Thầy Phan Văn Bộ"
               />
@@ -824,7 +824,7 @@ export const AttendancePage: React.FC = () => {
           onClose={() => setIsMedicalReportOpen(false)}
           alert={epidemicAlert}
           className={currentClass?.name || 'LỚP 6A6'}
-          schoolName={currentClass?.schoolName || 'TRƯỜNG THCS NGUYỄN VĂN TRỖI'}
+          schoolName={currentClass?.schoolName || 'TRƯỜNG THCS TÂN HẢI'}
           teacherName="Thầy Phan Văn Bộ"
         />
       )}

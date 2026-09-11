@@ -235,7 +235,7 @@ export const parentPortalService = {
       birthDate: student.birth_date,
       avatarUrl: student.avatar_url,
       className: classObj?.name || 'LỚP 6A6',
-      schoolName: classObj?.schools?.name || 'TRƯỜNG THCS NGUYỄN VĂN TRỖI',
+      schoolName: classObj?.schools?.name || 'TRƯỜNG THCS TÂN HẢI',
       groupName: groupObj?.name || 'Tổ 1',
       classRole: student.class_role || 'Thành viên',
       teacherName: 'Thầy Phan Văn Bộ',

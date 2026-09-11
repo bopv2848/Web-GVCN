@@ -18,7 +18,7 @@ export const MedicalReportModal: React.FC<MedicalReportModalProps> = ({
   alert,
   className = 'LỚP 6A6',
   teacherName = 'Thầy Phan Văn Bộ',
-  schoolName = 'TRƯỜNG THCS NGUYỄN VĂN TRỖI',
+  schoolName = 'TRƯỜNG THCS TÂN HẢI',
 }) => {
   const [copied, setCopied] = useState<boolean>(false);
 

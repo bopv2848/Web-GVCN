@@ -42,7 +42,7 @@ export const TimetablePrintModal: React.FC<TimetablePrintModalProps> = ({
         <div className="p-6 bg-white border border-slate-300 rounded-2xl text-slate-900 font-sans print:p-0 print:border-none">
           <div className="text-center pb-4 border-b border-slate-300 mb-4">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              TRƯỜNG THCS NGUYỄN VĂN TRỖI
+              TRƯỜNG THCS TÂN HẢI
             </h3>
             <h2 className="text-xl font-black text-slate-900 mt-1 uppercase tracking-tight">
               THỜI KHÓA BIỂU {classNameTitle}

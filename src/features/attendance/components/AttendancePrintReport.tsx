@@ -10,7 +10,7 @@ interface AttendancePrintReportProps {
 
 export const AttendancePrintReport: React.FC<AttendancePrintReportProps> = ({
   report,
-  schoolName = 'TRƯỜNG THCS NGUYỄN VĂN TRỖI',
+  schoolName = 'TRƯỜNG THCS TÂN HẢI',
   className = 'LỚP 6A6',
   teacherName = 'Thầy Phan Văn Bộ',
 }) => {

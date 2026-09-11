@@ -117,7 +117,7 @@ export const reportsService = {
 
     const className = classRes.data?.name || 'LỚP 6A6';
     const schoolData = classRes.data?.schools as unknown as { name?: string } | null;
-    const schoolName = schoolData?.name || 'TRƯỜNG THCS NGUYỄN VĂN TRỖI';
+    const schoolName = schoolData?.name || 'TRƯỜNG THCS TÂN HẢI';
     const studentsData = studentsRes.data || [];
     const groupsData = groupsRes.data || [];
     const transactions = pointTxRes.data || [];

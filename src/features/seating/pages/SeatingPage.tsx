@@ -660,7 +660,7 @@ export const SeatingPage: React.FC = () => {
           {/* Tiêu đề in chuẩn A4 khi bấm In */}
           <div className="hidden print:block text-center pb-4 border-b border-slate-300 mb-6 space-y-1">
             <h1 className="text-lg font-black uppercase text-slate-900">
-              TRƯỜNG THCS NGUYỄN VĂN TRỖI — LỚP 6A6
+              TRƯỜNG THCS TÂN HẢI — LỚP 6A6
             </h1>
             <h2 className="text-base font-black text-slate-850">
               {isRotationEnabled
@@ -876,7 +876,7 @@ export const SeatingPage: React.FC = () => {
           onClose={() => setIsMedicalReportOpen(false)}
           alert={epidemicAlert}
           className={currentClass?.name || 'LỚP 6A6'}
-          schoolName={currentClass?.schoolName || 'TRƯỜNG THCS NGUYỄN VĂN TRỖI'}
+          schoolName={currentClass?.schoolName || 'TRƯỜNG THCS TÂN HẢI'}
           teacherName="Thầy Phan Văn Bộ"
         />
       )}
