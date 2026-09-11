@@ -37,3 +37,18 @@ test-results
 # Supabase CLI temp
 supabase/.temp/
 
+# Agent & AI config (Không đưa lên GitHub theo yêu cầu)
+.agent/
+.Agent/
+.gemini/
+.antigravity/
+
+# TypeScript build cache
+*.tsbuildinfo
+
+# Temporary folders
+.cache/
+.temp/
+tmp/
+temp/
+
