@@ -1,82 +1,104 @@
-﻿import React from 'react';
-import { Card } from '../../../components/common/Card';
-import { EmptyState } from '../../../components/common/EmptyState';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
+import { dashboardService } from '../services/dashboardService';
+import type { DashboardStats } from '../../../types/dashboard';
+import { DashboardKpiCards } from '../components/DashboardKpiCards';
+import { WeeklyProgressChart } from '../components/WeeklyProgressChart';
+import { QuickRankingsAndActivities } from '../components/QuickRankingsAndActivities';
+import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
+import { Button } from '../../../components/common/Button';
 
 export const DashboardPage: React.FC = () => {
-  const { currentClass } = useAuth();
+  const { currentClass, user } = useAuth();
+  const classId = currentClass?.id || '66666666-6666-6666-6666-666666666666';
+
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+
+  const loadDashboard = useCallback(
+    async (isSilent = false) => {
+      if (!isSilent) setIsLoading(true);
+      else setIsRefreshing(true);
+
+      try {
+        const data = await dashboardService.getDashboardData(classId);
+        setStats(data);
+      } catch (err) {
+        console.error('Lỗi nạp dữ liệu Dashboard:', err);
+      } finally {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
+    },
+    [classId]
+  );
+
+  useEffect(() => {
+    loadDashboard();
+  }, [loadDashboard]);
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[55vh] gap-3">
+        <LoadingSpinner size="lg" />
+        <p className="text-sm font-bold text-slate-500">Đang tổng hợp dữ liệu lớp học từ Supabase Cloud...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {/* Banner Top */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-primary to-secondary p-6 md:p-8 text-white shadow-xl">
-        <div className="relative z-10 max-w-2xl">
-          <span className="inline-block px-3 py-1 mb-3 rounded-full bg-accent/20 border border-accent/40 text-accent text-xs font-bold uppercase tracking-wider">
-            {currentClass?.academicYear || 'Năm học 2026 - 2027'}
-          </span>
-          <h1 className="text-2xl md:text-4xl font-black tracking-tight mb-2">
-            {currentClass?.themeTitle || 'CHUYẾN TÀU THANH XUÂN'}
-          </h1>
-          <p className="text-sm md:text-base text-slate-300 font-medium leading-relaxed">
-            Chào mừng Thầy đến với không gian quản trị thông minh Lớp 12A1. Sẵn sàng cho một ngày học tập hứng khởi!
-          </p>
+      {/* 1. Banner Chào Mừng & Nhận Diện Lớp */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-primary via-indigo-900 to-secondary p-6 md:p-8 text-white shadow-xl">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="max-w-2xl">
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <span className="inline-block px-3 py-1 rounded-full bg-accent/20 border border-accent/40 text-accent text-xs font-black uppercase tracking-wider">
+                {currentClass?.academicYear || 'Niên khóa 2026 - 2027'}
+              </span>
+              <span className="inline-block px-3 py-1 rounded-full bg-white/10 border border-white/20 text-slate-200 text-xs font-bold">
+                {currentClass?.themeMonth || 'CHỦ ĐIỂM THÁNG 9: TRUYỀN THỐNG NHÀ TRƯỜNG'}
+              </span>
+            </div>
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-black tracking-tight mb-2 text-white">
+              {currentClass?.themeTitle || 'CHUYẾN TÀU THANH XUÂN 6A6 • GVCN THẦY PHAN VĂN BỘ'}
+            </h1>
+            <p className="text-xs md:text-sm text-slate-300 font-medium leading-relaxed">
+              Chào mừng {user?.fullName || 'Thầy'} đến với không gian quản trị thông minh Lớp 6A6. Dữ liệu
+              chuyên cần và thi đua hôm nay đã sẵn sàng!
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 self-start md:self-auto">
+            <Button
+              onClick={() => loadDashboard(true)}
+              variant="outline"
+              size="sm"
+              disabled={isRefreshing}
+              className="bg-white/10 hover:bg-white/20 text-white border-white/20 text-xs font-bold backdrop-blur-xs"
+            >
+              {isRefreshing ? '🔄 Đang làm mới...' : '🔄 Làm mới'}
+            </Button>
+          </div>
         </div>
+
+        {/* Trang trí vòng tròn đồ họa chìm */}
+        <div className="absolute -right-16 -bottom-16 w-64 h-64 rounded-full bg-white/5 pointer-events-none blur-2xl"></div>
       </div>
 
-      {/* Overview Metric Cards (Empty / Real State Placeholders) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-        <Card className="flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase">Sĩ số lớp</span>
-            <span className="p-2 rounded-xl bg-blue-50 text-blue-600 text-lg">👥</span>
-          </div>
-          <div className="mt-4">
-            <span className="text-2xl md:text-3xl font-black text-slate-800">--</span>
-            <p className="text-xs text-slate-400 mt-1 font-medium">Chờ kết nối danh sách học sinh</p>
-          </div>
-        </Card>
+      {stats && (
+        <>
+          {/* 2. Bốn thẻ KPI chỉ số lớp học */}
+          <DashboardKpiCards stats={stats} />
 
-        <Card className="flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase">Chuyên cần hôm nay</span>
-            <span className="p-2 rounded-xl bg-emerald-50 text-emerald-600 text-lg">📅</span>
-          </div>
-          <div className="mt-4">
-            <span className="text-2xl md:text-3xl font-black text-slate-800">-- %</span>
-            <p className="text-xs text-slate-400 mt-1 font-medium">Chưa có phiên điểm danh</p>
-          </div>
-        </Card>
+          {/* 3. Biểu đồ tiến độ tuần thật 100% */}
+          <WeeklyProgressChart weeklyTrend={stats.weeklyTrend} />
 
-        <Card className="flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase">Tổng điểm thi đua</span>
-            <span className="p-2 rounded-xl bg-amber-50 text-amber-600 text-lg">⭐</span>
-          </div>
-          <div className="mt-4">
-            <span className="text-2xl md:text-3xl font-black text-slate-800">--</span>
-            <p className="text-xs text-slate-400 mt-1 font-medium">Sổ cái Append-only Phase 5</p>
-          </div>
-        </Card>
-
-        <Card className="flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase">Nhiệm vụ tuần</span>
-            <span className="p-2 rounded-xl bg-purple-50 text-purple-600 text-lg">✓</span>
-          </div>
-          <div className="mt-4">
-            <span className="text-2xl md:text-3xl font-black text-slate-800">--</span>
-            <p className="text-xs text-slate-400 mt-1 font-medium">0 việc cần làm</p>
-          </div>
-        </Card>
-      </div>
-
-      {/* Main Empty State Content */}
-      <EmptyState
-        icon="📊"
-        title="Tổng quan Lớp học chưa có dữ liệu"
-        description="Ứng dụng đang ở Giai đoạn 1 (Nền tảng App Shell). Dữ liệu học sinh, điểm danh và sổ cái thi đua thời gian thực sẽ được kết nối ở Giai đoạn 4 và Giai đoạn 5."
-        targetPhase="Phase 4 & Phase 5 (Supabase PostgreSQL)"
-      />
+          {/* 4. Xếp hạng 4 Tổ & Hoạt động gần nhất */}
+          <QuickRankingsAndActivities stats={stats} />
+        </>
+      )}
     </div>
   );
 };

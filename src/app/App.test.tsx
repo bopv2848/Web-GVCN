@@ -1,4 +1,4 @@
-﻿import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { App } from './App';
 
@@ -7,7 +7,7 @@ describe('App Component Root', () => {
     render(<App />);
 
     await waitFor(() => {
-      const classHeadings = screen.getAllByText(/LỚP 12A1/i);
+      const classHeadings = screen.getAllByText(/LỚP 6A6|LỚP 12A1/i);
       expect(classHeadings.length).toBeGreaterThan(0);
     });
 
