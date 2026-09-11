@@ -1,4 +1,4 @@
-﻿# Logs
+# Logs
 logs
 *.log
 npm-debug.log*
@@ -33,3 +33,7 @@ dist-ssr
 coverage
 playwright-report
 test-results
+
+# Supabase CLI temp
+supabase/.temp/
+

@@ -22,6 +22,8 @@
 
 &lt;script src="<https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"&gt;&lt;/script>&gt;
 
+&lt;script src="<https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js"&gt;&lt;/script>&gt;
+
 &lt;!-- Tailwind Configuration --&gt;
 
 &lt;script&gt;
@@ -254,7 +256,11 @@ let state = {
 
 currentTab: 'tong-quan',
 
-auth: { loggedIn: true, role: 'gvcn' },
+auth: { loggedIn: false, role: 'gvcn' },
+
+loginRoleSelect: 'gvcn',
+
+auditLogs: \[\],
 
 theme: { month: "CHỦ ĐIỂM THÁNG", title: "CHUYẾN TÀU THANH XUÂN", bannerUrl: "", bannerColorClass: "from-\[#1e1b4b\] to-\[#312e81\]" },
 
@@ -373,6 +379,8 @@ const menuItems = \[
 { id: 'lich-bao-giang', icon: 'ph-notebook', label: 'Lịch báo giảng' },
 
 { id: 'xep-hang', icon: 'ph-trophy', label: 'Tuyên Dương' },
+
+{ id: 'ke-hoach', icon: 'ph-calendar-star', label: 'Kế hoạch tuần' }, // <--- THÊM DÒNG NÀY
 
 { id: 'bao-cao', icon: 'ph-chart-bar', label: 'Sổ theo dõi' },
 
@@ -602,67 +610,17 @@ renderLayout();
 
 };
 
-window.switchTab = function(tabId) {
-
-// Giới hạn tab nếu là Ban cán sự
-
-if (state.auth && state.auth.role === 'bancansu') {
-
-const allowed = \['tong-quan', 'hoc-sinh', 'thoi-khoa-bieu', 'diem-danh'\];
-
-if (!allowed.includes(tabId)) {
-
-showToast("Ban cán sự chỉ có quyền truy cập Trang chủ, Học sinh, Thời khóa biểu và Điểm danh!", "error");
-
-return;
-
-}
-
-}
-
-// Giới hạn tab nếu là Ban giám hiệu
-
-if (state.auth && state.auth.role === 'bgh') {
-
-const allowed = \['tong-quan', 'hoc-sinh', 'thoi-khoa-bieu', 'so-do-lop', 'diem-danh', 'bao-cao', 'tram-dong-hanh'\];
-
-if (!allowed.includes(tabId)) {
-
-showToast("Ban giám hiệu chỉ có quyền truy cập Trang chủ, Học sinh, TKB, Sơ đồ, Điểm danh, Sổ theo dõi và Trạm đồng hành!", "error");
-
-return;
-
-}
-
-}
-
-// SỬA LỖI TẠI ĐÂY: Nếu bấm vào Cài đặt từ menu, luôn đưa về mục Thông tin chung
-
-if (tabId === 'cai-dat') {
-
-state.settingsTab = 'thong-tin';
-
-}
-
-state.currentTab = tabId;
-
-renderLayout();
-
-};
-
 function renderSidebar() {
-
-// Lọc menu theo quyền đăng nhập
 
 let activeMenuItems = menuItems;
 
-if (state.auth && state.auth.role === 'bancansu') {
+if (state.auth && state.auth.role === 'bcs') {
 
-activeMenuItems = menuItems.filter(item => \['tong-quan', 'hoc-sinh', 'thoi-khoa-bieu', 'diem-danh'\].includes(item.id));
+activeMenuItems = menuItems.filter(item => \['tong-quan', 'hoc-sinh', 'thoi-khoa-bieu', 'so-do-lop', 'diem-danh'\].includes(item.id));
 
 } else if (state.auth && state.auth.role === 'bgh') {
 
-activeMenuItems = menuItems.filter(item => \['tong-quan', 'hoc-sinh', 'thoi-khoa-bieu', 'so-do-lop', 'diem-danh', 'bao-cao', 'tram-dong-hanh'\].includes(item.id));
+activeMenuItems = menuItems.filter(item => \['tong-quan', 'hoc-sinh', 'so-do-lop', 'diem-danh', 'bao-cao', 'tram-dong-hanh'\].includes(item.id));
 
 }
 
@@ -698,8 +656,6 @@ const classAvatarContent = state.admin.classAvatarUrl ? \`&lt;img src="\${state.
 
 return \`
 
-&lt;!-- Thêm 'hidden md:flex' để PC giữ nguyên, Điện thoại tự ẩn --&gt;
-
 &lt;aside class="hidden md:flex w-\[280px\] bg-primary text-white flex-col h-full shadow-\[4px_0_24px_rgba(0,0,0,0.05)\] z-20 flex-shrink-0 print:hidden relative border-r border-white/10"&gt;
 
 &lt;div class="flex flex-col items-center justify-center p-8 pb-6 relative overflow-hidden"&gt;
@@ -712,8 +668,6 @@ return \`
 
 \${classAvatarContent}
 
-&lt;div class="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"&gt;&lt;i class="ph-fill ph-camera text-white text-xl"&gt;&lt;/i&gt;&lt;/div&gt;
-
 &lt;/div&gt;
 
 &lt;/div&gt;
@@ -721,8 +675,6 @@ return \`
 &lt;input type="file" id="class-avatar-upload" class="hidden" accept="image/\*" onchange="handleClassAvatarUpload(event)"&gt;
 
 &lt;div class="font-extrabold text-white text-center text-\[15px\] tracking-wide uppercase leading-snug drop-shadow-md z-10 px-2"&gt;\${state.admin.className || "LỚP HỌC"}&lt;/div&gt;
-
-&lt;div class="text-\[10px\] text-indigo-300/80 uppercase tracking-widest mt-1.5 z-10 font-bold"&gt;Hệ thống quản lý&lt;/div&gt;
 
 &lt;/div&gt;
 
@@ -732,21 +684,19 @@ return \`
 
 \`;
 
-}
-
-// --- THANH ĐIỀU HƯỚNG NẰM DƯỚI ĐÁY (CHỈ HIỂN THỊ TRÊN ĐIỆN THOẠI) ---
+}// --- THANH ĐIỀU HƯỚNG NẰM DƯỚI ĐÁY (CHỈ HIỂN THỊ TRÊN ĐIỆN THOẠI) ---
 
 function renderBottomNav() {
 
 let activeMenuItems = menuItems;
 
-if (state.auth && state.auth.role === 'bancansu') {
+if (state.auth && state.auth.role === 'bcs') {
 
-activeMenuItems = menuItems.filter(item => \['tong-quan', 'hoc-sinh', 'thoi-khoa-bieu', 'diem-danh'\].includes(item.id));
+activeMenuItems = menuItems.filter(item => \['tong-quan', 'hoc-sinh', 'thoi-khoa-bieu', 'so-do-lop', 'diem-danh'\].includes(item.id));
 
 } else if (state.auth && state.auth.role === 'bgh') {
 
-activeMenuItems = menuItems.filter(item => \['tong-quan', 'hoc-sinh', 'thoi-khoa-bieu', 'so-do-lop', 'diem-danh', 'bao-cao', 'tram-dong-hanh'\].includes(item.id));
+activeMenuItems = menuItems.filter(item => \['tong-quan', 'hoc-sinh', 'so-do-lop', 'diem-danh', 'bao-cao', 'tram-dong-hanh'\].includes(item.id));
 
 }
 
@@ -754,21 +704,11 @@ const menuHtml = activeMenuItems.map(item => {
 
 const isActive = state.currentTab === item.id;
 
-// Căn chỉnh giao diện nút y như mẫu ảnh của cô
-
-const activeClass = isActive
-
-? "text-white bg-blue-600 shadow-\[0_4px_15px_rgba(37,99,235,0.4)\] transform -translate-y-1.5"
-
-: "text-\[#94a3b8\] hover:text-white hover:bg-white/5";
-
-// Xử lý các nút bấm đặc biệt
+const activeClass = isActive ? "text-white bg-blue-600 shadow-\[0_4px_15px_rgba(37,99,235,0.4)\] transform -translate-y-1.5" : "text-\[#94a3b8\] hover:text-white hover:bg-white/5";
 
 let onclickAction = \`switchTab('\${item.id}')\`;
 
 if (item.id === 'dong-ho') onclickAction = 'openTimerDrawer()';
-
-if (item.id === 'tich-diem') onclickAction = \`switchTab('cai-dat'); switchSettingsTab('tich-diem');\`;
 
 return \`
 
@@ -786,17 +726,9 @@ return \`
 
 return \`
 
-&lt;!-- Thẻ nav có chứa 'md:hidden' nghĩa là trên Máy tính nó sẽ hoàn toàn tàng hình --&gt;
-
 &lt;nav class="md:hidden fixed bottom-0 left-0 right-0 bg-\[#1e1b4b\] border-t border-indigo-900 shadow-\[0_-10px_40px_rgba(0,0,0,0.2)\] z-50 overflow-x-auto pb-1 custom-scrollbar"&gt;
 
-&lt;div class="absolute inset-0 opacity-10 bg-\[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjIiIGZpbGw9IiNmZmYiLz48L3N2Zz4=')\]"&gt;&lt;/div&gt;
-
-&lt;div class="flex items-center gap-1.5 px-3 pt-2 pb-2 relative z-10 w-max min-w-full"&gt;
-
-\${menuHtml}
-
-&lt;/div&gt;
+&lt;div class="flex items-center gap-1.5 px-3 pt-2 pb-2 relative z-10 w-max min-w-full"&gt;\${menuHtml}&lt;/div&gt;
 
 &lt;/nav&gt;
 
@@ -808,13 +740,11 @@ function renderHeader() {
 
 const syncStatus = \`&lt;div class="hidden sm:flex items-center gap-2 text-\[11px\] font-bold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200"&gt;&lt;i class="ph-fill ph-hard-drives text-sm"&gt;&lt;/i&gt; Lưu cục bộ&lt;/div&gt;\`;
 
-// Tự động đổi tên và chức danh dựa trên quyền đăng nhập
-
 let roleName = state.admin.name;
 
 let roleDesc = state.admin.role;
 
-if (state.auth && state.auth.role === 'bancansu') {
+if (state.auth && state.auth.role === 'bcs') {
 
 roleName = 'Ban Cán Sự';
 
@@ -842,6 +772,18 @@ return \`
 
 &lt;div class="flex items-center gap-4"&gt;
 
+&lt;!-- NÚT XEM NHẬT KÝ BCS CHO PHÉP GVCN VÀ BGH XEM --&gt;
+
+\${(!state.auth || state.auth.role === 'gvcn' || state.auth.role === 'bgh') ? \`
+
+&lt;button onclick="openAuditLogModal()" class="hidden sm:flex items-center gap-2 text-xs font-bold text-indigo-700 bg-indigo-50 px-4 py-2 rounded-xl shadow-sm border border-indigo-100 hover:bg-indigo-100 transition-all" title="Nhật ký Ban cán sự"&gt;
+
+&lt;i class="ph-bold ph-clipboard-text text-sm"&gt;&lt;/i&gt; Nhật ký BCS
+
+&lt;/button&gt;
+
+\` : ''}
+
 &lt;button onclick="openParentLookupModal()" class="flex items-center gap-2 text-xs font-bold text-white bg-gradient-to-r from-orange-400 to-amber-500 px-4 py-2 rounded-xl shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all" title="Cổng Phụ Huynh tra cứu"&gt;
 
 &lt;i class="ph-bold ph-magnifying-glass text-sm"&gt;&lt;/i&gt; &lt;span class="hidden sm:inline"&gt;Tra cứu&lt;/span&gt;
@@ -868,15 +810,23 @@ return \`
 
 &lt;/div&gt;
 
+&lt;div class="pl-2 ml-2 border-l border-slate-200"&gt;
+
+&lt;button onclick="logout()" class="p-2 text-red-500 hover:bg-red-50 hover:text-red-600 rounded-xl transition-colors font-bold flex items-center justify-center" title="Đăng xuất"&gt;
+
+&lt;i class="ph-bold ph-sign-out text-2xl"&gt;&lt;/i&gt;
+
+&lt;/button&gt;
+
+&lt;/div&gt;
+
 &lt;/div&gt;
 
 &lt;/header&gt;
 
 \`;
 
-}
-
-window.closeModal = function(id) {
+}window.closeModal = function(id) {
 
 // Xóa nội dung trong khung chứa chung
 
@@ -899,6 +849,16 @@ if (modal) modal.remove();
 function renderLayout() {
 
 const app = document.getElementById('app');
+
+// Nếu chưa đăng nhập thì hiển thị màn hình đăng nhập
+
+if (state.auth && !state.auth.loggedIn) {
+
+app.innerHTML = renderLoginScreen() + \`&lt;div id="modal-container"&gt;&lt;/div&gt;\`;
+
+return;
+
+}
 
 let contentHtml = '';
 
@@ -925,6 +885,8 @@ case 'diem-danh': contentHtml = renderViewDiemDanh(); break;
 case 'vong-quay': contentHtml = renderViewVongQuay(); break;
 
 case 'xep-hang': contentHtml = renderViewXepHang(); break;
+
+case 'ke-hoach': contentHtml = renderViewKeHoach(); break; // <--- THÊM DÒNG NÀY
 
 case 'bao-cao': contentHtml = renderViewBaoCao(); break;
 
@@ -986,7 +948,7 @@ pickerAnimationId = requestAnimationFrame(animatePicker);
 
 function renderViewTongQuan() {
 
-// Lấy dữ liệu cơ bản
+// --- 1. LẤY DỮ LIỆU HÔM NAY ĐỂ ĐÁNH GIÁ (YÊU CẦU 3) ---
 
 const d = new Date();
 
@@ -994,41 +956,87 @@ const todayStr = \`\${d.getFullYear()}-\${String(d.getMonth() + 1).padStart(2, '
 
 const todayRecord = state.attendanceRecords\[todayStr\] || {};
 
+const totalStudents = state.students.length;
+
 let absentCount = 0;
+
+let lateCount = 0;
+
+let todayPositiveCount = 0;
+
+let todayNegativeCount = 0;
+
+let attentionStudents = new Set();
 
 state.students.forEach(s => {
 
+// Điểm danh hôm nay
+
 const status = todayRecord\[s.id\];
 
-if (status === 'excused' || status === 'unexcused') absentCount++;
+if (status === 'excused' || status === 'unexcused') {
+
+absentCount++;
+
+attentionStudents.add(s.id); // Vắng mặt cần chú ý
+
+} else if (status === 'late') {
+
+lateCount++;
+
+attentionStudents.add(s.id); // Đi trễ cần chú ý
+
+}
+
+// Điểm số (khen thưởng/kỷ luật) hôm nay
+
+if (s.history) {
+
+s.history.forEach(h => {
+
+const hDate = h.date ? h.date.split('T')\[0\] : '';
+
+if (hDate === todayStr) {
+
+if (h.points > 0) todayPositiveCount++;
+
+if (h.points < 0) {
+
+todayNegativeCount++;
+
+attentionStudents.add(s.id); // Vi phạm cần chú ý
+
+}
+
+}
 
 });
 
-// --- KHAI BÁO BIẾN CƠ BẢN VÀ TÍNH TOÁN ---
+}
 
-const totalStudents = state.students.length;
+});
 
-const presentStudents = totalStudents - absentCount;
+const presentStudents = Math.max(0, totalStudents - absentCount);
 
-const goodPointsCount = state.students.filter(s => (s.points || 0) >= 10).length;
+const goodPointsCount = todayPositiveCount;
 
-// Tính % Học tập
+const needAttentionCount = attentionStudents.size;
+
+// Đánh giá Học tập hôm nay (100% trừ đi 5% mỗi lượt vi phạm)
 
 let learningPercent = 100;
 
 if (totalStudents > 0) {
 
-const positiveStudents = state.students.filter(s => (s.points || 0) >= 0).length;
+learningPercent = Math.max(0, 100 - (todayNegativeCount \* 5));
 
-learningPercent = Math.round((positiveStudents / totalStudents) \* 100);
+} else {
+
+learningPercent = 0;
 
 }
 
-// Đánh giá Nền nếp
-
-const negativeStudentsCount = state.students.filter(s => (s.points || 0) < 0).length;
-
-const totalIssues = absentCount + negativeStudentsCount;
+// Đánh giá Nền nếp hôm nay
 
 let disciplineStatus = "Tốt";
 
@@ -1038,9 +1046,9 @@ let disciplineIcon = "🟢";
 
 if (totalStudents > 0) {
 
-const issueRatio = totalIssues / totalStudents;
+const issueRatio = (lateCount + todayNegativeCount + absentCount) / totalStudents;
 
-if (issueRatio >= 0.3) {
+if (issueRatio >= 0.2) {
 
 disciplineStatus = "Cần cố gắng";
 
@@ -1048,7 +1056,7 @@ disciplineColor = "text-red-500";
 
 disciplineIcon = "🔴";
 
-} else if (issueRatio > 0.1) {
+} else if (issueRatio > 0.05) {
 
 disciplineStatus = "Khá";
 
@@ -1080,7 +1088,7 @@ return \`
 
 &lt;div class="font-bold text-white text-base"&gt;\${s.name}&lt;/div&gt;
 
-&lt;div class="text-white ml-auto font-black flex items-center gap-1"&gt;— \${s.points || 0} điểm&lt;/div&gt;
+&lt;div class="text-white ml-auto font-black flex items-center gap-1"&gt;\${s.points || 0} điểm&lt;/div&gt;
 
 &lt;/div&gt;
 
@@ -1132,13 +1140,13 @@ return \`
 
 }).join('');
 
-// XỬ LÝ VIỆC CẦN LÀM ĐỘNG
+// XỬ LÝ VIỆC CẦN LÀM ĐỘNG (YÊU CẦU 4)
 
 const tasks = state.tasks || \[\];
 
 const tasksHtml = tasks.length === 0
 
-? '&lt;div class="text-center py-12 text-slate-400 italic font-medium"&gt;✨ Cô Thùy đã xử lý xong mọi việc!&lt;/div&gt;'
+? '&lt;div class="text-center py-12 text-slate-400 italic font-medium"&gt;✨ Công việc đã xử lý xong!&lt;/div&gt;'
 
 : tasks.map(t => {
 
@@ -1248,7 +1256,9 @@ return \`
 
 &lt;div&gt;
 
-&lt;div class="w-full h-40 md:h-56 \${state.theme.bannerUrl ? 'bg-cover bg-center' : \`bg-gradient-to-br \${state.theme.bannerColorClass}\`} rounded-\[2rem\] shadow-sm relative flex flex-col items-center justify-center group overflow-hidden" \${state.theme.bannerUrl ? \`style="background-image: url('\${state.theme.bannerUrl}');"\` : ''}&gt;
+&lt;!-- GIAO DIỆN BANNER KÉO GIÃN TRÀN VIỀN 100% --&gt;
+
+&lt;div class="w-full h-40 md:h-64 rounded-\[2rem\] shadow-sm relative flex flex-col items-center justify-center group overflow-hidden \${!state.theme.bannerUrl ? 'bg-gradient-to-br ' + state.theme.bannerColorClass : 'bg-\[length:100%\_100%\] bg-no-repeat'}" \${state.theme.bannerUrl ? \`style="background-image: url('\${state.theme.bannerUrl}');"\` : ''}&gt;
 
 \${!state.theme.bannerUrl ? \`
 
@@ -1258,7 +1268,7 @@ return \`
 
 \` : ''}
 
-&lt;button onclick="openEditThemeModal()" class="absolute top-4 right-4 bg-black/40 text-white rounded-full p-2.5 opacity-0 group-hover:opacity-100 transition-all z-20 hover:bg-black/60"&gt;&lt;i class="ph-fill ph-pencil-simple text-base"&gt;&lt;/i&gt;&lt;/button&gt;
+&lt;button onclick="openEditThemeModal()" class="absolute top-4 right-4 bg-black/40 text-white rounded-full p-2.5 opacity-0 group-hover:opacity-100 transition-all z-20 hover:bg-black/80 shadow-lg"&gt;&lt;i class="ph-fill ph-pencil-simple text-base"&gt;&lt;/i&gt;&lt;/button&gt;
 
 &lt;/div&gt;
 
@@ -1284,9 +1294,13 @@ return \`
 
 &lt;/div&gt;
 
+&lt;!-- YÊU CẦU 2: Tách chữ Mục tiêu tuần --&gt;
+
 &lt;div class="bg-blue-50/50 border border-blue-100 rounded-xl p-3 flex items-start gap-2"&gt;
 
-🎯 &lt;span class="text-sm text-blue-800 italic outline-none cursor-text hover:bg-blue-100/50 transition-colors px-1 rounded" contenteditable="true" onblur="state.theme.weeklyGoal = this.innerText; saveData();" title="Nhấn vào để sửa"&gt;\${state.theme.weeklyGoal || 'Mục tiêu tuần: Ổn định nề nếp – xây dựng tinh thần tập thể'}&lt;/span&gt;
+🎯 &lt;span class="text-sm font-bold text-blue-800 flex-shrink-0"&gt;Mục tiêu tuần:&lt;/span&gt;
+
+&lt;span class="text-sm text-blue-800 italic outline-none cursor-text hover:bg-blue-100/50 transition-colors px-1 rounded flex-1" contenteditable="true" onblur="state.theme.weeklyGoal = this.innerText; saveData();" title="Nhấn vào để sửa"&gt;\${state.theme.weeklyGoal || 'Ổn định nề nếp – xây dựng tinh thần tập thể'}&lt;/span&gt;
 
 &lt;/div&gt;
 
@@ -1294,7 +1308,7 @@ return \`
 
 &lt;/div&gt;
 
-&lt;!-- 2. Tình Hình Lớp Hôm Nay --&gt;
+&lt;!-- 2. Tình Hình Lớp Hôm Nay (YÊU CẦU 3) --&gt;
 
 &lt;div&gt;
 
@@ -1342,7 +1356,7 @@ return \`
 
 &lt;div class="text-xs font-bold text-red-600 uppercase tracking-widest flex items-center gap-1.5 mb-2"&gt;⚠️ CẦN LƯU Ý&lt;/div&gt;
 
-&lt;div class="text-3xl font-black text-red-500 mt-auto"&gt;\${absentCount} &lt;span class="text-base font-bold"&gt;HS&lt;/span&gt;&lt;/div&gt;
+&lt;div class="text-3xl font-black text-red-500 mt-auto"&gt;\${needAttentionCount} &lt;span class="text-base font-bold"&gt;HS&lt;/span&gt;&lt;/div&gt;
 
 &lt;/button&gt;
 
@@ -1440,7 +1454,7 @@ return \`
 
 &lt;h3 class="font-black text-lg text-pink-700 flex items-center gap-2 mb-4 outline-none cursor-text hover:opacity-75 transition-opacity" contenteditable="true" onblur="state.theme.teacherMsgTitle = this.innerText; saveData();" title="Nhấn vào để sửa tiêu đề"&gt;
 
-💌 \${state.theme.teacherMsgTitle || 'CÔ THÙY NHẮN'}
+💌 \${state.theme.teacherMsgTitle || 'GIÁO VIÊN NHẮN'}
 
 &lt;/h3&gt;
 
@@ -1452,7 +1466,7 @@ return \`
 
 &lt;div class="font-black text-pink-800 outline-none cursor-text hover:opacity-75 transition-opacity" contenteditable="true" onblur="state.theme.teacherMsgSign = this.innerText; saveData();" title="Nhấn vào để sửa chữ ký"&gt;
 
-— \${state.theme.teacherMsgSign || 'Cô Đỗ Thị Thùy'}
+— \${state.theme.teacherMsgSign || 'Giáo viên chủ nhiệm'}
 
 &lt;/div&gt;
 
@@ -1494,13 +1508,15 @@ return \`
 
 function renderViewHocSinh() {
 
+const isBGH = state.auth && state.auth.role === 'bgh';
+
 const studentsHtml = state.students.map(s => {
 
 const group = state.groups.find(g => g.name === s.group);
 
 let borderColorClass = 'border-slate-200';
 
-if (group) {
+if (group && group.color) {
 
 if (group.color.includes('red')) borderColorClass = 'border-red-400';
 
@@ -1512,17 +1528,33 @@ else if (group.color.includes('blue')) borderColorClass = 'border-blue-400';
 
 else if (group.color.includes('purple')) borderColorClass = 'border-purple-400';
 
-else if (group.color.includes('pink')) borderColorClass = 'border-pink-400';
-
 }
 
 const currentPoints = s.points || 0;
 
-// --- TẠO DANH SÁCH ĐIỂM CỘNG NHANH TỪ CÀI ĐẶT ---
+let actionAreaHtml = '';
+
+if (isBGH) {
+
+actionAreaHtml = \`
+
+&lt;div class="w-full mt-2 mb-6 px-4"&gt;
+
+&lt;button onclick="openStudentHistoryModal(\${s.id})" class="w-full py-2.5 bg-indigo-50 text-indigo-600 font-bold rounded-xl text-xs hover:bg-indigo-100 transition-colors flex items-center justify-center gap-2 border border-indigo-100 shadow-sm"&gt;
+
+&lt;i class="ph-bold ph-clock-counter-clockwise text-sm"&gt;&lt;/i&gt; LỊCH SỬ ĐIỂM CỘNG TRỪ
+
+&lt;/button&gt;
+
+&lt;/div&gt;
+
+\`;
+
+} else {
 
 const positiveList = state.criteria.positive.map(c => \`
 
-&lt;button onclick="executeQuickPoint(\${s.id}, \${c.points}, '\${escapeInlineJs(c.reason)}', '\${escapeInlineJs(c.category)}', 'add')" class="w-full text-left px-3 py-2 text-xs font-bold text-emerald-600 hover:bg-emerald-50 rounded-lg flex justify-between items-center gap-2 transition-colors"&gt;
+&lt;button onclick="executeQuickPoint(\${s.id},\${c.points}, '\${escapeInlineJs(c.reason)}', '\${escapeInlineJs(c.category)}', 'add')" class="w-full text-left px-3 py-2 text-xs font-bold text-emerald-600 hover:bg-emerald-50 rounded-lg flex justify-between items-center gap-2 transition-colors"&gt;
 
 &lt;span class="truncate"&gt;\${c.reason}&lt;/span&gt;
 
@@ -1532,11 +1564,9 @@ const positiveList = state.criteria.positive.map(c => \`
 
 \`).join('');
 
-// --- TẠO DANH SÁCH ĐIỂM TRỪ NHANH TỪ CÀI ĐẶT ---
-
 const negativeList = state.criteria.negative.map(c => \`
 
-&lt;button onclick="executeQuickPoint(\${s.id}, \${c.points}, '\${escapeInlineJs(c.reason)}', '\${escapeInlineJs(c.category)}', 'subtract')" class="w-full text-left px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 rounded-lg flex justify-between items-center gap-2 transition-colors"&gt;
+&lt;button onclick="executeQuickPoint(\${s.id},\${c.points}, '\${escapeInlineJs(c.reason)}', '\${escapeInlineJs(c.category)}', 'subtract')" class="w-full text-left px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 rounded-lg flex justify-between items-center gap-2 transition-colors"&gt;
 
 &lt;span class="truncate"&gt;\${c.reason}&lt;/span&gt;
 
@@ -1546,49 +1576,7 @@ const negativeList = state.criteria.negative.map(c => \`
 
 \`).join('');
 
-return \`
-
-&lt;div class="bg-white rounded-\[2rem\] p-6 shadow-sm border border-slate-200 border-t-4 border-t-\${borderColorClass.replace('border-', '')} flex flex-col items-center relative hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"&gt;
-
-&lt;!-- Nút Tùy chọn gốc (Menu 3 chấm) --&gt;
-
-&lt;div class="absolute top-4 right-4 z-20"&gt;
-
-&lt;button onclick="toggleStudentMenu(event, \${s.id})" class="text-slate-300 hover:text-slate-600 p-1 rounded-full focus:outline-none transition-colors"&gt;&lt;i class="ph-bold ph-dots-three-vertical text-xl"&gt;&lt;/i&gt;&lt;/button&gt;
-
-&lt;div id="student-menu-\${s.id}" class="student-dropdown hidden absolute right-0 mt-1 w-40 bg-white rounded-xl shadow-\[0_10px_40px_rgba(0,0,0,0.1)\] border border-slate-100 overflow-hidden z-30 p-2 animate-fade-in"&gt;
-
-&lt;button onclick="openStudentHistoryModal(\${s.id})" class="w-full text-left px-3 py-2.5 text-sm text-emerald-600 hover:bg-slate-50 rounded-lg font-bold flex items-center gap-2.5"&gt;&lt;i class="ph-bold ph-clock-counter-clockwise text-lg"&gt;&lt;/i&gt; Lịch sử&lt;/button&gt;
-
-&lt;button onclick="deleteStudent(\${s.id})" class="w-full text-left px-3 py-2.5 text-sm text-red-600 hover:bg-slate-50 rounded-lg font-bold flex items-center gap-2.5"&gt;&lt;i class="ph-fill ph-trash text-lg"&gt;&lt;/i&gt; Xóa&lt;/button&gt;
-
-&lt;/div&gt;
-
-&lt;/div&gt;
-
-&lt;!-- Ảnh đại diện --&gt;
-
-\${getAvatarImg(s.avatarUrl, s.name, "w-24 h-24 mb-4 mt-2 ring-4 ring-slate-50 shadow-md")}
-
-&lt;!-- Thông tin cơ bản (Tên, Tổ, Chức vụ) --&gt;
-
-&lt;div class="font-black text-slate-800 text-xl mb-2 truncate w-full text-center"&gt;\${s.name}&lt;/div&gt;
-
-&lt;div class="flex items-center justify-center gap-2 mb-4"&gt;
-
-&lt;span class="text-\[10px\] font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-md uppercase border border-slate-200"&gt;\${s.group || 'Chưa nhóm'}&lt;/span&gt;
-
-&lt;span class="text-\[10px\] font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-md border border-blue-100"&gt;\${s.role || 'Thành viên'}&lt;/span&gt;
-
-&lt;/div&gt;
-
-&lt;!-- Điểm số nổi bật --&gt;
-
-&lt;div class="text-\[10px\] font-bold text-slate-400 uppercase tracking-widest mb-1 mt-2"&gt;TỔNG ĐIỂM&lt;/div&gt;
-
-&lt;div class="text-4xl font-black text-\[#1e1b4b\] mb-6"&gt;\${currentPoints}&lt;/div&gt;
-
-&lt;!-- Dải Nút Cộng/Trừ nhanh --&gt;
+actionAreaHtml = \`
 
 &lt;div class="flex items-center justify-center gap-4 w-full relative mb-6 px-4"&gt;
 
@@ -1599,8 +1587,6 @@ return \`
 &lt;i class="ph-bold ph-minus"&gt;&lt;/i&gt;
 
 &lt;/button&gt;
-
-&lt;!-- Menu Trừ điểm --&gt;
 
 &lt;div id="quick-minus-\${s.id}" class="student-dropdown hidden absolute bottom-\[calc(100%+8px)\] left-0 w-60 bg-white border border-red-100 shadow-\[0_10px_40px_rgba(239,68,68,0.15)\] rounded-2xl z-50 p-2 max-h-56 overflow-y-auto custom-scrollbar animate-slide-up"&gt;
 
@@ -1620,8 +1606,6 @@ return \`
 
 &lt;/button&gt;
 
-&lt;!-- Menu Cộng điểm --&gt;
-
 &lt;div id="quick-plus-\${s.id}" class="student-dropdown hidden absolute bottom-\[calc(100%+8px)\] right-0 w-60 bg-white border border-emerald-100 shadow-\[0_10px_40px_rgba(16,185,129,0.15)\] rounded-2xl z-50 p-2 max-h-56 overflow-y-auto custom-scrollbar animate-slide-up"&gt;
 
 &lt;div class="text-\[10px\] text-emerald-500 font-bold uppercase tracking-widest px-2 pb-2 mb-2 border-b border-emerald-50 text-left"&gt;Chọn lý do cộng điểm:&lt;/div&gt;
@@ -1634,11 +1618,47 @@ return \`
 
 &lt;/div&gt;
 
-&lt;!-- Nút Xem Hồ Sơ bọc tất cả những thông tin bị ẩn --&gt;
+\`;
 
-&lt;button onclick="openEditStudentModal(\${s.id})" class="w-full py-3 bg-slate-50 text-slate-600 font-bold rounded-xl text-xs hover:bg-slate-100 transition-colors flex items-center justify-center gap-2 border border-slate-200 mt-auto"&gt;
+}
 
-&lt;i class="ph-bold ph-identification-card text-sm"&gt;&lt;/i&gt; XEM HỒ SƠ
+return \`
+
+&lt;div class="bg-white rounded-\[2rem\] p-6 shadow-sm border border-slate-200 border-t-4 border-t-\${borderColorClass.replace('border-', '')} flex flex-col items-center relative hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"&gt;
+
+&lt;div class="absolute top-4 right-4 z-20"&gt;
+
+&lt;button onclick="toggleStudentMenu(event, \${s.id})" class="text-slate-300 hover:text-slate-600 p-1 rounded-full focus:outline-none transition-colors"&gt;&lt;i class="ph-bold ph-dots-three-vertical text-xl"&gt;&lt;/i&gt;&lt;/button&gt;
+
+&lt;div id="student-menu-\${s.id}" class="student-dropdown hidden absolute right-0 mt-1 w-40 bg-white rounded-xl shadow-\[0_10px_40px_rgba(0,0,0,0.1)\] border border-slate-100 overflow-hidden z-30 p-2 animate-fade-in"&gt;
+
+&lt;button onclick="openStudentHistoryModal(\${s.id})" class="w-full text-left px-3 py-2.5 text-sm text-emerald-600 hover:bg-slate-50 rounded-lg font-bold flex items-center gap-2.5"&gt;&lt;i class="ph-bold ph-clock-counter-clockwise text-lg"&gt;&lt;/i&gt; Lịch sử&lt;/button&gt;
+
+\${state.auth.role === 'gvcn' ? \`&lt;button onclick="deleteStudent(\${s.id})" class="w-full text-left px-3 py-2.5 text-sm text-red-600 hover:bg-slate-50 rounded-lg font-bold flex items-center gap-2.5"&gt;&lt;i class="ph-fill ph-trash text-lg"&gt;&lt;/i&gt; Xóa&lt;/button&gt;\` : ''}
+
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+\${getAvatarImg(s.avatarUrl, s.name, "w-24 h-24 mb-4 mt-2 ring-4 ring-slate-50 shadow-md")}
+
+&lt;div class="font-black text-slate-800 text-xl mb-2 truncate w-full text-center"&gt;\${s.name}&lt;/div&gt;
+
+&lt;div class="flex items-center justify-center gap-2 mb-4"&gt;
+
+&lt;span class="text-\[10px\] font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-md uppercase border border-slate-200"&gt;\${s.group || 'Chưa nhóm'}&lt;/span&gt;
+
+&lt;span class="text-\[10px\] font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-md border border-blue-100"&gt;\${s.role || 'Thành viên'}&lt;/span&gt;
+
+&lt;/div&gt;
+
+&lt;div class="text-\[10px\] font-bold text-slate-400 uppercase tracking-widest mb-1 mt-2"&gt;TỔNG ĐIỂM&lt;/div&gt;
+
+&lt;div class="text-4xl font-black text-\[#1e1b4b\] mb-6"&gt;\${currentPoints}&lt;/div&gt;\${actionAreaHtml}
+
+&lt;button \${isBGH ? '' : \`onclick="openEditStudentModal(\${s.id})"\`} class="w-full py-3 bg-slate-50 text-slate-600 font-bold rounded-xl text-xs flex items-center justify-center gap-2 border border-slate-200 mt-auto \${isBGH ? 'cursor-not-allowed opacity-70' : 'hover:bg-slate-100 transition-colors'}"&gt;
+
+&lt;i class="ph-bold \${isBGH ? 'ph-eye' : 'ph-identification-card'} text-sm"&gt;&lt;/i&gt; \${isBGH ? 'CHỈ XEM HỒ SƠ' : 'XEM HỒ SƠ'}
 
 &lt;/button&gt;
 
@@ -1664,11 +1684,11 @@ Quản lí Học sinh
 
 &lt;/h2&gt;
 
-&lt;p class="text-slate-500 text-sm font-medium mt-1"&gt;Thông tin chi tiết, vai trò và mục tiêu phấn đấu của các em&lt;/p&gt;
-
 &lt;/div&gt;
 
 &lt;div class="flex gap-3 w-full sm:w-auto"&gt;
+
+\${!isBGH ? \`
 
 &lt;button onclick="openEditStudentModal(null)" class="flex-1 sm:flex-none px-5 py-3 bg-\[#0f172a\] text-white font-bold rounded-xl text-sm shadow-md hover:bg-black transition-colors flex items-center justify-center gap-2"&gt;&lt;i class="ph-bold ph-user-plus text-lg"&gt;&lt;/i&gt; Thêm HS&lt;/button&gt;
 
@@ -1676,25 +1696,15 @@ Quản lí Học sinh
 
 &lt;button onclick="openImportModal()" class="flex-1 sm:flex-none px-5 py-3 bg-blue-50 text-blue-700 border border-blue-100 font-bold rounded-xl text-sm shadow-sm hover:bg-blue-100 transition-colors flex items-center justify-center gap-2"&gt;&lt;i class="ph-bold ph-upload-simple text-lg"&gt;&lt;/i&gt; Nhập DS&lt;/button&gt;
 
+\` : ''}
+
 &lt;/div&gt;
 
 &lt;/div&gt;
 
 &lt;div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6 xl:gap-8"&gt;
 
-\${studentsHtml || \`
-
-&lt;div class="col-span-full py-20 flex flex-col items-center justify-center text-slate-400 border-2 border-dashed border-slate-200 rounded-\[2rem\] bg-white/50"&gt;
-
-&lt;i class="ph-fill ph-users-slash text-6xl mb-4 text-slate-300"&gt;&lt;/i&gt;
-
-&lt;div class="font-bold text-lg text-slate-600 mb-2"&gt;Chưa có học sinh nào&lt;/div&gt;
-
-&lt;button onclick="openEditStudentModal(null)" class="text-blueAccent font-bold hover:underline"&gt;Thêm học sinh đầu tiên&lt;/button&gt;
-
-&lt;/div&gt;
-
-\`}
+\${studentsHtml}
 
 &lt;/div&gt;
 
@@ -1752,7 +1762,7 @@ targetSelectHtml = \`
 
 \${\[...state.students\].sort((a,b) => a.name.localeCompare(b.name)).map(s =>
 
-\`&lt;option value="\${s.id}" \${pf.selectedTargetId == s.id ? 'selected' : ''}&gt;\${s.name} (\${s.group} - \${s.points}đ)&lt;/option&gt;\`
+\`&lt;option value="\${s.id}" \${pf.selectedTargetId == s.id ? 'selected' : ''}&gt;\${s.name} (\${s.group} | \${s.points}đ)&lt;/option&gt;\`
 
 ).join('')}
 
@@ -2040,15 +2050,25 @@ return \`
 
 &lt;!-- Footer Actions --&gt;
 
-&lt;div class="p-6 bg-slate-50 border-t border-slate-200 flex justify-end gap-4 rounded-b-\[2rem\]"&gt;
+&lt;div class="p-6 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-4 rounded-b-\[2rem\]"&gt;
 
-&lt;button onclick="resetPointsForm()" class="px-6 py-3.5 bg-white border border-slate-300 text-slate-600 font-bold rounded-xl hover:bg-slate-100 transition-colors text-sm shadow-sm"&gt;Khôi Phục&lt;/button&gt;
+&lt;button onclick="saveNewCriterion()" class="w-full sm:w-auto px-6 py-3.5 bg-blue-50 border border-blue-200 text-blue-700 font-bold rounded-xl hover:bg-blue-100 transition-colors text-sm shadow-sm flex items-center justify-center gap-2"&gt;
 
-&lt;button id="points-submit-btn" onclick="executePointsSubmission()" class="px-8 py-3.5 font-black rounded-xl shadow-md transition-all flex items-center justify-center gap-2 text-sm hover:-translate-y-0.5 \${canSubmit ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-slate-300 text-slate-500 cursor-not-allowed opacity-70'}" \${!canSubmit ? 'disabled' : ''}&gt;
-
-Xác Nhận & Kiểm Tra &lt;span id="points-preview-badge" class="bg-white/20 px-2 py-0.5 rounded ml-1"&gt;\${finalPointsStr}&lt;/span&gt;
+&lt;i class="ph-bold ph-floppy-disk text-lg"&gt;&lt;/i&gt; Chỉ lưu mẫu (Không cộng điểm)
 
 &lt;/button&gt;
+
+&lt;div class="flex w-full sm:w-auto gap-3"&gt;
+
+&lt;button onclick="resetPointsForm()" class="flex-1 sm:flex-none px-6 py-3.5 bg-white border border-slate-300 text-slate-600 font-bold rounded-xl hover:bg-slate-100 transition-colors text-sm shadow-sm"&gt;Khôi Phục&lt;/button&gt;
+
+&lt;button id="points-submit-btn" onclick="executePointsSubmission()" class="flex-1 sm:flex-none px-8 py-3.5 font-black rounded-xl shadow-md transition-all flex items-center justify-center gap-2 text-sm hover:-translate-y-0.5 \${canSubmit ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-slate-300 text-slate-500 cursor-not-allowed opacity-70'}" \${!canSubmit ? 'disabled' : ''}&gt;
+
+Xác Nhận & Áp Dụng &lt;span id="points-preview-badge" class="bg-white/20 px-2 py-0.5 rounded ml-1"&gt;\${finalPointsStr}&lt;/span&gt;
+
+&lt;/button&gt;
+
+&lt;/div&gt;
 
 &lt;/div&gt;
 
@@ -2152,6 +2172,46 @@ renderLayout();
 
 };
 
+window.executeQuickPoint = function(studentId, points, reason, category, type) {
+
+const student = state.students.find(s => s.id === studentId);
+
+if (!student) return;
+
+const pointsToApply = type === 'add' ? points : -points;
+
+const actorName = (state.auth && state.auth.role === 'bcs') ? 'Ban Cán Sự' : 'GVCN';
+
+student.points = (student.points || 0) + pointsToApply;
+
+student.stars = Math.max(0, (student.stars || 0) + pointsToApply);
+
+if (!student.history) student.history = \[\];
+
+student.history.push({
+
+id: Date.now(),
+
+date: new Date().toISOString(),
+
+points: pointsToApply,
+
+reason: reason + \` \[\${category}\]\`,
+
+actor: actorName
+
+});
+
+saveData();
+
+renderLayout();
+
+showToast(\`Đã \${type === 'add' ? 'cộng' : 'trừ'} \${points} điểm cho \${student.name}\`, type === 'add' ? 'success' : 'error');
+
+if (type === 'add' && typeof triggerConfetti === 'function') triggerConfetti();
+
+};
+
 window.executePointsSubmission = function() {
 
 const pf = state.pointsForm;
@@ -2198,31 +2258,9 @@ successMsg = \`Đã \${pf.actionType === 'add' ? 'cộng' : 'trừ'} \${Math.abs
 
 }
 
-// --- TÍNH NĂNG TỰ ĐỘNG HỌC MẪU MỚI ---
-
 const currentReason = pf.reason.trim();
 
-const absVal = Math.abs(pointsToApply);
-
-const targetCriteriaList = pf.actionType === 'add' ? state.criteria.positive : state.criteria.negative;
-
-const isExist = targetCriteriaList.find(c => c.reason.toLowerCase() === currentReason.toLowerCase() && c.points === absVal);
-
-if (!isExist) {
-
-targetCriteriaList.push({
-
-points: absVal,
-
-reason: currentReason,
-
-category: pf.category || 'Khác'
-
-});
-
-}
-
-// Apply points and log history
+const actorName = (state.auth && state.auth.role === 'bcs') ? 'Ban Cán Sự' : 'GVCN';
 
 const historyEntry = {
 
@@ -2232,17 +2270,15 @@ date: new Date().toISOString(),
 
 points: pointsToApply,
 
-reason: currentReason + (pf.note ? \` (\${pf.note.trim()})\` : '') + \` \[\${pf.category}\]\`
+reason: currentReason + (pf.note ? \` (\${pf.note.trim()})\` : '') + \` \[\${pf.category}\]\`,
+
+actor: actorName
 
 };
 
 targetStudents.forEach(s => {
 
-// BỎ Math.max ĐỂ TỔNG ĐIỂM XUỐNG ĐƯỢC SỐ ÂM
-
 s.points = (s.points || 0) + pointsToApply;
-
-// Giữ nguyên Math.max cho phần Sao đổi quà
 
 s.stars = Math.max(0, (s.stars || 0) + pointsToApply);
 
@@ -2284,9 +2320,9 @@ console.log('Legacy custom points called');
 
 }
 
-function saveNewCriterion() {
+window.saveNewCriterion = function() {
 
-const val = state.pointsForm.pointsVal;
+const val = parseInt(state.pointsForm.pointsVal);
 
 const reason = state.pointsForm.reason.trim();
 
@@ -2296,19 +2332,33 @@ if (isNaN(val) || val &lt;= 0) return showToast("Vui lòng nhập số điểm &
 
 if (!reason) return showToast("Vui lòng nhập lý do tiêu chí!", "error");
 
-if (state.pointsForm.actionType === 'add') {
+const targetList = state.pointsForm.actionType === 'add' ? state.criteria.positive : state.criteria.negative;
 
-state.criteria.positive.push({ points: val, reason: reason, category: category });
+// Kiểm tra xem mẫu đã tồn tại chưa để tránh trùng lặp
 
-} else {
+const isExist = targetList.find(c => c.reason.toLowerCase() === reason.toLowerCase() && c.points === val);
 
-state.criteria.negative.push({ points: val, reason: reason, category: category });
+if (isExist) {
 
-}
-
-saveData(); renderLayout(); showToast("Đã lưu tiêu chí mới thành công!");
+return showToast("Mẫu tiêu chí này đã tồn tại!", "error");
 
 }
+
+targetList.push({ points: val, reason: reason, category: category });
+
+saveData();
+
+// Xóa trắng form sau khi lưu mẫu để tránh ấn nhầm
+
+state.pointsForm.pointsVal = 0;
+
+state.pointsForm.reason = '';
+
+renderLayout();
+
+showToast("Đã tạo mẫu tiêu chí mới (Không tác động đến điểm HS)!", "success");
+
+};
 
 function deleteCriterion(type, index) {
 
@@ -2478,17 +2528,103 @@ student.stars -= item.cost; saveData(); renderLayout(); showToast(\`Đã đổi 
 
 }
 
+// Biến toàn cục chuyển đổi bộ lọc thời gian
+
+window.switchGroupRankingTimeframe = function(timeframe) {
+
+state.groupRankingTimeframe = timeframe;
+
+renderLayout();
+
+};
+
 function renderViewNhomThiDua() {
 
-const groupsWithStats = state.groups.map(g => {
+const timeframe = state.groupRankingTimeframe || 'tong';
 
-const members = state.students.filter(s => s.group === g.name);
+// Hàm kiểm tra lịch sử có nằm trong tuần này không
 
-const totalPoints = members.reduce((sum, s) => sum + (s.points || 0), 0);
+const isThisWeek = (dateString) => {
+
+if (!dateString) return false;
+
+const d = new Date(dateString);
+
+const now = new Date();
+
+const day = now.getDay();
+
+const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+
+const monday = new Date(now.getFullYear(), now.getMonth(), diff);
+
+monday.setHours(0,0,0,0);
+
+return d >= monday;
+
+};
+
+// Hàm kiểm tra lịch sử có nằm trong tháng này không
+
+const isThisMonth = (dateString) => {
+
+if (!dateString) return false;
+
+const d = new Date(dateString);
+
+const now = new Date();
+
+return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+
+};
+
+// Hàm tính điểm động theo bộ lọc
+
+const getStudentPoints = (student) => {
+
+if (timeframe === 'tong') return Number(student.points) || 0;
+
+let sum = 0;
+
+if (student.history) {
+
+student.history.forEach(h => {
+
+if (h.date) {
+
+if (timeframe === 'tuan' && isThisWeek(h.date)) sum += Number(h.points);
+
+if (timeframe === 'thang' && isThisMonth(h.date)) sum += Number(h.points);
+
+}
+
+});
+
+}
+
+return sum;
+
+};
+
+// Lấy danh sách và tự động xếp hạng Tổ
+
+let groupsWithStats = state.groups.map(g => {
+
+const members = state.students.filter(s => s.group === g.name).map(s => {
+
+return { ...s, calculatedPoints: getStudentPoints(s) };
+
+});
+
+const totalPoints = members.reduce((sum, s) => sum + s.calculatedPoints, 0);
 
 return { ...g, members, totalPoints };
 
-}).sort((a, b) => a.name.localeCompare(b.name));
+});
+
+// Sắp xếp các tổ theo điểm từ cao xuống thấp (Hạng 1 tự động lên đầu)
+
+groupsWithStats.sort((a, b) => b.totalPoints - a.totalPoints || a.name.localeCompare(b.name));
 
 const maxGroupPoints = Math.max(...groupsWithStats.map(g => g.totalPoints), 1);
 
@@ -2506,6 +2642,8 @@ let bgHeader = 'bg-transparent';
 
 let progressColor = 'from-blue-400 to-blueAccent';
 
+// Xử lý hạng 1 (Top 1)
+
 if (index === 0 && g.totalPoints > 0) {
 
 wrapperClass = 'p-1.5 bg-gradient-to-br from-\[#fde047\] via-\[#f59e0b\] to-\[#d97706\] shadow-\[0_10px_30px_rgba(245,158,11,0.25)\] hover:-translate-y-3 border-none transform md:scale-\[1.02\] z-10';
@@ -2522,7 +2660,7 @@ innerClass = 'bg-white rounded-\[1.6rem\]';
 
 }
 
-const sortedMembers = \[...g.members\].sort((a,b) => (b.points || 0) - (a.points || 0));
+const sortedMembers = \[...g.members\].sort((a,b) => b.calculatedPoints - a.calculatedPoints);
 
 let membersListHtml = sortedMembers.map((m, i) => \`
 
@@ -2540,7 +2678,7 @@ let membersListHtml = sortedMembers.map((m, i) => \`
 
 &lt;/div&gt;
 
-&lt;div class="text-sm font-bold \${m.points &gt; 0 ? 'text-blueAccent' : 'text-slate-400'} bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-100">\${m.points || 0}&lt;/div&gt;
+&lt;div class="text-sm font-bold \${m.calculatedPoints &gt; 0 ? 'text-blueAccent' : (m.calculatedPoints &lt; 0 ? 'text-red-500' : 'text-slate-400')} bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-100"&gt;\${m.calculatedPoints}&lt;/div&gt;
 
 &lt;/div&gt;
 
@@ -2548,7 +2686,7 @@ let membersListHtml = sortedMembers.map((m, i) => \`
 
 if (sortedMembers.length === 0) membersListHtml = \`&lt;div class="text-xs text-slate-400 font-medium italic text-center py-10 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200"&gt;Chưa có thành viên nào&lt;/div&gt;\`;
 
-const progressPercent = maxGroupPoints > 0 ? (g.totalPoints / maxGroupPoints) \* 100 : 0;
+const progressPercent = maxGroupPoints > 0 ? Math.max(0, (g.totalPoints / maxGroupPoints) \* 100) : 0;
 
 return \`
 
@@ -2578,11 +2716,11 @@ return \`
 
 &lt;div class="flex flex-col items-end flex-shrink-0"&gt;
 
-&lt;div class="px-4 py-2.5 rounded-xl \${pointColor} flex items-center gap-1.5"&gt;
+&lt;div class="px-4 py-2.5 rounded-xl \${pointColor} flex items-center gap-1.5 min-w-\[70px\] justify-center"&gt;
 
 &lt;span class="font-black text-2xl leading-none"&gt;\${g.totalPoints}&lt;/span&gt;
 
-&lt;i class="ph-fill ph-star text-base \${index === 0 ? 'text-yellow-200 animate-pulse' : ''}"&gt;&lt;/i&gt;
+&lt;i class="ph-fill ph-star text-base \${index === 0 && g.totalPoints &gt; 0 ? 'text-yellow-200 animate-pulse' : ''}">&lt;/i&gt;
 
 &lt;/div&gt;
 
@@ -2622,25 +2760,39 @@ return \`
 
 &lt;div class="max-w-7xl mx-auto animate-fade-in space-y-8 pb-12"&gt;
 
-&lt;div class="flex flex-col md:flex-row justify-between items-start md:items-center py-2 border-b border-slate-200 pb-6 gap-4"&gt;
+&lt;div class="flex flex-col xl:flex-row justify-between items-start xl:items-center py-2 border-b border-slate-200 pb-6 gap-4"&gt;
 
 &lt;div&gt;
 
 &lt;h2 class="text-2xl md:text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3"&gt;&lt;i class="ph-fill ph-flag-pennant text-blueAccent"&gt;&lt;/i&gt; Bảng Đua Các Tổ&lt;/h2&gt;
 
-&lt;p class="text-slate-500 text-sm font-medium mt-1"&gt;Danh sách thành viên và điểm tổng thi đua của từng đội&lt;/p&gt;
+&lt;p class="text-slate-500 text-sm font-medium mt-1"&gt;Bảng xếp hạng Tổ tự động tính theo Tuần, Tháng hoặc Tổng điểm&lt;/p&gt;
 
 &lt;/div&gt;
 
-&lt;div class="flex flex-wrap gap-3"&gt;
+&lt;!-- Thanh filter theo thời gian --&gt;
+
+&lt;div class="flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200 w-full xl:w-auto"&gt;
+
+&lt;button onclick="switchGroupRankingTimeframe('tuan')" class="flex-1 xl:flex-none px-6 py-2.5 rounded-xl text-sm font-bold transition-all \${timeframe === 'tuan' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}"&gt;Tuần này&lt;/button&gt;
+
+&lt;button onclick="switchGroupRankingTimeframe('thang')" class="flex-1 xl:flex-none px-6 py-2.5 rounded-xl text-sm font-bold transition-all \${timeframe === 'thang' ? 'bg-white text-blueAccent shadow-sm' : 'text-slate-500 hover:text-slate-800'}"&gt;Tháng này&lt;/button&gt;
+
+&lt;button onclick="switchGroupRankingTimeframe('tong')" class="flex-1 xl:flex-none px-6 py-2.5 rounded-xl text-sm font-bold transition-all \${timeframe === 'tong' ? 'bg-white text-purple-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}"&gt;Tổng điểm&lt;/button&gt;
+
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;!-- Nút thao tác --&gt;
+
+&lt;div class="flex flex-wrap gap-3 justify-end md:justify-start"&gt;
 
 &lt;button onclick="pickOneFromEachGroup()" class="px-5 py-3 bg-purple-50 text-purple-700 font-bold border border-purple-200 rounded-xl shadow-sm hover:bg-purple-100 transition-all flex items-center gap-2 text-sm"&gt;&lt;i class="ph-fill ph-dice-three text-xl"&gt;&lt;/i&gt; Đại diện các tổ&lt;/button&gt;
 
 &lt;button onclick="pickRandomGroup()" class="px-5 py-3 bg-amber-50 text-amber-700 font-bold border border-amber-200 rounded-xl shadow-sm hover:bg-amber-100 transition-all flex items-center gap-2 text-sm"&gt;&lt;i class="ph-fill ph-users-three text-xl"&gt;&lt;/i&gt; Chọn ngẫu nhiên 1 tổ&lt;/button&gt;
 
 &lt;button onclick="addNewGroup()" class="px-5 py-3 bg-primary text-white font-bold rounded-xl shadow-md hover:bg-secondary transition-all flex items-center gap-2 text-sm"&gt;&lt;i class="ph-bold ph-plus text-xl"&gt;&lt;/i&gt; Thêm Tổ mới&lt;/button&gt;
-
-&lt;/div&gt;
 
 &lt;/div&gt;
 
@@ -2652,9 +2804,23 @@ return \`
 
 }
 
+if (typeof window.currentAttendanceSession === 'undefined') {
+
+window.currentAttendanceSession = 'Sáng';
+
+}
+
 window.switchAttendanceTab = function(tab) {
 
 state.attendanceTab = tab;
+
+renderLayout();
+
+};
+
+window.changeAttendanceSession = function(session) {
+
+window.currentAttendanceSession = session;
 
 renderLayout();
 
@@ -2666,31 +2832,57 @@ if (!state.attendanceRecords) state.attendanceRecords = {};
 
 if (!state.attendanceTab) state.attendanceTab = 'diem-danh';
 
+if (typeof window.attendanceTopFilter === 'undefined') window.attendanceTopFilter = 'thang'; // Mặc định xem theo tháng
+
+const recordKey = currentAttendanceDate + '\_' + window.currentAttendanceSession;
+
 let contentHtml = '';
+
+// Hàm render các nút Tab
+
+const renderTabs = () => \`
+
+&lt;div class="flex bg-slate-50 p-1.5 rounded-xl w-full xl:w-auto overflow-x-auto custom-scrollbar"&gt;
+
+&lt;button onclick="switchAttendanceTab('diem-danh')" class="flex-1 xl:flex-none whitespace-nowrap px-6 py-2.5 rounded-lg text-sm font-bold \${state.attendanceTab === 'diem-danh' ? 'bg-white text-blueAccent shadow-sm' : 'text-slate-500 hover:text-slate-800 transition-colors'}"&gt;Thực hiện điểm danh&lt;/button&gt;
+
+&lt;button onclick="switchAttendanceTab('thong-ke')" class="flex-1 xl:flex-none whitespace-nowrap px-6 py-2.5 rounded-lg text-sm font-bold \${state.attendanceTab === 'thong-ke' ? 'bg-white text-blueAccent shadow-sm' : 'text-slate-500 hover:text-slate-800 transition-colors'}"&gt;Bảng thống kê&lt;/button&gt;
+
+&lt;button onclick="switchAttendanceTab('top-vi-pham')" class="flex-1 xl:flex-none whitespace-nowrap px-6 py-2.5 rounded-lg text-sm font-bold \${state.attendanceTab === 'top-vi-pham' ? 'bg-white text-red-500 shadow-sm' : 'text-slate-500 hover:text-slate-800 transition-colors'}"&gt;Top Vắng/Trễ&lt;/button&gt;
+
+&lt;/div&gt;
+
+\`;
 
 // --- TAB THỰC HIỆN ĐIỂM DANH ---
 
 if (state.attendanceTab === 'diem-danh') {
 
-if (!state.attendanceRecords\[currentAttendanceDate\]) state.attendanceRecords\[currentAttendanceDate\] = {};
+if (!state.attendanceRecords\[recordKey\]) state.attendanceRecords\[recordKey\] = {};
 
-const currentRecord = state.attendanceRecords\[currentAttendanceDate\];
+const currentRecord = state.attendanceRecords\[recordKey\];
 
-const sortedDates = Object.keys(state.attendanceRecords).sort((a,b) => new Date(b) - new Date(a));
+// Lọc và sắp xếp các ngày có điểm danh
+
+const sortedDates = Object.keys(state.attendanceRecords).sort((a,b) => {
+
+const dateA = new Date(a.split('\_')\[0\]);
+
+const dateB = new Date(b.split('\_')\[0\]);
+
+return dateB - dateA; // Mới nhất lên đầu
+
+});
 
 const tableRowsHtml = state.students.map((s, idx) => {
 
 const status = currentRecord\[s.id\] || null;
-
-// Hàm render nút bấm điểm danh
 
 const renderButton = (val, label, colorTheme) => {
 
 const isChecked = status === val;
 
 let activeClass = '', idleClass = '';
-
-// Màu khi đang chọn (đậm)
 
 if (colorTheme === 'emerald') { activeClass = 'bg-white text-emerald-500 border-emerald-500'; idleClass = 'bg-white text-emerald-500/50 border-emerald-500/30 hover:border-emerald-500/50'; }
 
@@ -2714,7 +2906,13 @@ const dStatus = state.attendanceRecords\[date\]\[s.id\];
 
 if (!dStatus || dStatus === 'present') return;
 
-const p = date.split('-'); const formattedDate = \`\${p\[2\]}/\${p\[1\]}\`;
+const dateParts = date.split('\_');
+
+const p = dateParts\[0\].split('-');
+
+const session = dateParts\[1\] ? \` (\${dateParts\[1\]})\` : '';
+
+const formattedDate = \`\${p\[2\]}/\${p\[1\]}\${session}\`;
 
 if (dStatus === 'late') lateDates.push(formattedDate);
 
@@ -2724,25 +2922,23 @@ else if (dStatus === 'unexcused') unexcusedDates.push(formattedDate);
 
 });
 
-// Khối hiển thị lịch sử vi phạm ngay dưới tên học sinh
-
 let historyHtml = '';
 
 if (lateDates.length > 0 || excusedDates.length > 0 || unexcusedDates.length > 0) {
 
 let badges = '';
 
-if (lateDates.length > 0) badges += \`&lt;div class="flex items-center gap-3"&gt;&lt;span class="bg-yellow-100 text-yellow-600 px-2 py-1 rounded text-\[10px\] font-bold w-16 text-center"&gt;Đi muộn&lt;/span&gt; &lt;span class="text-xs text-slate-600 font-medium"&gt;\${lateDates.join(', ')}&lt;/span&gt;&lt;/div&gt;\`;
+if (lateDates.length > 0) badges += \`&lt;div class="flex items-center gap-3"&gt;&lt;span class="bg-yellow-100 text-yellow-600 px-2 py-1 rounded text-\[10px\] font-bold w-16 text-center"&gt;Đi muộn&lt;/span&gt; &lt;span class="text-xs text-slate-600 font-medium truncate max-w-\[200px\]" title="\${lateDates.join(', ')}"&gt;\${lateDates.join(', ')}&lt;/span&gt;&lt;/div&gt;\`;
 
-if (excusedDates.length > 0) badges += \`&lt;div class="flex items-center gap-3"&gt;&lt;span class="bg-blue-100 text-blue-600 px-2 py-1 rounded text-\[10px\] font-bold w-16 text-center"&gt;Vắng (P)&lt;/span&gt; &lt;span class="text-xs text-slate-600 font-medium"&gt;\${excusedDates.join(', ')}&lt;/span&gt;&lt;/div&gt;\`;
+if (excusedDates.length > 0) badges += \`&lt;div class="flex items-center gap-3"&gt;&lt;span class="bg-blue-100 text-blue-600 px-2 py-1 rounded text-\[10px\] font-bold w-16 text-center"&gt;Vắng (P)&lt;/span&gt; &lt;span class="text-xs text-slate-600 font-medium truncate max-w-\[200px\]" title="\${excusedDates.join(', ')}"&gt;\${excusedDates.join(', ')}&lt;/span&gt;&lt;/div&gt;\`;
 
-if (unexcusedDates.length > 0) badges += \`&lt;div class="flex items-center gap-3"&gt;&lt;span class="bg-red-100 text-red-500 px-2 py-1 rounded text-\[10px\] font-bold w-16 text-center"&gt;Vắng (KP)&lt;/span&gt; &lt;span class="text-xs text-slate-600 font-medium"&gt;\${unexcusedDates.join(', ')}&lt;/span&gt;&lt;/div&gt;\`;
+if (unexcusedDates.length > 0) badges += \`&lt;div class="flex items-center gap-3"&gt;&lt;span class="bg-red-100 text-red-500 px-2 py-1 rounded text-\[10px\] font-bold w-16 text-center"&gt;Vắng (KP)&lt;/span&gt; &lt;span class="text-xs text-slate-600 font-medium truncate max-w-\[200px\]" title="\${unexcusedDates.join(', ')}"&gt;\${unexcusedDates.join(', ')}&lt;/span&gt;&lt;/div&gt;\`;
 
 historyHtml = \`
 
 &lt;div class="mt-4 flex flex-col gap-2 pl-2 border border-dashed border-slate-200 rounded-xl p-3 bg-slate-50/50 ml-14 w-max min-w-\[250px\]"&gt;
 
-&lt;div class="text-\[9px\] font-bold uppercase tracking-widest text-slate-400 mb-1"&gt;LỊCH SỬ VI PHẠM CHUYÊN CẦN&lt;/div&gt;
+&lt;div class="text-\[9px\] font-bold uppercase tracking-widest text-slate-400 mb-1"&gt;LỊCH SỬ VI PHẠM&lt;/div&gt;
 
 &lt;div class="flex flex-col gap-1.5"&gt;\${badges}&lt;/div&gt;
 
@@ -2796,25 +2992,27 @@ return \`
 
 contentHtml = \`
 
-&lt;div class="flex flex-wrap justify-between items-center gap-4 bg-white p-5 rounded-\[2rem\] shadow-sm border border-slate-200 mb-6 relative z-10"&gt;
+&lt;div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-white p-5 rounded-\[2rem\] shadow-sm border border-slate-200 mb-6 relative z-10"&gt;
 
-&lt;div class="flex bg-slate-50 p-1.5 rounded-xl w-full md:w-auto"&gt;
+\${renderTabs()}
 
-&lt;button onclick="switchAttendanceTab('diem-danh')" class="flex-1 md:flex-none px-6 py-2.5 rounded-lg text-sm font-bold bg-white text-blueAccent shadow-sm"&gt;Thực hiện điểm danh&lt;/button&gt;
+&lt;div class="flex gap-3 items-center w-full lg:w-auto overflow-x-auto custom-scrollbar"&gt;
 
-&lt;button onclick="switchAttendanceTab('thong-ke')" class="flex-1 md:flex-none px-6 py-2.5 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors"&gt;Bảng thống kê&lt;/button&gt;
+&lt;div class="flex bg-slate-50 p-1.5 rounded-xl border border-slate-200 flex-shrink-0"&gt;
 
-&lt;/div&gt;
+&lt;button onclick="changeAttendanceSession('Sáng')" class="px-4 py-2 rounded-lg text-sm font-bold transition-colors \${window.currentAttendanceSession === 'Sáng' ? 'bg-white text-orange-500 shadow-sm' : 'text-slate-500 hover:text-slate-800'}"&gt;&lt;i class="ph-fill ph-sun text-lg"&gt;&lt;/i&gt; Sáng&lt;/button&gt;
 
-&lt;div class="flex gap-4 items-center w-full md:w-auto"&gt;
-
-&lt;div class="relative"&gt;
-
-&lt;input type="date" value="\${currentAttendanceDate}" onchange="changeAttendanceDate(this.value)" class="px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:border-blueAccent w-full md:w-48 shadow-sm"&gt;
+&lt;button onclick="changeAttendanceSession('Chiều')" class="px-4 py-2 rounded-lg text-sm font-bold transition-colors \${window.currentAttendanceSession === 'Chiều' ? 'bg-white text-indigo-500 shadow-sm' : 'text-slate-500 hover:text-slate-800'}"&gt;&lt;i class="ph-fill ph-moon-stars text-lg"&gt;&lt;/i&gt; Chiều&lt;/button&gt;
 
 &lt;/div&gt;
 
-&lt;button onclick="markAllPresent()" class="px-5 py-2.5 bg-emerald-500 text-white font-bold rounded-xl shadow-md hover:bg-emerald-600 flex items-center justify-center gap-2 text-sm transition-all"&gt;&lt;i class="ph-bold ph-check-square-offset text-lg"&gt;&lt;/i&gt; Cả lớp có mặt&lt;/button&gt;
+&lt;div class="relative flex-shrink-0"&gt;
+
+&lt;input type="date" value="\${currentAttendanceDate}" onchange="changeAttendanceDate(this.value)" class="px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:border-blueAccent w-40 shadow-sm"&gt;
+
+&lt;/div&gt;
+
+&lt;button onclick="markAllPresent()" class="px-5 py-2.5 bg-emerald-500 text-white font-bold rounded-xl shadow-md hover:bg-emerald-600 flex items-center justify-center gap-2 text-sm transition-all flex-shrink-0"&gt;&lt;i class="ph-bold ph-check-square-offset text-lg"&gt;&lt;/i&gt; Cả lớp có mặt&lt;/button&gt;
 
 &lt;/div&gt;
 
@@ -2824,7 +3022,7 @@ contentHtml = \`
 
 &lt;div class="py-4 border-b border-slate-100 bg-slate-50 px-6 md:px-8 flex-shrink-0 flex justify-between items-center"&gt;
 
-&lt;div class="text-\[11px\] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2"&gt;&lt;i class="ph-fill ph-users text-lg"&gt;&lt;/i&gt; DANH SÁCH HỌC SINH - NGÀY \${formatDateForDisplay(currentAttendanceDate)}&lt;/div&gt;
+&lt;div class="text-\[11px\] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2"&gt;&lt;i class="ph-fill ph-users text-lg"&gt;&lt;/i&gt; DANH SÁCH - \${formatDateForDisplay(currentAttendanceDate)} (\${window.currentAttendanceSession})&lt;/div&gt;
 
 &lt;/div&gt;
 
@@ -2838,21 +3036,39 @@ contentHtml = \`
 
 // --- TAB BẢNG THỐNG KÊ ---
 
-else {
+else if (state.attendanceTab === 'thong-ke') {
 
-const allDates = Object.keys(state.attendanceRecords).sort((a,b) => new Date(a) - new Date(b));
+const allDates = Object.keys(state.attendanceRecords).sort((a,b) => {
 
-// Header của bảng thống kê
+const dateA = new Date(a.split('\_')\[0\]);
+
+const dateB = new Date(b.split('\_')\[0\]);
+
+if (dateA.getTime() === dateB.getTime()) {
+
+return a.includes('Sáng') ? -1 : 1;
+
+}
+
+return dateA - dateB;
+
+});
 
 const tableHeadDates = allDates.map(d => {
 
-const p = d.split('-'); const formatted = \`\${p\[2\]}/\${p\[1\]}\`;
+const parts = d.split('\_');
 
-return \`&lt;th class="p-4 text-center border-l border-white/10 whitespace-nowrap text-white font-bold text-xs tracking-wider w-16"&gt;\${formatted}&lt;/th&gt;\`;
+const p = parts\[0\].split('-');
+
+const session = parts\[1\] || '';
+
+const sessionColor = session === 'Sáng' ? 'text-orange-400' : 'text-indigo-400';
+
+const formatted = \`\${p\[2\]}/\${p\[1\]}&lt;br&gt;&lt;span class="text-\[9px\] font-black uppercase \${sessionColor}"&gt;\${session}&lt;/span&gt;\`;
+
+return \`&lt;th class="p-4 text-center border-l border-white/10 whitespace-nowrap text-white font-bold text-xs tracking-wider w-16 leading-tight"&gt;\${formatted}&lt;/th&gt;\`;
 
 }).join('');
-
-// Dữ liệu các dòng
 
 const tableBodyRows = state.students.map((s, index) => {
 
@@ -2863,8 +3079,6 @@ const dateCells = allDates.map(d => {
 const status = state.attendanceRecords\[d\]\[s.id\];
 
 let cellContent = '';
-
-// Hiển thị trạng thái điểm danh dưới dạng chữ có badge tròn mờ
 
 if (status === 'present') { cellContent = '&lt;div class="w-8 h-8 mx-auto rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center font-bold text-xs"&gt;&lt;i class="ph-bold ph-check"&gt;&lt;/i&gt;&lt;/div&gt;'; presentCount++; }
 
@@ -2900,17 +3114,11 @@ return \`
 
 contentHtml = \`
 
-&lt;div class="flex flex-wrap justify-between items-center gap-4 bg-white p-5 rounded-\[2rem\] shadow-sm border border-slate-200 mb-6 relative z-10"&gt;
+&lt;div class="flex flex-col lg:flex-row justify-between lg:items-center gap-4 bg-white p-5 rounded-\[2rem\] shadow-sm border border-slate-200 mb-6 relative z-10"&gt;
 
-&lt;div class="flex bg-slate-50 p-1.5 rounded-xl w-full md:w-max"&gt;
+\${renderTabs()}
 
-&lt;button onclick="switchAttendanceTab('diem-danh')" class="flex-1 md:flex-none px-6 py-2.5 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors"&gt;Thực hiện điểm danh&lt;/button&gt;
-
-&lt;button onclick="switchAttendanceTab('thong-ke')" class="flex-1 md:flex-none px-6 py-2.5 rounded-lg text-sm font-bold bg-white text-blueAccent shadow-sm"&gt;Bảng thống kê&lt;/button&gt;
-
-&lt;/div&gt;
-
-&lt;div class="text-sm font-semibold text-slate-500 bg-slate-50 px-5 py-2.5 rounded-xl border border-slate-200"&gt;Tổng số ngày ghi nhận: &lt;span class="font-black text-slate-800 text-lg ml-1"&gt;\${allDates.length}&lt;/span&gt;&lt;/div&gt;
+&lt;div class="text-sm font-semibold text-slate-500 bg-slate-50 px-5 py-2.5 rounded-xl border border-slate-200"&gt;Tổng số lượt ghi nhận: &lt;span class="font-black text-slate-800 text-lg ml-1"&gt;\${allDates.length}&lt;/span&gt;&lt;/div&gt;
 
 &lt;/div&gt;
 
@@ -2948,6 +3156,190 @@ contentHtml = \`
 
 }
 
+// --- TAB XẾP HẠNG VI PHẠM (TOP VẮNG/TRỄ) ---
+
+else if (state.attendanceTab === 'top-vi-pham') {
+
+const filter = window.attendanceTopFilter;
+
+const now = new Date();
+
+// Hàm kiểm tra ngày có thuộc filter không
+
+const isDateInFilter = (dateStr) => {
+
+if (filter === 'tong') return true;
+
+const d = new Date(dateStr);
+
+if (filter === 'tuan') {
+
+const day = now.getDay();
+
+const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+
+const monday = new Date(now.getFullYear(), now.getMonth(), diff);
+
+monday.setHours(0,0,0,0);
+
+return d >= monday;
+
+}
+
+if (filter === 'thang') {
+
+return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+
+}
+
+if (filter === 'hk1') {
+
+// Tính từ tháng 8 đến tháng 12
+
+return (d.getMonth() + 1 >= 8 && d.getMonth() + 1 <= 12) && d.getFullYear() === (now.getMonth() < 7 ? now.getFullYear() - 1 : now.getFullYear());
+
+}
+
+if (filter === 'hk2') {
+
+// Tính từ tháng 1 đến tháng 5
+
+return (d.getMonth() + 1 >= 1 && d.getMonth() + 1 &lt;= 5) && d.getFullYear() === (now.getMonth() &gt; 5 ? now.getFullYear() + 1 : now.getFullYear());
+
+}
+
+return true;
+
+};
+
+// Thống kê đếm lỗi
+
+const studentStats = state.students.map(s => {
+
+let late = 0, excused = 0, unexcused = 0, total = 0;
+
+Object.keys(state.attendanceRecords).forEach(recordKey => {
+
+const dateStr = recordKey.split('\_')\[0\];
+
+if (isDateInFilter(dateStr)) {
+
+const status = state.attendanceRecords\[recordKey\]\[s.id\];
+
+if (status === 'late') { late++; total++; }
+
+if (status === 'excused') { excused++; total++; }
+
+if (status === 'unexcused') { unexcused++; total += 2; } // KP phạt nặng hơn trong việc xếp hạng để đẩy lên top
+
+}
+
+});
+
+return { ...s, late, excused, unexcused, totalViPham: total };
+
+}).filter(s => s.totalViPham > 0).sort((a, b) => b.totalViPham - a.totalViPham);
+
+// Khung chọn thời gian
+
+const filterButtons = \[
+
+{ id: 'tuan', label: 'Tuần này' },
+
+{ id: 'thang', label: 'Tháng này' },
+
+{ id: 'hk1', label: 'Học kì 1' },
+
+{ id: 'hk2', label: 'Học kì 2' },
+
+{ id: 'tong', label: 'Tổng cả năm' }
+
+\].map(f => \`
+
+&lt;button onclick="window.attendanceTopFilter='\${f.id}'; renderLayout();" class="px-4 py-2.5 rounded-lg text-xs font-bold transition-colors \${filter === f.id ? 'bg-red-50 text-red-600 border border-red-200 shadow-sm' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'}"&gt;\${f.label}&lt;/button&gt;
+
+\`).join('');
+
+const topListHtml = studentStats.length === 0
+
+? '&lt;div class="p-10 text-center text-emerald-500 font-bold bg-emerald-50 rounded-2xl border border-emerald-100 flex flex-col items-center gap-3"&gt;&lt;i class="ph-fill ph-check-circle text-5xl"&gt;&lt;/i&gt;&lt;span&gt;Tuyệt vời! Không có học sinh nào vắng hay trễ trong khoảng thời gian này.&lt;/span&gt;&lt;/div&gt;'
+
+: studentStats.map((s, idx) => \`
+
+&lt;div class="flex items-center gap-4 py-4 border-b border-slate-100 hover:bg-slate-50 transition-colors px-4 group"&gt;
+
+&lt;div class="w-10 h-10 rounded-full flex items-center justify-center font-black \${idx < 3 ? 'bg-red-100 text-red-600 border border-red-200' : 'bg-slate-100 text-slate-400'}"&gt;\${idx + 1}&lt;/div&gt;
+
+\${getAvatarImg(s.avatarUrl, s.name, 'w-12 h-12 ring-2 ring-white shadow-sm')}
+
+&lt;div class="flex-1 min-w-0"&gt;
+
+&lt;div class="font-bold text-slate-800 text-base truncate"&gt;\${s.name}&lt;/div&gt;
+
+&lt;div class="text-\[10px\] text-slate-500 font-bold uppercase tracking-widest"&gt;\${s.group}&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;div class="flex gap-2 flex-wrap justify-end"&gt;
+
+\${s.late > 0 ? \`&lt;div class="bg-yellow-50 text-yellow-700 px-3 py-1.5 rounded-lg border border-yellow-200 text-xs font-bold flex items-center gap-1"&gt;&lt;i class="ph-bold ph-clock"&gt;&lt;/i&gt; Trễ: \${s.late}&lt;/div&gt;\` : ''}
+
+\${s.excused > 0 ? \`&lt;div class="bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg border border-blue-200 text-xs font-bold flex items-center gap-1"&gt;Vắng (P): \${s.excused}&lt;/div&gt;\` : ''}
+
+\${s.unexcused > 0 ? \`&lt;div class="bg-red-50 text-red-600 px-3 py-1.5 rounded-lg border border-red-200 text-xs font-bold flex items-center gap-1"&gt;Vắng (KP): \${s.unexcused}&lt;/div&gt;\` : ''}
+
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+\`).join('');
+
+contentHtml = \`
+
+&lt;div class="flex flex-col lg:flex-row justify-between lg:items-center gap-4 bg-white p-5 rounded-\[2rem\] shadow-sm border border-slate-200 mb-6 relative z-10"&gt;
+
+\${renderTabs()}
+
+&lt;div class="flex gap-2 flex-wrap"&gt;
+
+\${filterButtons}
+
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;div class="bg-white rounded-\[2rem\] shadow-sm border border-slate-200 flex-1 flex flex-col overflow-hidden relative z-10"&gt;
+
+&lt;div class="py-5 border-b border-slate-100 bg-red-50 px-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4"&gt;
+
+&lt;div class="text-sm font-black text-red-600 uppercase tracking-widest flex items-center gap-2"&gt;&lt;i class="ph-fill ph-warning-circle text-xl"&gt;&lt;/i&gt; BẢNG XẾP HẠNG HỌC SINH VẮNG/TRỄ&lt;/div&gt;
+
+&lt;div class="flex items-center gap-3"&gt;
+
+&lt;div class="text-\[11px\] font-bold text-red-500 bg-white px-3 py-1.5 rounded-full border border-red-100 shadow-sm hidden md:block"&gt;Đã tính gộp Sáng & Chiều&lt;/div&gt;
+
+&lt;button onclick="exportTopViPhamExcel()" class="px-4 py-2 bg-emerald-500 text-white font-bold rounded-xl shadow-md hover:bg-emerald-600 hover:-translate-y-0.5 transition-all flex items-center gap-2 text-xs"&gt;
+
+&lt;i class="ph-bold ph-file-xls text-lg"&gt;&lt;/i&gt; Xuất Excel để in
+
+&lt;/button&gt;
+
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;div class="overflow-y-auto flex-1 custom-scrollbar p-4"&gt;
+
+\${topListHtml}
+
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+\`;
+
+}
+
 return \`
 
 &lt;div class="max-w-7xl mx-auto animate-fade-in space-y-4 flex flex-col h-full pb-12"&gt;
@@ -2958,7 +3350,7 @@ return \`
 
 &lt;h2 class="text-2xl md:text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3"&gt;&lt;i class="ph-fill ph-calendar-check text-emerald-500"&gt;&lt;/i&gt; Quản lý Chuyên Cần&lt;/h2&gt;
 
-&lt;p class="text-slate-500 text-sm font-medium mt-1"&gt;Theo dõi việc đi học hàng ngày của học sinh&lt;/p&gt;
+&lt;p class="text-slate-500 text-sm font-medium mt-1"&gt;Theo dõi việc đi học hàng ngày của học sinh (Sáng/Chiều)&lt;/p&gt;
 
 &lt;/div&gt;
 
@@ -2972,27 +3364,285 @@ return \`
 
 }
 
-function markAttendance(id, status) {
+// --- BẢNG QUY ĐỔI ĐIỂM CHUYÊN CẦN ---
 
-if(state.attendanceRecords\[currentAttendanceDate\]\[id\] === status) { delete state.attendanceRecords\[currentAttendanceDate\]\[id\]; }
+const ATTENDANCE_POINTS = {
 
-else { state.attendanceRecords\[currentAttendanceDate\]\[id\] = status; }
+'present': { val: 1, reason: 'Có mặt' },
 
-saveData(); renderLayout();
+'late': { val: -2, reason: 'Đi học muộn' },
+
+'excused': { val: -1, reason: 'Nghỉ có phép' },
+
+'unexcused': { val: -3, reason: 'Nghỉ không phép' }
+
+};
+
+window.applyAttendancePoints = function(studentId, status, dateStr) {
+
+const student = state.students.find(s => String(s.id) === String(studentId));
+
+if (!student) return;
+
+const config = ATTENDANCE_POINTS\[status\];
+
+if (!config || config.val === 0) return;
+
+student.points = Number(student.points || 0) + config.val;
+
+student.stars = Math.max(0, Number(student.stars || 0) + config.val);
+
+if (!student.history) student.history = \[\];
+
+student.history.push({
+
+id: \`att_\${dateStr}\_\${status}\_\${Date.now()}\`,
+
+date: new Date().toISOString(),
+
+points: config.val,
+
+reason: config.reason + \` \[Chuyên cần\]\`,
+
+isAttendance: true,
+
+attDate: dateStr,
+
+attStatus: status
+
+});
+
+};
+
+window.revertAttendancePoints = function(studentId, oldStatus, dateStr) {
+
+const student = state.students.find(s => String(s.id) === String(studentId));
+
+if (!student) return;
+
+const config = ATTENDANCE_POINTS\[oldStatus\];
+
+if (!config || config.val === 0) return;
+
+student.points = Number(student.points || 0) - config.val;
+
+student.stars = Math.max(0, Number(student.stars || 0) - config.val);
+
+if (student.history) {
+
+const idx = student.history.findIndex(h => h.isAttendance && h.attDate === dateStr && h.attStatus === oldStatus);
+
+if (idx > -1) {
+
+student.history.splice(idx, 1);
 
 }
 
-function markAllPresent() {
+}
 
-state.attendanceRecords\[currentAttendanceDate\] = {};
+};
 
-state.students.forEach(s => state.attendanceRecords\[currentAttendanceDate\]\[s.id\] = 'present');
+window.markAttendance = function(id, status) {
 
-saveData(); renderLayout(); showToast("Đã đánh dấu tất cả có mặt!");
+const recordKey = currentAttendanceDate + '\_' + window.currentAttendanceSession;
+
+if (!state.attendanceRecords\[recordKey\]) state.attendanceRecords\[recordKey\] = {};
+
+const oldStatus = state.attendanceRecords\[recordKey\]\[id\];
+
+if (oldStatus === status) {
+
+delete state.attendanceRecords\[recordKey\]\[id\];
+
+window.revertAttendancePoints(id, oldStatus, recordKey);
+
+} else {
+
+if (oldStatus) window.revertAttendancePoints(id, oldStatus, recordKey);
+
+state.attendanceRecords\[recordKey\]\[id\] = status;
+
+window.applyAttendancePoints(id, status, recordKey);
 
 }
 
-function changeAttendanceDate(d) { if(d) { currentAttendanceDate = d; renderLayout(); } }
+const stu = state.students.find(s => String(s.id) === String(id));
+
+const statusText = status === 'present' ? 'Có mặt' : status === 'late' ? 'Đi muộn' : status === 'excused' ? 'Vắng (P)' : 'Vắng (KP)';
+
+if(stu && typeof logBCSAction === 'function') logBCSAction(\`Điểm danh \${stu.name} (\${window.currentAttendanceSession}): \${statusText}\`);
+
+saveData();
+
+renderLayout();
+
+};
+
+window.markAllPresent = function() {
+
+const recordKey = currentAttendanceDate + '\_' + window.currentAttendanceSession;
+
+if (!state.attendanceRecords\[recordKey\]) state.attendanceRecords\[recordKey\] = {};
+
+state.students.forEach(s => {
+
+const oldStatus = state.attendanceRecords\[recordKey\]\[s.id\];
+
+if (oldStatus !== 'present') {
+
+if (oldStatus) window.revertAttendancePoints(s.id, oldStatus, recordKey);
+
+state.attendanceRecords\[recordKey\]\[s.id\] = 'present';
+
+window.applyAttendancePoints(s.id, 'present', recordKey);
+
+}
+
+});
+
+if(typeof logBCSAction === 'function') logBCSAction(\`Đánh dấu cả lớp có mặt: \${currentAttendanceDate} (\${window.currentAttendanceSession})\`);
+
+saveData();
+
+renderLayout();
+
+showToast("Đã đánh dấu cả lớp có mặt và tự động cộng điểm!", "success");
+
+};
+
+window.changeAttendanceDate = function(d) {
+
+if(d) { currentAttendanceDate = d; renderLayout(); }
+
+};
+
+// --- XUẤT FILE EXCEL TOP VI PHẠM ---
+
+window.exportTopViPhamExcel = function() {
+
+const filter = window.attendanceTopFilter || 'thang';
+
+const now = new Date();
+
+const isDateInFilter = (dateStr) => {
+
+if (filter === 'tong') return true;
+
+const d = new Date(dateStr);
+
+if (filter === 'tuan') {
+
+const day = now.getDay();
+
+const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+
+const monday = new Date(now.getFullYear(), now.getMonth(), diff);
+
+monday.setHours(0,0,0,0);
+
+return d >= monday;
+
+}
+
+if (filter === 'thang') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+
+if (filter === 'hk1') return (d.getMonth() + 1 >= 8 && d.getMonth() + 1 <= 12) && d.getFullYear() === (now.getMonth() < 7 ? now.getFullYear() - 1 : now.getFullYear());
+
+if (filter === 'hk2') return (d.getMonth() + 1 >= 1 && d.getMonth() + 1 &lt;= 5) && d.getFullYear() === (now.getMonth() &gt; 5 ? now.getFullYear() + 1 : now.getFullYear());
+
+return true;
+
+};
+
+const studentStats = state.students.map(s => {
+
+let late = 0, excused = 0, unexcused = 0, total = 0;
+
+Object.keys(state.attendanceRecords).forEach(recordKey => {
+
+const dateStr = recordKey.split('\_')\[0\];
+
+if (isDateInFilter(dateStr)) {
+
+const status = state.attendanceRecords\[recordKey\]\[s.id\];
+
+if (status === 'late') { late++; total++; }
+
+if (status === 'excused') { excused++; total++; }
+
+if (status === 'unexcused') { unexcused++; total += 2; }
+
+}
+
+});
+
+return { ...s, late, excused, unexcused, totalViPham: total };
+
+}).filter(s => s.totalViPham > 0).sort((a, b) => b.totalViPham - a.totalViPham);
+
+if (studentStats.length === 0) {
+
+return showToast("Không có học sinh nào vi phạm để xuất file!", "error");
+
+}
+
+// Tạo dữ liệu cho file Excel
+
+const data = \[
+
+\["BẢNG THỐNG KÊ HỌC SINH VẮNG/TRỄ (Đã gộp Sáng/Chiều)"\], // Dòng tiêu đề
+
+\[\], // Dòng trống
+
+\["STT", "Họ và Tên", "Tổ", "Đi Trễ", "Vắng (Phép)", "Vắng (Không Phép)", "Điểm Phạt Tạm Tính"\]
+
+\];
+
+studentStats.forEach((s, idx) => {
+
+// Điểm phạt mô phỏng: Trễ -2, Vắng(P) -1, Vắng(KP) -3
+
+const diemPhat = (s.late \* -2) + (s.excused \* -1) + (s.unexcused \* -3);
+
+data.push(\[
+
+idx + 1,
+
+s.name,
+
+s.group,
+
+s.late,
+
+s.excused,
+
+s.unexcused,
+
+diemPhat
+
+\]);
+
+});
+
+// Định dạng và xuất file
+
+const ws = XLSX.utils.aoa_to_sheet(data);
+
+ws\['!cols'\] = \[{wch: 5}, {wch: 25}, {wch: 15}, {wch: 10}, {wch: 15}, {wch: 20}, {wch: 20}\];
+
+const wb = XLSX.utils.book_new();
+
+XLSX.utils.book_append_sheet(wb, ws, "DS_Vi_Pham");
+
+const filterNames = { 'tuan': 'TuanNay', 'thang': 'ThangNay', 'hk1': 'HocKi1', 'hk2': 'HocKi2', 'tong': 'TongCaNam' };
+
+const fileName = \`Top_Vi_Pham_Chuyen_Can_\${filterNames\[filter\]}\_\${getTodayString()}.xlsx\`;
+
+XLSX.writeFile(wb, fileName);
+
+showToast("Đã tải xuống file Excel! Cô có thể mở ra để in nhé.", "success");
+
+};
 
 // --- NEW RANDOM PICKER ENGINE VARIABLES ---
 
@@ -3788,13 +4438,9 @@ const tableRowsHtml = sortedStudents.map((s, index) => \`
 
 \`).join('');
 
-// REDESIGN: Khung nhận xét học sinh mới
-
 const commentsHtml = sortedStudents.map((s, index) => \`
 
 &lt;div class="bg-white rounded-\[2rem\] p-3 md:p-4 shadow-sm border border-slate-100 hover:shadow-md hover:border-indigo-100 transition-all flex flex-col lg:flex-row gap-4 items-stretch group mb-4 break-inside-avoid"&gt;
-
-&lt;!-- Cột thông tin học sinh (Trái) --&gt;
 
 &lt;div class="w-full lg:w-1/4 bg-slate-50/80 rounded-\[1.5rem\] p-4 flex items-center gap-4 border border-slate-100 group-hover:bg-indigo-50/40 transition-colors"&gt;
 
@@ -3822,17 +4468,15 @@ const commentsHtml = sortedStudents.map((s, index) => \`
 
 &lt;/div&gt;
 
-&lt;!-- Cột nhập nhận xét (Phải) --&gt;
-
 &lt;div class="w-full lg:w-3/4 relative flex group-focus-within:text-blueAccent"&gt;
 
-&lt;div class="absolute left-5 top-5 text-indigo-300/50 pointer-events-none group-focus-within:text-\[#1e1b4b\]/20 transition-colors"&gt;
+&lt;div class="absolute left-5 top-5 text-indigo-300/50 pointer-events-none transition-colors"&gt;
 
 &lt;i class="ph-fill ph-quotes text-3xl"&gt;&lt;/i&gt;
 
 &lt;/div&gt;
 
-&lt;textarea onchange="saveStudentComment(\${s.id}, this.value)" class="w-full flex-1 bg-white border-2 border-slate-100 rounded-\[1.5rem\] p-5 pl-16 outline-none focus:border-\[#1e1b4b\] focus:bg-indigo-50/10 focus:ring-4 focus:ring-\[#1e1b4b\]/10 transition-all resize-y min-h-\[100px\] text-slate-700 font-medium placeholder:text-slate-400 placeholder:font-normal print:hidden" placeholder="Nhập nhận xét của giáo viên về học sinh này trong tháng..."&gt;\${escapeHtmlAttr(s.comment || '')}&lt;/textarea&gt;
+&lt;textarea onchange="saveStudentComment(\${s.id}, this.value)" class="w-full flex-1 bg-white border-2 border-slate-100 rounded-\[1.5rem\] p-5 pl-16 outline-none focus:border-\[#1e1b4b\] focus:bg-indigo-50/10 transition-all resize-y min-h-\[100px\] text-slate-700 font-medium placeholder:text-slate-400 placeholder:font-normal print:hidden" placeholder="\${state.auth && state.auth.role === 'bgh' ? 'Giáo viên chưa có nhận xét.' : 'Nhập nhận xét của giáo viên về học sinh này trong tháng...'}" \${state.auth && state.auth.role === 'bgh' ? 'readonly' : ''}&gt;\${escapeHtmlAttr(s.comment || '')}&lt;/textarea&gt;
 
 &lt;div class="hidden print:block text-sm text-slate-800 font-medium leading-relaxed pl-6 italic border-l-2 border-slate-300"&gt;\${s.comment ? escapeHtmlAttr(s.comment).replace(/\\n/g, '&lt;br&gt;') : 'Chưa có nhận xét.'}&lt;/div&gt;
 
@@ -3864,8 +4508,6 @@ tabContentHtml = \`
 
 } else if (currentReportTab === 'diem-tuan') {
 
-// Logic lấy Báo cáo Tuần
-
 const getWeekLabel = (dStr) => {
 
 const dObj = new Date(dStr);
@@ -3886,37 +4528,15 @@ return \`\${f(monday)} - \${f(sunday)}\`;
 
 const allWeeksSet = new Set();
 
-state.students.forEach(s => {
-
-if (s.history) s.history.forEach(h => { if (h.date) allWeeksSet.add(getWeekLabel(h.date)); });
-
-});
+state.students.forEach(s => { if (s.history) s.history.forEach(h => { if (h.date) allWeeksSet.add(getWeekLabel(h.date)); }); });
 
 if (allWeeksSet.size === 0) allWeeksSet.add(getWeekLabel(new Date().toISOString()));
 
-const sortedWeeks = Array.from(allWeeksSet).sort((a,b) => {
+const sortedWeeks = Array.from(allWeeksSet).sort((a,b) => a.split(' - ')\[0\].split('/').reverse().join('').localeCompare(b.split(' - ')\[0\].split('/').reverse().join('')));
 
-const pa = a.split(' - ')\[0\].split('/').reverse().join('');
+const weekHeadersHtml = sortedWeeks.map(w => \`&lt;th colspan="2" class="p-3 text-center border-b border-r border-slate-200 bg-orange-50 font-black text-orange-700 text-sm whitespace-nowrap"&gt;Tuần&lt;br&gt;&lt;span class="text-\[10px\] font-medium text-slate-500"&gt;\${w}&lt;/span&gt;&lt;/th&gt;\`).join('');
 
-const pb = b.split(' - ')\[0\].split('/').reverse().join('');
-
-return pa.localeCompare(pb);
-
-});
-
-const weekHeadersHtml = sortedWeeks.map(w => \`
-
-&lt;th colspan="2" class="p-3 text-center border-b border-r border-slate-200 bg-orange-50 font-black text-orange-700 text-sm whitespace-nowrap"&gt;Tuần&lt;br&gt;&lt;span class="text-\[10px\] font-medium text-slate-500"&gt;\${w}&lt;/span&gt;&lt;/th&gt;
-
-\`).join('');
-
-const subHeadersHtml = sortedWeeks.map(() => \`
-
-&lt;th class="p-2 text-center border-b border-r border-slate-200 bg-emerald-50/50 text-emerald-600 font-bold text-xs w-14"&gt;+&lt;/th&gt;
-
-&lt;th class="p-2 text-center border-b border-r border-slate-200 bg-red-50/50 text-red-500 font-bold text-xs w-14"&gt;-&lt;/th&gt;
-
-\`).join('');
+const subHeadersHtml = sortedWeeks.map(() => \`&lt;th class="p-2 text-center border-b border-r border-slate-200 bg-emerald-50/50 text-emerald-600 font-bold text-xs w-14"&gt;+&lt;/th&gt;&lt;th class="p-2 text-center border-b border-r border-slate-200 bg-red-50/50 text-red-500 font-bold text-xs w-14"&gt;-&lt;/th&gt;\`).join('');
 
 const weeklyDataRowsHtml = sortedStudents.map((s, index) => {
 
@@ -3946,359 +4566,317 @@ else weeklyPoints\[wLabel\].minus += Math.abs(h.points);
 
 }
 
-const cellsHtml = sortedWeeks.map(w => \`
+const cellsHtml = sortedWeeks.map(w => \`&lt;td class="p-3 text-center border-b border-r border-slate-100 font-bold text-emerald-600 bg-emerald-50/30"&gt;\${weeklyPoints\[w\].plus > 0 ? '+' + weeklyPoints\[w\].plus : '&lt;span class="text-slate-200 font-normal"&gt;-&lt;/span&gt;'}&lt;/td&gt;&lt;td class="p-3 text-center border-b border-r border-slate-100 font-bold text-red-500 bg-red-50/30"&gt;\${weeklyPoints\[w\].minus > 0 ? '-' + weeklyPoints\[w\].minus : '&lt;span class="text-slate-200 font-normal"&gt;-&lt;/span&gt;'}&lt;/td&gt;\`).join('');
 
-&lt;td class="p-3 text-center border-b border-r border-slate-100 font-bold text-emerald-600 bg-emerald-50/30"&gt;\${weeklyPoints\[w\].plus > 0 ? '+' + weeklyPoints\[w\].plus : '&lt;span class="text-slate-200 font-normal"&gt;-&lt;/span&gt;'}&lt;/td&gt;
-
-&lt;td class="p-3 text-center border-b border-r border-slate-100 font-bold text-red-500 bg-red-50/30"&gt;\${weeklyPoints\[w\].minus > 0 ? '-' + weeklyPoints\[w\].minus : '&lt;span class="text-slate-200 font-normal"&gt;-&lt;/span&gt;'}&lt;/td&gt;
-
-\`).join('');
-
-return \`
-
-&lt;tr class="hover:bg-slate-50/80 transition-colors"&gt;
-
-&lt;td class="p-3 text-center border-b border-r border-slate-100 text-slate-400 font-bold"&gt;\${index + 1}&lt;/td&gt;
-
-&lt;td class="p-3 border-b border-r border-slate-100 font-bold text-slate-800 whitespace-nowrap flex items-center gap-2"&gt;
-
-\${getAvatarImg(s.avatarUrl, s.name, 'w-6 h-6')} \${s.name}
-
-&lt;/td&gt;
-
-\${cellsHtml}
-
-&lt;/tr&gt;
-
-\`;
+return \`&lt;tr class="hover:bg-slate-50/80 transition-colors"&gt;&lt;td class="p-3 text-center border-b border-r border-slate-100 text-slate-400 font-bold"&gt;\${index + 1}&lt;/td&gt;&lt;td class="p-3 border-b border-r border-slate-100 font-bold text-slate-800 whitespace-nowrap flex items-center gap-2"&gt;\${getAvatarImg(s.avatarUrl, s.name, 'w-6 h-6')} \${s.name}&lt;/td&gt;\${cellsHtml}&lt;/tr&gt;\`;
 
 }).join('');
 
-tabContentHtml = \`
-
-&lt;div class="mt-6 overflow-x-auto custom-scrollbar border border-slate-200 rounded-2xl shadow-sm"&gt;
-
-&lt;table class="w-full text-sm text-left border-collapse min-w-max"&gt;
-
-&lt;thead&gt;
-
-&lt;tr&gt;
-
-&lt;th rowspan="2" class="p-3 text-center border-b border-r border-slate-200 bg-slate-50 font-bold text-slate-500 uppercase tracking-widest text-\[10px\] w-16"&gt;STT&lt;/th&gt;
-
-&lt;th rowspan="2" class="p-3 border-b border-r border-slate-200 bg-slate-50 font-bold text-slate-500 uppercase tracking-widest text-\[10px\]"&gt;Tên Học Sinh&lt;/th&gt;
-
-\${weekHeadersHtml}
-
-&lt;/tr&gt;
-
-&lt;tr&gt;
-
-\${subHeadersHtml}
-
-&lt;/tr&gt;
-
-&lt;/thead&gt;
-
-&lt;tbody&gt;
-
-\${weeklyDataRowsHtml || '&lt;tr&gt;&lt;td colspan="100%" class="p-8 text-center text-slate-400 font-medium"&gt;Chưa có dữ liệu học sinh.&lt;/td&gt;&lt;/tr&gt;'}
-
-&lt;/tbody&gt;
-
-&lt;/table&gt;
-
-&lt;/div&gt;
-
-\`;
+tabContentHtml = \`&lt;div class="mt-6 overflow-x-auto custom-scrollbar border border-slate-200 rounded-2xl shadow-sm"&gt;&lt;table class="w-full text-sm text-left border-collapse min-w-max"&gt;&lt;thead&gt;&lt;tr&gt;&lt;th rowspan="2" class="p-3 text-center border-b border-r border-slate-200 bg-slate-50 font-bold text-slate-500 uppercase tracking-widest text-\[10px\] w-16"&gt;STT&lt;/th&gt;&lt;th rowspan="2" class="p-3 border-b border-r border-slate-200 bg-slate-50 font-bold text-slate-500 uppercase tracking-widest text-\[10px\]"&gt;Tên Học Sinh&lt;/th&gt;\${weekHeadersHtml}&lt;/tr&gt;&lt;tr&gt;\${subHeadersHtml}&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;\${weeklyDataRowsHtml || '&lt;tr&gt;&lt;td colspan="100%" class="p-8 text-center text-slate-400 font-medium"&gt;Chưa có dữ liệu học sinh.&lt;/td&gt;&lt;/tr&gt;'}&lt;/tbody&gt;&lt;/table&gt;&lt;/div&gt;\`;
 
 } else if (currentReportTab === 'diem-thang') {
 
 const allMonthsSet = new Set();
 
-state.students.forEach(s => {
+state.students.forEach(s => { if (s.history) s.history.forEach(h => { if (h.date) { const d = new Date(h.date); allMonthsSet.add(\`\${String(d.getMonth() + 1).padStart(2, '0')}/\${d.getFullYear()}\`); }});});
 
-if (s.history) {
+if (allMonthsSet.size === 0) { const d = new Date(); allMonthsSet.add(\`\${String(d.getMonth() + 1).padStart(2, '0')}/\${d.getFullYear()}\`); }
 
-s.history.forEach(h => {
+const sortedMonths = Array.from(allMonthsSet).sort((a, b) => { const \[ma, ya\] = a.split('/').map(Number); const \[mb, yb\] = b.split('/').map(Number); return ya !== yb ? ya - yb : ma - mb; });
 
-if (h.date) {
+const monthHeadersHtml = sortedMonths.map(m => \`&lt;th colspan="2" class="p-3 text-center border-b border-r border-slate-200 bg-slate-50 font-black text-slate-800 text-sm whitespace-nowrap"&gt;\${m}&lt;/th&gt;\`).join('');
 
-const dateObj = new Date(h.date);
-
-const monthYear = \`\${String(dateObj.getMonth() + 1).padStart(2, '0')}/\${dateObj.getFullYear()}\`;
-
-allMonthsSet.add(monthYear);
-
-}
-
-});
-
-}
-
-});
-
-if (allMonthsSet.size === 0) {
-
-const today = new Date();
-
-for (let i = 0; i < 3; i++) {
-
-const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
-
-allMonthsSet.add(\`\${String(d.getMonth() + 1).padStart(2, '0')}/\${d.getFullYear()}\`);
-
-}
-
-}
-
-const sortedMonths = Array.from(allMonthsSet).sort((a, b) => {
-
-const \[monthA, yearA\] = a.split('/').map(Number);
-
-const \[monthB, yearB\] = b.split('/').map(Number);
-
-if (yearA !== yearB) return yearA - yearB;
-
-return monthA - monthB;
-
-});
-
-const monthHeadersHtml = sortedMonths.map(month => \`
-
-&lt;th colspan="2" class="p-3 text-center border-b border-r border-slate-200 bg-slate-50 font-black text-slate-800 text-sm whitespace-nowrap"&gt;\${month}&lt;/th&gt;
-
-\`).join('');
-
-const subHeadersHtml = sortedMonths.map(() => \`
-
-&lt;th class="p-2 text-center border-b border-r border-slate-200 bg-emerald-50/50 text-emerald-600 font-bold text-xs w-14"&gt;+&lt;/th&gt;
-
-&lt;th class="p-2 text-center border-b border-r border-slate-200 bg-red-50/50 text-red-500 font-bold text-xs w-14"&gt;-&lt;/th&gt;
-
-\`).join('');
+const subHeadersHtml = sortedMonths.map(() => \`&lt;th class="p-2 text-center border-b border-r border-slate-200 bg-emerald-50/50 text-emerald-600 font-bold text-xs w-14"&gt;+&lt;/th&gt;&lt;th class="p-2 text-center border-b border-r border-slate-200 bg-red-50/50 text-red-500 font-bold text-xs w-14"&gt;-&lt;/th&gt;\`).join('');
 
 const monthlyDataRowsHtml = sortedStudents.map((s, index) => {
 
-const monthlyPoints = {};
+const monthlyPoints = {}; sortedMonths.forEach(m => monthlyPoints\[m\] = { plus: 0, minus: 0 });
 
-sortedMonths.forEach(m => monthlyPoints\[m\] = { plus: 0, minus: 0 });
+if (s.history) s.history.forEach(h => { if (h.date && h.points) { const d = new Date(h.date); const my = \`\${String(d.getMonth() + 1).padStart(2, '0')}/\${d.getFullYear()}\`; if (monthlyPoints\[my\]) { if (h.points > 0) monthlyPoints\[my\].plus += h.points; else monthlyPoints\[my\].minus += Math.abs(h.points); }}});
 
-if (s.history) {
+const cellsHtml = sortedMonths.map(m => \`&lt;td class="p-3 text-center border-b border-r border-slate-100 font-bold text-emerald-600 bg-emerald-50/30"&gt;\${monthlyPoints\[m\].plus > 0 ? '+' + monthlyPoints\[m\].plus : '&lt;span class="text-slate-200 font-normal"&gt;-&lt;/span&gt;'}&lt;/td&gt;&lt;td class="p-3 text-center border-b border-r border-slate-100 font-bold text-red-500 bg-red-50/30"&gt;\${monthlyPoints\[m\].minus > 0 ? '-' + monthlyPoints\[m\].minus : '&lt;span class="text-slate-200 font-normal"&gt;-&lt;/span&gt;'}&lt;/td&gt;\`).join('');
 
-s.history.forEach(h => {
-
-if (h.date && h.points) {
-
-const dateObj = new Date(h.date);
-
-const monthYear = \`\${String(dateObj.getMonth() + 1).padStart(2, '0')}/\${dateObj.getFullYear()}\`;
-
-if (monthlyPoints\[monthYear\]) {
-
-if (h.points > 0) monthlyPoints\[monthYear\].plus += h.points;
-
-else monthlyPoints\[monthYear\].minus += Math.abs(h.points);
-
-}
-
-}
-
-});
-
-}
-
-const cellsHtml = sortedMonths.map(m => {
-
-const plusVal = monthlyPoints\[m\].plus;
-
-const minusVal = monthlyPoints\[m\].minus;
-
-return \`
-
-&lt;td class="p-3 text-center border-b border-r border-slate-100 font-bold text-emerald-600 bg-emerald-50/30"&gt;\${plusVal > 0 ? '+' + plusVal : '&lt;span class="text-slate-200 font-normal"&gt;-&lt;/span&gt;'}&lt;/td&gt;
-
-&lt;td class="p-3 text-center border-b border-r border-slate-100 font-bold text-red-500 bg-red-50/30"&gt;\${minusVal > 0 ? '-' + minusVal : '&lt;span class="text-slate-200 font-normal"&gt;-&lt;/span&gt;'}&lt;/td&gt;
-
-\`;
+return \`&lt;tr class="hover:bg-slate-50/80 transition-colors"&gt;&lt;td class="p-3 text-center border-b border-r border-slate-100 text-slate-400 font-bold"&gt;\${index + 1}&lt;/td&gt;&lt;td class="p-3 border-b border-r border-slate-100 font-bold text-slate-800 whitespace-nowrap flex items-center gap-2"&gt;\${getAvatarImg(s.avatarUrl, s.name, 'w-6 h-6')} \${s.name}&lt;/td&gt;\${cellsHtml}&lt;/tr&gt;\`;
 
 }).join('');
 
-return \`
-
-&lt;tr class="hover:bg-slate-50/80 transition-colors"&gt;
-
-&lt;td class="p-3 text-center border-b border-r border-slate-100 text-slate-400 font-bold"&gt;\${index + 1}&lt;/td&gt;
-
-&lt;td class="p-3 border-b border-r border-slate-100 font-bold text-slate-800 whitespace-nowrap flex items-center gap-2"&gt;
-
-\${getAvatarImg(s.avatarUrl, s.name, 'w-6 h-6')} \${s.name}
-
-&lt;/td&gt;
-
-\${cellsHtml}
-
-&lt;/tr&gt;
-
-\`;
-
-}).join('');
-
-tabContentHtml = \`
-
-&lt;div class="mt-6 overflow-x-auto custom-scrollbar border border-slate-200 rounded-2xl shadow-sm"&gt;
-
-&lt;table class="w-full text-sm text-left border-collapse min-w-max"&gt;
-
-&lt;thead&gt;
-
-&lt;tr&gt;
-
-&lt;th rowspan="2" class="p-3 text-center border-b border-r border-slate-200 bg-slate-50 font-bold text-slate-500 uppercase tracking-widest text-\[10px\] w-16"&gt;STT&lt;/th&gt;
-
-&lt;th rowspan="2" class="p-3 border-b border-r border-slate-200 bg-slate-50 font-bold text-slate-500 uppercase tracking-widest text-\[10px\]"&gt;Tên Học Sinh&lt;/th&gt;
-
-\${monthHeadersHtml}
-
-&lt;/tr&gt;
-
-&lt;tr&gt;
-
-\${subHeadersHtml}
-
-&lt;/tr&gt;
-
-&lt;/thead&gt;
-
-&lt;tbody&gt;
-
-\${monthlyDataRowsHtml || '&lt;tr&gt;&lt;td colspan="100%" class="p-8 text-center text-slate-400 font-medium"&gt;Chưa có dữ liệu học sinh.&lt;/td&gt;&lt;/tr&gt;'}
-
-&lt;/tbody&gt;
-
-&lt;/table&gt;
-
-&lt;/div&gt;
-
-\`;
+tabContentHtml = \`&lt;div class="mt-6 overflow-x-auto custom-scrollbar border border-slate-200 rounded-2xl shadow-sm"&gt;&lt;table class="w-full text-sm text-left border-collapse min-w-max"&gt;&lt;thead&gt;&lt;tr&gt;&lt;th rowspan="2" class="p-3 text-center border-b border-r border-slate-200 bg-slate-50 font-bold text-slate-500 uppercase tracking-widest text-\[10px\] w-16"&gt;STT&lt;/th&gt;&lt;th rowspan="2" class="p-3 border-b border-r border-slate-200 bg-slate-50 font-bold text-slate-500 uppercase tracking-widest text-\[10px\]"&gt;Tên Học Sinh&lt;/th&gt;\${monthHeadersHtml}&lt;/tr&gt;&lt;tr&gt;\${subHeadersHtml}&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;\${monthlyDataRowsHtml || '&lt;tr&gt;&lt;td colspan="100%" class="p-8 text-center text-slate-400 font-medium"&gt;Chưa có dữ liệu học sinh.&lt;/td&gt;&lt;/tr&gt;'}&lt;/tbody&gt;&lt;/table&gt;&lt;/div&gt;\`;
 
 } else if (currentReportTab === 'diem-hoc-ki') {
 
 const hkDataRowsHtml = sortedStudents.map((s, index) => {
 
-let hk1Plus = 0, hk1Minus = 0;
+let hk1Plus = 0, hk1Minus = 0, hk2Plus = 0, hk2Minus = 0;
 
-let hk2Plus = 0, hk2Minus = 0;
+if (s.history) s.history.forEach(h => { if (h.date && h.points) { const m = new Date(h.date).getMonth() + 1; if (m >= 8 && m &lt;= 12) { if (h.points &gt; 0) hk1Plus += h.points; else hk1Minus += Math.abs(h.points); } else if (m >= 1 && m &lt;= 5) { if (h.points &gt; 0) hk2Plus += h.points; else hk2Minus += Math.abs(h.points); }}});
 
-if (s.history) {
+const hk1Total = hk1Plus - hk1Minus, hk2Total = hk2Plus - hk2Minus, yearTotal = hk1Total + hk2Total;
 
-s.history.forEach(h => {
+return \`&lt;tr class="hover:bg-slate-50/80 transition-colors"&gt;&lt;td class="p-3 text-center border-b border-r border-slate-100 text-slate-400 font-bold"&gt;\${index + 1}&lt;/td&gt;&lt;td class="p-3 border-b border-r border-slate-100 font-bold text-slate-800 whitespace-nowrap flex items-center gap-2"&gt;\${getAvatarImg(s.avatarUrl, s.name, 'w-6 h-6')} \${s.name}&lt;/td&gt;&lt;td class="p-3 text-center border-b border-r border-slate-100 font-bold text-emerald-600 bg-emerald-50/30"&gt;\${hk1Plus > 0 ? '+' + hk1Plus : '&lt;span class="text-slate-200 font-normal"&gt;-&lt;/span&gt;'}&lt;/td&gt;&lt;td class="p-3 text-center border-b border-r border-slate-100 font-bold text-red-500 bg-red-50/30"&gt;\${hk1Minus > 0 ? '-' + hk1Minus : '&lt;span class="text-slate-200 font-normal"&gt;-&lt;/span&gt;'}&lt;/td&gt;&lt;td class="p-3 text-center border-b border-r border-slate-200 font-bold text-slate-800 bg-slate-100/50"&gt;\${hk1Total}&lt;/td&gt;&lt;td class="p-3 text-center border-b border-r border-slate-100 font-bold text-emerald-600 bg-emerald-50/30"&gt;\${hk2Plus > 0 ? '+' + hk2Plus : '&lt;span class="text-slate-200 font-normal"&gt;-&lt;/span&gt;'}&lt;/td&gt;&lt;td class="p-3 text-center border-b border-r border-slate-100 font-bold text-red-500 bg-red-50/30"&gt;\${hk2Minus > 0 ? '-' + hk2Minus : '&lt;span class="text-slate-200 font-normal"&gt;-&lt;/span&gt;'}&lt;/td&gt;&lt;td class="p-3 text-center border-b border-r border-slate-200 font-bold text-slate-800 bg-slate-100/50"&gt;\${hk2Total}&lt;/td&gt;&lt;td class="p-3 text-center border-b border-slate-100 font-black text-blueAccent bg-blue-50/40"&gt;\${yearTotal > 0 ? yearTotal : (yearTotal &lt; 0 ? yearTotal : '<span class="text-slate-300"&gt;0&lt;/span&gt;')}&lt;/td&gt;&lt;/tr&gt;\`;
 
-if (h.date && h.points) {
+}).join('');
 
-const d = new Date(h.date);
+tabContentHtml = \`&lt;div class="mt-6 overflow-x-auto custom-scrollbar border border-slate-200 rounded-2xl shadow-sm"&gt;&lt;table class="w-full text-sm text-left border-collapse min-w-max"&gt;&lt;thead&gt;&lt;tr&gt;&lt;th rowspan="2" class="p-3 text-center border-b border-r border-slate-200 bg-slate-50 font-bold text-slate-500 uppercase tracking-widest text-\[10px\] w-16"&gt;STT&lt;/th&gt;&lt;th rowspan="2" class="p-3 border-b border-r border-slate-200 bg-slate-50 font-bold text-slate-500 uppercase tracking-widest text-\[10px\]"&gt;Tên Học Sinh&lt;/th&gt;&lt;th colspan="3" class="p-3 text-center border-b border-r border-slate-200 bg-slate-50 font-black text-slate-800 text-sm whitespace-nowrap"&gt;HỌC KÌ 1 &lt;span class="text-\[10px\] font-medium text-slate-400 block mt-1"&gt;(T8 - T12)&lt;/span&gt;&lt;/th&gt;&lt;th colspan="3" class="p-3 text-center border-b border-r border-slate-200 bg-slate-50 font-black text-slate-800 text-sm whitespace-nowrap"&gt;HỌC KÌ 2 &lt;span class="text-\[10px\] font-medium text-slate-400 block mt-1"&gt;(T1 - T5)&lt;/span&gt;&lt;/th&gt;&lt;th rowspan="2" class="p-3 text-center border-b border-slate-200 bg-blue-50 font-black text-blue-700 text-xs uppercase tracking-widest whitespace-nowrap"&gt;TỔNG KẾT NĂM&lt;/th&gt;&lt;/tr&gt;&lt;tr&gt;&lt;th class="p-2 text-center border-b border-r border-slate-200 bg-emerald-50/50 text-emerald-600 font-bold text-xs w-20"&gt;Cộng&lt;/th&gt;&lt;th class="p-2 text-center border-b border-r border-slate-200 bg-red-50/50 text-red-500 font-bold text-xs w-20"&gt;Trừ&lt;/th&gt;&lt;th class="p-2 text-center border-b border-r border-slate-200 bg-slate-100 text-slate-700 font-bold text-xs w-20"&gt;Tổng HK1&lt;/th&gt;&lt;th class="p-2 text-center border-b border-r border-slate-200 bg-emerald-50/50 text-emerald-600 font-bold text-xs w-20"&gt;Cộng&lt;/th&gt;&lt;th class="p-2 text-center border-b border-r border-slate-200 bg-red-50/50 text-red-500 font-bold text-xs w-20"&gt;Trừ&lt;/th&gt;&lt;th class="p-2 text-center border-b border-r border-slate-200 bg-slate-100 text-slate-700 font-bold text-xs w-20"&gt;Tổng HK2&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;\${hkDataRowsHtml || '&lt;tr&gt;&lt;td colspan="100%" class="p-8 text-center text-slate-400 font-medium"&gt;Chưa có dữ liệu học sinh.&lt;/td&gt;&lt;/tr&gt;'}&lt;/tbody&gt;&lt;/table&gt;&lt;/div&gt;\`;
 
-const m = d.getMonth() + 1; // 1 -> 12
+// GIAO DIỆN BẢNG NHẬT KÝ MỚI - HOÀN TOÀN KHÁC TAB NHẬN XÉT
 
-// Học kì 1: Tháng 8 -> Tháng 12
+} else if (currentReportTab === 'nhat-ky') {
 
-if (m >= 8 && m <= 12) {
+if (!state.filterStartDate) {
 
-if (h.points > 0) hk1Plus += h.points;
+const firstDay = new Date(d.getFullYear(), d.getMonth(), 1);
 
-else hk1Minus += Math.abs(h.points);
-
-}
-
-// Học kì 2: Tháng 1 -> Tháng 5
-
-else if (m >= 1 && m <= 5) {
-
-if (h.points > 0) hk2Plus += h.points;
-
-else hk2Minus += Math.abs(h.points);
+state.filterStartDate = \`\${firstDay.getFullYear()}-\${String(firstDay.getMonth() + 1).padStart(2, '0')}-\${String(firstDay.getDate()).padStart(2, '0')}\`;
 
 }
 
-}
+if (!state.filterEndDate) state.filterEndDate = todayStr;
 
-});
+let countTot = 0, countKha = 0, countDat = 0, countChuaDat = 0;
 
-}
+let chuaChotCount = 0;
 
-const hk1Total = hk1Plus - hk1Minus;
+const tableRows = state.students.map((s, index) => {
 
-const hk2Total = hk2Plus - hk2Minus;
+const pts = s.points || 0;
 
-const yearTotal = hk1Total + hk2Total;
+// Xếp loại đề xuất
+
+let deXuat = "Chưa đạt"; let badgeColor = "bg-red-50 text-red-600 border-red-200";
+
+if (pts >= 80) { deXuat = "Tốt"; badgeColor = "bg-emerald-50 text-emerald-600 border-emerald-200"; }
+
+else if (pts >= 60) { deXuat = "Khá"; badgeColor = "bg-blue-50 text-blue-600 border-blue-200"; }
+
+else if (pts >= 40) { deXuat = "Đạt"; badgeColor = "bg-yellow-50 text-yellow-600 border-yellow-200"; }
+
+const finalGrade = s.gvcnGrade || "";
+
+if (!finalGrade) chuaChotCount++;
+
+const gradeToCount = finalGrade || deXuat;
+
+if (gradeToCount === "Tốt") countTot++;
+
+else if (gradeToCount === "Khá") countKha++;
+
+else if (gradeToCount === "Đạt") countDat++;
+
+else countChuaDat++;
+
+// Lịch sử ghi nhận (gọn gàng)
+
+const historyList = (s.history || \[\]).slice().sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 3).map(h => {
+
+const hd = new Date(h.date);
+
+const dStr = \`\${String(hd.getDate()).padStart(2, '0')}/\${String(hd.getMonth()+1).padStart(2, '0')}\`;
+
+const color = h.points > 0 ? 'text-emerald-600' : 'text-red-600';
+
+return \`&lt;div class="text-xs text-slate-600 truncate max-w-\[220px\] mb-1"&gt;&lt;span class="font-bold text-slate-400"&gt;\${dStr}&lt;/span&gt;: \${h.reason} &lt;span class="\${color} font-black bg-slate-50 px-1.5 py-0.5 rounded ml-1"&gt;\${h.points > 0 ? '+'+h.points : h.points}&lt;/span&gt;&lt;/div&gt;\`;
+
+}).join('');
+
+const historyHtml = historyList ? historyList + ((s.history && s.history.length > 3) ? \`&lt;div class="text-\[10px\] font-bold text-blue-400 italic mt-1 bg-blue-50 px-2 py-0.5 rounded inline-block"&gt;...và \${s.history.length - 3} ghi nhận khác&lt;/div&gt;\` : '') : '&lt;span class="text-slate-400 italic text-xs"&gt;Chưa có ghi nhận thi đua&lt;/span&gt;';
 
 return \`
 
-&lt;tr class="hover:bg-slate-50/80 transition-colors"&gt;
+&lt;tr class="nhatky-row border-b border-slate-100 hover:bg-slate-50 transition-colors" data-name="\${escapeHtmlAttr(s.name.toLowerCase())}"&gt;
 
-&lt;td class="p-3 text-center border-b border-r border-slate-100 text-slate-400 font-bold"&gt;\${index + 1}&lt;/td&gt;
+&lt;td class="p-4 text-center text-slate-400 font-bold"&gt;\${index + 1}&lt;/td&gt;
 
-&lt;td class="p-3 border-b border-r border-slate-100 font-bold text-slate-800 whitespace-nowrap flex items-center gap-2"&gt;
+&lt;td class="p-4"&gt;
 
-\${getAvatarImg(s.avatarUrl, s.name, 'w-6 h-6')} \${s.name}
+&lt;div class="flex items-center gap-3"&gt;
+
+\${getAvatarImg(s.avatarUrl, s.name, 'w-10 h-10')}
+
+&lt;div&gt;
+
+&lt;div class="font-bold text-slate-800 text-sm"&gt;\${s.name}&lt;/div&gt;
+
+&lt;div class="text-\[10px\] text-slate-500 font-bold uppercase tracking-widest mt-0.5"&gt;\${s.group}&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;/div&gt;
 
 &lt;/td&gt;
 
-&lt;td class="p-3 text-center border-b border-r border-slate-100 font-bold text-emerald-600 bg-emerald-50/30"&gt;\${hk1Plus > 0 ? '+' + hk1Plus : '&lt;span class="text-slate-200 font-normal"&gt;-&lt;/span&gt;'}&lt;/td&gt;
+&lt;td class="p-4 align-top py-4"&gt;
 
-&lt;td class="p-3 text-center border-b border-r border-slate-100 font-bold text-red-500 bg-red-50/30"&gt;\${hk1Minus > 0 ? '-' + hk1Minus : '&lt;span class="text-slate-200 font-normal"&gt;-&lt;/span&gt;'}&lt;/td&gt;
+&lt;div class="flex flex-col justify-start"&gt;
 
-&lt;td class="p-3 text-center border-b border-r border-slate-200 font-bold text-slate-800 bg-slate-100/50"&gt;\${hk1Total}&lt;/td&gt;
+\${historyHtml}
 
-&lt;td class="p-3 text-center border-b border-r border-slate-100 font-bold text-emerald-600 bg-emerald-50/30"&gt;\${hk2Plus > 0 ? '+' + hk2Plus : '&lt;span class="text-slate-200 font-normal"&gt;-&lt;/span&gt;'}&lt;/td&gt;
+&lt;/div&gt;
 
-&lt;td class="p-3 text-center border-b border-r border-slate-100 font-bold text-red-500 bg-red-50/30"&gt;\${hk2Minus > 0 ? '-' + hk2Minus : '&lt;span class="text-slate-200 font-normal"&gt;-&lt;/span&gt;'}&lt;/td&gt;
+&lt;/td&gt;
 
-&lt;td class="p-3 text-center border-b border-r border-slate-200 font-bold text-slate-800 bg-slate-100/50"&gt;\${hk2Total}&lt;/td&gt;
+&lt;td class="p-4 text-center font-black text-\[#1e1b4b\] text-xl"&gt;\${pts}&lt;/td&gt;
 
-&lt;td class="p-3 text-center border-b border-slate-100 font-black text-blueAccent bg-blue-50/40"&gt;\${yearTotal > 0 ? yearTotal : (yearTotal &lt; 0 ? yearTotal : '<span class="text-slate-300"&gt;0&lt;/span&gt;')}&lt;/td&gt;
+&lt;td class="p-4 text-center"&gt;
 
-&lt;/tr&gt;
+&lt;span class="px-3 py-1 rounded-lg text-xs font-bold border \${badgeColor}"&gt;\${deXuat}&lt;/span&gt;
 
-\`;
+&lt;/td&gt;
+
+&lt;td class="p-4 text-center"&gt;
+
+&lt;select onchange="updateGvcnGrade(\${s.id}, this.value)" class="px-3 py-1.5 bg-white border \${finalGrade ? 'border-indigo-400 font-bold text-indigo-700' : 'border-slate-300 text-slate-500'} rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-100 cursor-pointer w-full max-w-\[110px\]"&gt;
+
+&lt;option value=""&gt;- Chưa chốt -&lt;/option&gt;
+
+&lt;option value="Tốt" \${finalGrade === 'Tốt' ? 'selected' : ''}&gt;Tốt&lt;/option&gt;
+
+&lt;option value="Khá" \${finalGrade === 'Khá' ? 'selected' : ''}&gt;Khá&lt;/option&gt;
+
+&lt;option value="Đạt" \${finalGrade === 'Đạt' ? 'selected' : ''}&gt;Đạt&lt;/option&gt;
+
+&lt;option value="Chưa đạt" \${finalGrade === 'Chưa đạt' ? 'selected' : ''}&gt;Chưa đạt&lt;/option&gt;
+
+&lt;/select&gt;
+
+&lt;/td&gt;
+
+&lt;td class="p-4 text-center"&gt;
+
+&lt;button onclick="copyParentMessage(\${s.id})" class="flex items-center justify-center gap-2 w-full px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold rounded-xl transition-all border border-blue-100 shadow-sm hover:shadow hover:-translate-y-0.5" title="Sao chép tin nhắn Zalo theo mẫu"&gt;
+
+&lt;i class="ph-bold ph-copy text-lg"&gt;&lt;/i&gt; Copy
+
+&lt;/button&gt;
+
+&lt;/td&gt;
+
+&lt;/tr&gt;\`;
 
 }).join('');
 
 tabContentHtml = \`
 
-&lt;div class="mt-6 overflow-x-auto custom-scrollbar border border-slate-200 rounded-2xl shadow-sm"&gt;
+&lt;div class="mt-6 space-y-4"&gt;
+
+&lt;!-- BỘ LỌC VÀ THỐNG KÊ --&gt;
+
+&lt;div class="bg-white p-5 rounded-\[1.5rem\] border border-slate-200 flex flex-col gap-6 shadow-sm"&gt;
+
+&lt;div class="flex gap-6 items-center"&gt;
+
+&lt;div class="flex flex-col"&gt;
+
+&lt;label class="text-\[10px\] font-bold text-slate-500 uppercase tracking-widest mb-1.5"&gt;Từ ngày&lt;/label&gt;
+
+&lt;input type="date" value="\${state.filterStartDate}" onchange="state.filterStartDate = this.value; renderLayout();" class="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-indigo-400 cursor-pointer"&gt;
+
+&lt;/div&gt;
+
+&lt;div class="flex flex-col"&gt;
+
+&lt;label class="text-\[10px\] font-bold text-slate-500 uppercase tracking-widest mb-1.5"&gt;Đến ngày&lt;/label&gt;
+
+&lt;input type="date" value="\${state.filterEndDate}" onchange="state.filterEndDate = this.value; renderLayout();" class="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-indigo-400 cursor-pointer"&gt;
+
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;div class="grid grid-cols-2 md:grid-cols-4 gap-4"&gt;
+
+&lt;div class="bg-emerald-50/50 rounded-2xl p-4 flex flex-col"&gt;
+
+&lt;div class="text-\[11px\] font-bold text-slate-600 mb-1"&gt;Tốt&lt;/div&gt;
+
+&lt;div class="text-3xl font-black text-emerald-700 mt-auto"&gt;\${countTot}&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;div class="bg-indigo-50/50 rounded-2xl p-4 flex flex-col"&gt;
+
+&lt;div class="text-\[11px\] font-bold text-slate-600 mb-1"&gt;Khá&lt;/div&gt;
+
+&lt;div class="text-3xl font-black text-indigo-700 mt-auto"&gt;\${countKha}&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;div class="bg-orange-50/50 rounded-2xl p-4 flex flex-col"&gt;
+
+&lt;div class="text-\[11px\] font-bold text-slate-600 mb-1"&gt;Đạt&lt;/div&gt;
+
+&lt;div class="text-3xl font-black text-orange-600 mt-auto"&gt;\${countDat}&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;div class="bg-red-50/50 rounded-2xl p-4 flex flex-col"&gt;
+
+&lt;div class="text-\[11px\] font-bold text-slate-600 mb-1"&gt;Chưa đạt&lt;/div&gt;
+
+&lt;div class="text-3xl font-black text-red-600 mt-auto"&gt;\${countChuaDat}&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;div class="text-sm font-medium text-slate-500 border-t border-slate-100 pt-4 flex flex-col sm:flex-row justify-between items-center gap-2"&gt;
+
+&lt;div&gt;
+
+Đếm theo ô &lt;span class="font-bold text-slate-700"&gt;GVCN chốt&lt;/span&gt;; em nào chưa chốt thì tạm tính bằng đề xuất của máy.
+
+&lt;/div&gt;
+
+\${chuaChotCount > 0 ? \`&lt;button onclick="chotNhanhTheoDeXuat()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs transition-colors flex items-center gap-2"&gt;&lt;i class="ph-bold ph-magic-wand"&gt;&lt;/i&gt; Chốt \${chuaChotCount} em theo đề xuất&lt;/button&gt;\` : ''}
+
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;!-- Thanh tìm kiếm cực gọn --&gt;
+
+&lt;div class="bg-slate-50 p-3 rounded-\[1rem\] border border-slate-200 flex items-center gap-3 shadow-sm"&gt;
+
+&lt;div class="relative w-full max-w-sm flex-shrink-0"&gt;
+
+&lt;i class="ph-bold ph-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg"&gt;&lt;/i&gt;
+
+&lt;input type="text" id="search-nhatky" placeholder="Tìm nhanh tên học sinh..." oninput="filterNhatKyTable()" class="w-full pl-11 pr-8 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-medium text-slate-700 outline-none focus:border-indigo-400 shadow-sm transition-colors"&gt;
+
+&lt;button onclick="document.getElementById('search-nhatky').value=''; filterNhatKyTable();" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"&gt;
+
+&lt;i class="ph-bold ph-x text-sm"&gt;&lt;/i&gt;
+
+&lt;/button&gt;
+
+&lt;/div&gt;
+
+&lt;div class="text-xs text-slate-500 font-medium bg-white px-4 py-2.5 rounded-xl border border-slate-200 shadow-sm whitespace-nowrap"&gt;Đang hiện: &lt;span id="nhatky-count" class="font-bold text-indigo-600 text-sm"&gt;\${state.students.length}&lt;/span&gt; HS&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;!-- Bảng danh sách Nhật ký --&gt;
+
+&lt;div class="overflow-x-auto custom-scrollbar border border-slate-200 rounded-2xl shadow-sm bg-white"&gt;
 
 &lt;table class="w-full text-sm text-left border-collapse min-w-max"&gt;
 
 &lt;thead&gt;
 
-&lt;tr&gt;
+&lt;tr class="bg-slate-50 text-\[10px\] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200"&gt;
 
-&lt;th rowspan="2" class="p-3 text-center border-b border-r border-slate-200 bg-slate-50 font-bold text-slate-500 uppercase tracking-widest text-\[10px\] w-16"&gt;STT&lt;/th&gt;
+&lt;th class="p-4 text-center w-12"&gt;STT&lt;/th&gt;
 
-&lt;th rowspan="2" class="p-3 border-b border-r border-slate-200 bg-slate-50 font-bold text-slate-500 uppercase tracking-widest text-\[10px\]"&gt;Tên Học Sinh&lt;/th&gt;
+&lt;th class="p-4 w-48"&gt;HỌ VÀ TÊN&lt;/th&gt;
 
-&lt;th colspan="3" class="p-3 text-center border-b border-r border-slate-200 bg-slate-50 font-black text-slate-800 text-sm whitespace-nowrap"&gt;HỌC KÌ 1 &lt;span class="text-\[10px\] font-medium text-slate-400 block mt-1"&gt;(T8 - T12)&lt;/span&gt;&lt;/th&gt;
+&lt;th class="p-4"&gt;LỊCH SỬ GHI NHẬN (GẦN NHẤT)&lt;/th&gt;
 
-&lt;th colspan="3" class="p-3 text-center border-b border-r border-slate-200 bg-slate-50 font-black text-slate-800 text-sm whitespace-nowrap"&gt;HỌC KÌ 2 &lt;span class="text-\[10px\] font-medium text-slate-400 block mt-1"&gt;(T1 - T5)&lt;/span&gt;&lt;/th&gt;
+&lt;th class="p-4 text-center w-20"&gt;ĐIỂM&lt;/th&gt;
 
-&lt;th rowspan="2" class="p-3 text-center border-b border-slate-200 bg-blue-50 font-black text-blue-700 text-xs uppercase tracking-widest whitespace-nowrap"&gt;TỔNG KẾT NĂM&lt;/th&gt;
+&lt;th class="p-4 text-center w-28"&gt;MÁY ĐỀ XUẤT&lt;/th&gt;
 
-&lt;/tr&gt;
+&lt;th class="p-4 text-center w-32"&gt;GVCN CHỐT&lt;/th&gt;
 
-&lt;tr&gt;
-
-&lt;th class="p-2 text-center border-b border-r border-slate-200 bg-emerald-50/50 text-emerald-600 font-bold text-xs w-20"&gt;Cộng&lt;/th&gt;
-
-&lt;th class="p-2 text-center border-b border-r border-slate-200 bg-red-50/50 text-red-500 font-bold text-xs w-20"&gt;Trừ&lt;/th&gt;
-
-&lt;th class="p-2 text-center border-b border-r border-slate-200 bg-slate-100 text-slate-700 font-bold text-xs w-20"&gt;Tổng HK1&lt;/th&gt;
-
-&lt;th class="p-2 text-center border-b border-r border-slate-200 bg-emerald-50/50 text-emerald-600 font-bold text-xs w-20"&gt;Cộng&lt;/th&gt;
-
-&lt;th class="p-2 text-center border-b border-r border-slate-200 bg-red-50/50 text-red-500 font-bold text-xs w-20"&gt;Trừ&lt;/th&gt;
-
-&lt;th class="p-2 text-center border-b border-r border-slate-200 bg-slate-100 text-slate-700 font-bold text-xs w-20"&gt;Tổng HK2&lt;/th&gt;
+&lt;th class="p-4 text-center w-28"&gt;THAO TÁC&lt;/th&gt;
 
 &lt;/tr&gt;
 
@@ -4306,7 +4884,7 @@ tabContentHtml = \`
 
 &lt;tbody&gt;
 
-\${hkDataRowsHtml || '&lt;tr&gt;&lt;td colspan="100%" class="p-8 text-center text-slate-400 font-medium"&gt;Chưa có dữ liệu học sinh.&lt;/td&gt;&lt;/tr&gt;'}
+\${tableRows || '&lt;tr&gt;&lt;td colspan="100%" class="p-8 text-center text-slate-400 font-medium"&gt;Chưa có dữ liệu học sinh.&lt;/td&gt;&lt;/tr&gt;'}
 
 &lt;/tbody&gt;
 
@@ -4314,11 +4892,265 @@ tabContentHtml = \`
 
 &lt;/div&gt;
 
+&lt;/div&gt;
+
 \`;
 
-} else {
+} else if (currentReportTab === 'truc-nhat') {
 
-tabContentHtml = \`&lt;div class="flex flex-col mt-4"&gt;\${commentsHtml || '&lt;div class="py-16 text-center text-slate-400 font-medium bg-white border border-slate-200 rounded-\[2rem\]"&gt;Chưa có dữ liệu học sinh.&lt;/div&gt;'}&lt;/div&gt;\`;
+if (!state.dutyAssignments) state.dutyAssignments = \[\];
+
+const now = new Date();
+
+const todayStr = \`\${now.getFullYear()}-\${String(now.getMonth()+1).padStart(2, '0')}-\${String(now.getDate()).padStart(2, '0')}\`;
+
+const nextWeek = new Date(now.getTime() + 7 \* 24 \* 60 \* 60 \* 1000);
+
+const nextWeekStr = \`\${nextWeek.getFullYear()}-\${String(nextWeek.getMonth()+1).padStart(2, '0')}-\${String(nextWeek.getDate()).padStart(2, '0')}\`;
+
+// Tìm HS vi phạm (14 ngày qua) để gợi ý lên đầu
+
+const fourteenDaysAgo = new Date(now.getTime() - 14 \* 24 \* 60 \* 60 \* 1000);
+
+const violatorIds = new Set();
+
+state.students.forEach(s => {
+
+if (s.history && s.history.some(h => h.points &lt; 0 && new Date(h.date) &gt;= fourteenDaysAgo)) {
+
+violatorIds.add(s.id);
+
+}
+
+});
+
+// Tạo danh sách HS dropdown
+
+const sortedStudentsForDuty = \[...state.students\].sort((a,b) => a.name.localeCompare(b.name));
+
+let studentOptions = \`&lt;option value=""&gt;-- Chọn học sinh --&lt;/option&gt;\`;
+
+const violators = sortedStudentsForDuty.filter(s => violatorIds.has(s.id));
+
+if (violators.length > 0) {
+
+studentOptions += \`&lt;optgroup label="⚠️ Học sinh vi phạm gần đây"&gt;\`;
+
+violators.forEach(s => studentOptions += \`&lt;option value="\${s.id}"&gt;\${s.name} (\${s.group})&lt;/option&gt;\`);
+
+studentOptions += \`&lt;/optgroup&gt;\`;
+
+}
+
+studentOptions += \`&lt;optgroup label="Tất cả học sinh"&gt;\`;
+
+sortedStudentsForDuty.filter(s => !violatorIds.has(s.id)).forEach(s => {
+
+studentOptions += \`&lt;option value="\${s.id}"&gt;\${s.name} (\${s.group})&lt;/option&gt;\`;
+
+});
+
+studentOptions += \`&lt;/optgroup&gt;\`;
+
+// Render các nhiệm vụ hiện tại
+
+const activeDutiesHtml = state.dutyAssignments.map(d => {
+
+const student = state.students.find(s => s.id === d.studentId);
+
+if (!student) return '';
+
+const eDateObj = new Date(d.endDate);
+
+eDateObj.setHours(23, 59, 59);
+
+const diffTime = eDateObj - now;
+
+const diffDays = Math.ceil(diffTime / (1000 \* 60 \* 60 \* 24));
+
+let statusBadge = '';
+
+if (diffDays &lt; 0) statusBadge = \`<span class="text-\[10px\] bg-slate-100 text-slate-500 px-2 py-1 rounded-md font-bold"&gt;Đã hết hạn&lt;/span&gt;\`;
+
+else if (diffDays === 0) statusBadge = \`&lt;span class="text-\[10px\] bg-orange-100 text-orange-600 px-2 py-1 rounded-md font-bold animate-pulse"&gt;Hạn cuối hôm nay&lt;/span&gt;\`;
+
+else statusBadge = \`&lt;span class="text-\[10px\] bg-emerald-100 text-emerald-600 px-2 py-1 rounded-md font-bold"&gt;Còn \${diffDays} ngày&lt;/span&gt;\`;
+
+return \`
+
+&lt;div class="flex items-start gap-4 p-4 bg-white border border-rose-100 rounded-2xl shadow-sm mb-3 relative group transition-all hover:shadow-md hover:border-rose-300"&gt;
+
+&lt;button onclick="deleteDutyAssignment(\${d.id})" class="absolute top-2 right-2 w-7 h-7 bg-slate-50 hover:bg-emerald-500 text-slate-400 hover:text-white rounded-full flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 shadow-sm" title="Đánh dấu hoàn thành"&gt;
+
+&lt;i class="ph-bold ph-check text-sm"&gt;&lt;/i&gt;
+
+&lt;/button&gt;
+
+\${getAvatarImg(student.avatarUrl, student.name, 'w-12 h-12 ring-2 ring-rose-50 object-cover')}
+
+&lt;div class="flex-1 min-w-0"&gt;
+
+&lt;div class="font-bold text-slate-800 text-base truncate pr-6"&gt;\${student.name}&lt;/div&gt;
+
+&lt;div class="text-\[10px\] font-bold text-slate-500 uppercase tracking-widest mb-1.5"&gt;\${student.group}&lt;/div&gt;
+
+&lt;div class="text-sm font-bold text-rose-700 bg-rose-50 px-3 py-1.5 rounded-lg inline-block border border-rose-100 mb-2"&gt;
+
+&lt;i class="ph-fill ph-broom mr-1"&gt;&lt;/i&gt; \${d.task}
+
+&lt;/div&gt;
+
+&lt;div class="flex items-center flex-wrap gap-2 text-\[11px\] font-bold text-slate-500"&gt;
+
+&lt;i class="ph-bold ph-calendar-blank"&gt;&lt;/i&gt; \${formatDateForDisplay(d.startDate)} ➔ \${formatDateForDisplay(d.endDate)}
+
+\${statusBadge}
+
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+\`;
+
+}).join('') || \`
+
+&lt;div class="text-center py-12 flex flex-col items-center border-2 border-dashed border-slate-200 rounded-2xl"&gt;
+
+&lt;i class="ph-fill ph-hands-clapping text-5xl text-emerald-400 mb-2"&gt;&lt;/i&gt;
+
+&lt;div class="text-slate-600 font-bold"&gt;Lớp đang rất nề nếp&lt;/div&gt;
+
+&lt;div class="text-xs text-slate-400 mt-1"&gt;Chưa có học sinh nào bị phạt trực nhật thêm.&lt;/div&gt;
+
+&lt;/div&gt;\`;
+
+tabContentHtml = \`
+
+&lt;div class="flex flex-col xl:flex-row gap-6 mt-6 items-stretch"&gt;
+
+&lt;!-- CỘT TRÁI: Form Phân Công --&gt;
+
+&lt;div class="w-full xl:w-\[380px\] flex flex-col gap-6 flex-shrink-0"&gt;
+
+&lt;div class="bg-white rounded-\[2rem\] p-6 shadow-sm border border-slate-200"&gt;
+
+&lt;h3 class="font-black text-slate-800 uppercase tracking-wide text-sm flex items-center gap-2 mb-6"&gt;
+
+&lt;i class="ph-fill ph-user-gear text-rose-500 text-lg"&gt;&lt;/i&gt; GIAO VIỆC / PHẠT TRỰC NHẬT
+
+&lt;/h3&gt;
+
+&lt;div class="space-y-4"&gt;
+
+&lt;div&gt;
+
+&lt;label class="block text-\[11px\] font-bold text-slate-500 uppercase tracking-widest mb-2"&gt;Tên Học Sinh&lt;/label&gt;
+
+&lt;select id="duty-student" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-rose-400 transition-colors shadow-sm cursor-pointer"&gt;
+
+\${studentOptions}
+
+&lt;/select&gt;
+
+&lt;/div&gt;
+
+&lt;div&gt;
+
+&lt;label class="block text-\[11px\] font-bold text-slate-500 uppercase tracking-widest mb-2"&gt;Nhiệm vụ trực&lt;/label&gt;
+
+&lt;input type="text" id="duty-task" list="task-suggestions" placeholder="VD: Lau bảng, quét hành lang..." class="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-rose-400 focus:ring-4 focus:ring-rose-50 transition-all shadow-sm"&gt;
+
+&lt;datalist id="task-suggestions"&gt;
+
+&lt;option value="Lau bảng, giặt khăn"&gt;&lt;/option&gt;
+
+&lt;option value="Đổ rác cuối buổi"&gt;&lt;/option&gt;
+
+&lt;option value="Quét và lau lớp học"&gt;&lt;/option&gt;
+
+&lt;option value="Sắp xếp lại bàn ghế"&gt;&lt;/option&gt;
+
+&lt;/datalist&gt;
+
+&lt;/div&gt;
+
+&lt;div class="grid grid-cols-2 gap-4"&gt;
+
+&lt;div&gt;
+
+&lt;label class="block text-\[11px\] font-bold text-slate-500 uppercase tracking-widest mb-2"&gt;Từ ngày&lt;/label&gt;
+
+&lt;input type="date" id="duty-start" value="\${todayStr}" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-3 text-sm font-bold text-slate-700 outline-none focus:border-rose-400 transition-all shadow-sm cursor-pointer"&gt;
+
+&lt;/div&gt;
+
+&lt;div&gt;
+
+&lt;label class="block text-\[11px\] font-bold text-slate-500 uppercase tracking-widest mb-2"&gt;Đến ngày&lt;/label&gt;
+
+&lt;input type="date" id="duty-end" value="\${nextWeekStr}" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-3 text-sm font-bold text-slate-700 outline-none focus:border-rose-400 transition-all shadow-sm cursor-pointer"&gt;
+
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;button onclick="saveDutyAssignment()" class="w-full py-3.5 mt-2 bg-rose-500 hover:bg-rose-600 text-white font-black rounded-xl shadow-md transition-all hover:-translate-y-0.5 flex items-center justify-center gap-2"&gt;
+
+&lt;i class="ph-bold ph-plus-circle text-lg"&gt;&lt;/i&gt; PHÂN CÔNG
+
+&lt;/button&gt;
+
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;!-- CỘT PHẢI: Danh sách đang phân công --&gt;
+
+&lt;div class="flex-1 bg-rose-50/40 rounded-\[2rem\] p-6 shadow-sm border border-rose-100 flex flex-col relative overflow-hidden"&gt;
+
+&lt;div class="absolute top-0 right-0 w-32 h-32 bg-rose-100 rounded-bl-full -mr-10 -mt-10 z-0 opacity-40 pointer-events-none"&gt;&lt;/div&gt;
+
+&lt;div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4 relative z-10"&gt;
+
+&lt;div&gt;
+
+&lt;h3 class="font-black text-rose-700 uppercase tracking-wide text-base flex items-center gap-2 mb-1"&gt;
+
+&lt;i class="ph-fill ph-clipboard-text"&gt;&lt;/i&gt; DANH SÁCH ĐANG BỊ PHẠT / LÀM THÊM
+
+&lt;/h3&gt;
+
+&lt;p class="text-xs font-medium text-rose-500/80"&gt;
+
+Ấn vào nút check (✓) màu xanh khi HS đã hoàn thành nhiệm vụ.
+
+&lt;/p&gt;
+
+&lt;/div&gt;
+
+&lt;button onclick="exportDutyExcel()" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl shadow-md transition-all flex items-center gap-2 text-xs flex-shrink-0"&gt;
+
+&lt;i class="ph-bold ph-file-xls text-lg"&gt;&lt;/i&gt; Xuất Excel
+
+&lt;/button&gt;
+
+&lt;/div&gt;
+
+&lt;div class="flex-1 overflow-y-auto custom-scrollbar pr-2 relative z-10 max-h-\[450px\]"&gt;
+
+\${activeDutiesHtml}
+
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+\`;
 
 }
 
@@ -4346,8 +5178,6 @@ return \`
 
 &lt;div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 mt-4"&gt;
 
-&lt;!-- Thẻ 1: Xanh Navy --&gt;
-
 &lt;div class="bg-gradient-to-br from-\[#1e1b4b\] to-\[#312e81\] rounded-\[2rem\] p-6 shadow-lg shadow-indigo-900/20 text-white relative overflow-hidden group hover:-translate-y-1 transition-transform"&gt;
 
 &lt;div class="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform"&gt;&lt;/div&gt;
@@ -4359,8 +5189,6 @@ return \`
 &lt;i class="ph-fill ph-users text-5xl absolute right-4 bottom-4 text-white/10 group-hover:text-white/20 transition-colors"&gt;&lt;/i&gt;
 
 &lt;/div&gt;
-
-&lt;!-- Thẻ 2: Xanh Pastel --&gt;
 
 &lt;div class="bg-gradient-to-br from-blue-400 to-cyan-500 rounded-\[2rem\] p-6 shadow-lg shadow-blue-500/20 text-white relative overflow-hidden group hover:-translate-y-1 transition-transform"&gt;
 
@@ -4374,8 +5202,6 @@ return \`
 
 &lt;/div&gt;
 
-&lt;!-- Thẻ 3: Xanh Lục --&gt;
-
 &lt;div class="bg-gradient-to-br from-emerald-400 to-teal-500 rounded-\[2rem\] p-6 shadow-lg shadow-emerald-500/20 text-white relative overflow-hidden group hover:-translate-y-1 transition-transform"&gt;
 
 &lt;div class="absolute -right-4 -top-4 w-24 h-24 bg-white/20 rounded-full blur-2xl group-hover:scale-150 transition-transform"&gt;&lt;/div&gt;
@@ -4387,8 +5213,6 @@ return \`
 &lt;i class="ph-fill ph-chart-line-up text-5xl absolute right-4 bottom-4 text-white/20 group-hover:text-white/30 transition-colors"&gt;&lt;/i&gt;
 
 &lt;/div&gt;
-
-&lt;!-- Thẻ 4: Trắng Sáng --&gt;
 
 &lt;div class="bg-white border-2 border-slate-100 rounded-\[2rem\] p-6 shadow-sm relative overflow-hidden group hover:-translate-y-1 transition-transform hover:border-blue-200"&gt;
 
@@ -4428,7 +5252,9 @@ return \`
 
 &lt;button onclick="switchReportTab('diem-hoc-ki')" class="flex-1 sm:flex-none whitespace-nowrap px-6 py-2.5 rounded-lg text-sm font-bold transition-all \${currentReportTab === 'diem-hoc-ki' ? 'bg-white text-purple-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}"&gt;&lt;i class="ph-bold ph-books mr-1"&gt;&lt;/i&gt; Điểm Học Kì&lt;/button&gt;
 
-&lt;button onclick="switchReportTab('nhan-xet')" class="flex-1 sm:flex-none whitespace-nowrap px-6 py-2.5 rounded-lg text-sm font-bold transition-all \${currentReportTab === 'nhan-xet' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}"&gt;&lt;i class="ph-fill ph-chat-centered-text mr-1"&gt;&lt;/i&gt; Nhận Xét&lt;/button&gt;
+&lt;button onclick="switchReportTab('nhat-ky')" class="flex-1 sm:flex-none whitespace-nowrap px-6 py-2.5 rounded-lg text-sm font-bold transition-all \${currentReportTab === 'nhat-ky' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}"&gt;&lt;i class="ph-fill ph-notebook mr-1"&gt;&lt;/i&gt; Nhật Ký&lt;/button&gt;
+
+&lt;button onclick="switchReportTab('truc-nhat')" class="flex-1 sm:flex-none whitespace-nowrap px-6 py-2.5 rounded-lg text-sm font-bold transition-all \${currentReportTab === 'truc-nhat' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}"&gt;&lt;i class="ph-fill ph-broom mr-1"&gt;&lt;/i&gt; Trực Nhật&lt;/button&gt;
 
 &lt;/div&gt;
 
@@ -4792,149 +5618,13 @@ previewContainer.innerHTML = \`&lt;img src="\${dataUrl}" class="w-full h-full ob
 
 };
 
-window.openEditRewardModal = function(id) {
-
-const reward = id ? state.rewards.find(r => r.id === id) : { name: '', cost: 10, icon: 'ph-gift', color: 'text-purple-600', bg: 'bg-purple-100', desc: '', imageUrl: '' };
-
-const modalHtml = \`
-
-&lt;div class="fixed inset-0 bg-slate-900/70 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in" id="edit-reward-modal"&gt;
-
-&lt;div class="bg-white rounded-\[2rem\] shadow-2xl w-full max-w-md overflow-hidden flex flex-col"&gt;
-
-&lt;div class="bg-primary text-white p-6 flex justify-between items-center px-8 relative overflow-hidden"&gt;
-
-&lt;div class="absolute inset-0 bg-\[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjIiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wNSkiLz48L3N2Zz4=')\]"&gt;&lt;/div&gt;
-
-&lt;h3 class="font-black text-xl relative z-10 flex items-center gap-2"&gt;&lt;i class="ph-fill ph-gift text-accent"&gt;&lt;/i&gt; \${id ? 'SỬA QUÀ TẶNG' : 'THÊM QUÀ MỚI'}&lt;/h3&gt;
-
-&lt;button onclick="closeModal('edit-reward-modal')" class="bg-white/10 hover:bg-white/20 p-2 rounded-full transition-colors relative z-10"&gt;&lt;i class="ph-bold ph-x text-lg"&gt;&lt;/i&gt;&lt;/button&gt;
-
-&lt;/div&gt;
-
-&lt;div class="p-8 space-y-5 bg-slate-50 text-left overflow-y-auto max-h-\[70vh\] custom-scrollbar"&gt;
-
-&lt;!-- Khung tải ảnh quà tặng --&gt;
-
-&lt;div&gt;
-
-&lt;label class="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-widest"&gt;Ảnh minh họa quà tặng&lt;/label&gt;
-
-&lt;div class="relative cursor-pointer group" onclick="document.getElementById('edit-reward-image-upload').click()"&gt;
-
-&lt;div id="reward-image-preview" class="w-full h-40 rounded-2xl bg-white flex items-center justify-center overflow-hidden border-2 border-dashed border-slate-300 group-hover:border-blueAccent transition-colors shadow-sm"&gt;
-
-\${reward.imageUrl ? \`&lt;img src="\${reward.imageUrl}" class="w-full h-full object-contain p-2"&gt;\` : \`&lt;div class="text-slate-400 flex flex-col items-center"&gt;&lt;i class="ph-fill ph-image text-4xl mb-2"&gt;&lt;/i&gt;&lt;span class="text-xs font-bold"&gt;Bấm để tải ảnh lên&lt;/span&gt;&lt;/div&gt;\`}
-
-&lt;/div&gt;
-
-&lt;div class="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl"&gt;
-
-&lt;span class="text-white text-sm font-bold flex items-center gap-2"&gt;&lt;i class="ph-bold ph-upload-simple text-lg"&gt;&lt;/i&gt; Chọn ảnh&lt;/span&gt;
-
-&lt;/div&gt;
-
-&lt;/div&gt;
-
-&lt;input type="file" id="edit-reward-image-upload" class="hidden" accept="image/\*" onchange="handleRewardImageUpload(event)"&gt;
-
-&lt;input type="hidden" id="edit-reward-image" value="\${escapeHtmlAttr(reward.imageUrl || '')}"&gt;
-
-&lt;/div&gt;
-
-&lt;div&gt;&lt;label class="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-widest"&gt;Tên món quà&lt;/label&gt;&lt;input type="text" id="edit-reward-name" value="\${escapeHtmlAttr(reward.name)}" class="w-full px-4 py-3.5 bg-white border border-slate-300 rounded-xl text-sm font-bold focus:border-blueAccent focus:ring-4 focus:ring-blue-100 transition-all shadow-sm"&gt;&lt;/div&gt;
-
-&lt;div&gt;&lt;label class="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-widest"&gt;Mô tả (Tùy chọn)&lt;/label&gt;&lt;input type="text" id="edit-reward-desc" value="\${escapeHtmlAttr(reward.desc || '')}" class="w-full px-4 py-3.5 bg-white border border-slate-300 rounded-xl text-sm focus:border-blueAccent focus:ring-4 focus:ring-blue-100 transition-all shadow-sm"&gt;&lt;/div&gt;
-
-&lt;div&gt;&lt;label class="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-widest"&gt;Điểm sao cần để đổi&lt;/label&gt;
-
-&lt;div class="relative"&gt;
-
-&lt;input type="number" id="edit-reward-cost" value="\${reward.cost}" class="w-full pl-4 pr-10 py-3.5 bg-white border border-slate-300 rounded-xl text-base font-black text-orange-600 focus:border-orange-400 focus:ring-4 focus:ring-orange-100 transition-all shadow-sm"&gt;
-
-&lt;i class="ph-fill ph-star absolute right-4 top-1/2 -translate-y-1/2 text-accent text-lg"&gt;&lt;/i&gt;
-
-&lt;/div&gt;
-
-&lt;/div&gt;
-
-&lt;button onclick="saveRewardEdit('\${id || ''}')" class="w-full py-4 bg-primary hover:bg-secondary text-white font-black rounded-xl mt-4 shadow-lg transition-all hover:-translate-y-0.5"&gt;LƯU QUÀ TẶNG&lt;/button&gt;
-
-&lt;/div&gt;
-
-&lt;/div&gt;
-
-&lt;/div&gt;
-
-\`;
-
-document.getElementById('modal-container').innerHTML = modalHtml;
-
-}
-
-window.saveRewardEdit = function(id) {
-
-const name = document.getElementById('edit-reward-name').value.trim();
-
-const desc = document.getElementById('edit-reward-desc').value.trim();
-
-const cost = parseInt(document.getElementById('edit-reward-cost').value);
-
-const imageUrl = document.getElementById('edit-reward-image').value.trim();
-
-if (!name || isNaN(cost)) return showToast("Vui lòng nhập tên và giá sao hợp lệ!", "error");
-
-// Giữ lại fallback icon nếu ko upload ảnh
-
-const icon = 'ph-gift', color = 'text-purple-600', bg = 'bg-purple-100';
-
-if (id) {
-
-const idx = state.rewards.findIndex(r => r.id === id);
-
-if (idx > -1) state.rewards\[idx\] = { ...state.rewards\[idx\], name, desc, cost, icon, color, bg, imageUrl };
-
-} else {
-
-state.rewards.push({ id: 'r' + Date.now(), name, desc, cost, icon, color, bg, imageUrl });
-
-}
-
-saveData(); renderLayout(); closeModal('edit-reward-modal'); showToast("Đã lưu danh mục quà tặng!");
-
-}
-
-function saveRewardEdit(id) {
-
-const name = document.getElementById('edit-reward-name').value.trim(), desc = document.getElementById('edit-reward-desc').value.trim();
-
-const cost = parseInt(document.getElementById('edit-reward-cost').value), icon = document.getElementById('edit-reward-icon').value;
-
-const colorBase = document.getElementById('edit-reward-color').value;
-
-if (!name || isNaN(cost)) return showToast("Vui lòng nhập tên và giá sao hợp lệ!", "error");
-
-let color = \`text-\${colorBase}-600\`, bg = \`bg-\${colorBase}-100\`; if (colorBase === 'blue') color = 'text-blueAccent';
-
-if (id) {
-
-const idx = state.rewards.findIndex(r => r.id === id);
-
-if (idx > -1) state.rewards\[idx\] = { ...state.rewards\[idx\], name, desc, cost, icon, color, bg };
-
-} else state.rewards.push({ id: 'r' + Date.now(), name, desc, cost, icon, color, bg });
-
-saveData(); renderLayout(); closeModal('edit-reward-modal'); showToast("Đã lưu danh mục quà tặng!");
-
-}
-
-function deleteReward(id) { if (confirm("Xóa quà tặng này khỏi cửa hàng?")) { state.rewards = state.rewards.filter(r => r.id !== id); saveData(); renderLayout(); showToast("Đã xóa quà tặng!"); } }
-
 function openEditStudentModal(id) {
 
 state.editingStudentId = id;
 
-const s = id ? state.students.find(x => x.id === id) : { name: '', role: '', goal: '', talent: '', group: 'Tổ 1', avatarUrl: '', gender: 'Nữ', dob: '', boardingType: 'Ngoại trú' };
+// Khởi tạo thêm các trường mới: ethnicity, isUnionMember, prevAcademic, prevConduct
+
+const s = id ? state.students.find(x => x.id === id) : { name: '', role: '', goal: '', talent: '', group: 'Tổ 1', avatarUrl: '', gender: 'Nữ', dob: '', boardingType: 'Ngoại trú', ethnicity: 'Kinh', isUnionMember: 'Chưa', prevAcademic: '', prevConduct: '' };
 
 if (!s && id) return;
 
@@ -4962,11 +5652,11 @@ const modalHtml = \`
 
 &lt;div class="fixed inset-0 bg-slate-900/70 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in" id="edit-student-modal"&gt;
 
-&lt;div class="bg-white rounded-\[2rem\] shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-\[90vh\]"&gt;
+&lt;div class="bg-white rounded-\[2rem\] shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-\[95vh\]"&gt;
 
 &lt;!-- Header --&gt;
 
-&lt;div class="p-6 border-b border-slate-100 flex justify-between items-center relative bg-white"&gt;
+&lt;div class="p-6 border-b border-slate-100 flex justify-between items-center relative bg-white flex-shrink-0"&gt;
 
 &lt;h3 class="font-black text-xl flex items-center gap-3 text-\[#0f172a\]"&gt;
 
@@ -4982,13 +5672,13 @@ const modalHtml = \`
 
 &lt;!-- Body --&gt;
 
-&lt;div class="p-8 flex-1 overflow-y-auto custom-scrollbar flex flex-col md:flex-row gap-10 bg-white"&gt;
+&lt;div class="p-6 md:p-8 flex-1 overflow-y-auto custom-scrollbar flex flex-col md:flex-row gap-10 bg-white"&gt;
 
 &lt;!-- Left Column --&gt;
 
-&lt;div class="flex-1 space-y-6"&gt;
+&lt;div class="flex-1 space-y-5"&gt;
 
-&lt;div class="text-\[12px\] font-black text-slate-400 uppercase tracking-widest mb-4"&gt;THÔNG TIN CƠ BẢN&lt;/div&gt;
+&lt;div class="text-\[12px\] font-black text-slate-400 uppercase tracking-widest mb-2 border-b border-slate-100 pb-2"&gt;THÔNG TIN CƠ BẢN&lt;/div&gt;
 
 &lt;!-- Ảnh đại diện --&gt;
 
@@ -5012,7 +5702,7 @@ const modalHtml = \`
 
 &lt;label class="block text-sm font-bold text-slate-600 mb-1"&gt;Ảnh đại diện&lt;/label&gt;
 
-&lt;input type="text" id="edit-s-avatar" value="\${escapeHtmlAttr(s.avatarUrl || '')}" placeholder="Dán link hoặc tải lên..." class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:border-blueAccent focus:outline-none font-medium truncate shadow-sm" oninput="document.querySelector('#edit-student-modal img').src=this.value || '<https://placehold.co/100x100/e2e8f0/64748b?text=AVT>'"&gt;
+&lt;input type="text" id="edit-s-avatar" value="\${escapeHtmlAttr(s.avatarUrl || '')}" placeholder="Dán link hoặc tải lên..." class="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:border-blueAccent focus:outline-none font-medium truncate shadow-sm" oninput="document.querySelector('#edit-student-modal img').src=this.value || '<https://placehold.co/100x100/e2e8f0/64748b?text=AVT>'"&gt;
 
 &lt;/div&gt;
 
@@ -5022,21 +5712,21 @@ const modalHtml = \`
 
 &lt;div&gt;
 
-&lt;label class="block text-sm font-bold text-slate-600 mb-2"&gt;Họ và tên &lt;span class="text-red-500"&gt;\*&lt;/span&gt;&lt;/label&gt;
+&lt;label class="block text-sm font-bold text-slate-600 mb-1.5"&gt;Họ và tên &lt;span class="text-red-500"&gt;\*&lt;/span&gt;&lt;/label&gt;
 
-&lt;input type="text" id="edit-s-name" value="\${escapeHtmlAttr(s.name)}" class="w-full px-5 py-3.5 bg-white border border-slate-300 rounded-xl text-base font-black text-slate-800 focus:border-blueAccent focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm"&gt;
+&lt;input type="text" id="edit-s-name" value="\${escapeHtmlAttr(s.name)}" class="w-full px-5 py-3 bg-white border border-slate-300 rounded-xl text-base font-black text-slate-800 focus:border-blueAccent focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm"&gt;
 
 &lt;/div&gt;
 
-&lt;!-- Giới tính & Nhóm thi đua --&gt;
+&lt;!-- Giới tính & Nhóm --&gt;
 
-&lt;div class="grid grid-cols-2 gap-5"&gt;
+&lt;div class="grid grid-cols-2 gap-4"&gt;
 
 &lt;div&gt;
 
-&lt;label class="block text-sm font-bold text-slate-600 mb-2"&gt;Giới tính&lt;/label&gt;
+&lt;label class="block text-sm font-bold text-slate-600 mb-1.5"&gt;Giới tính&lt;/label&gt;
 
-&lt;select id="edit-s-gender" class="w-full px-5 py-3.5 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-700 focus:border-blueAccent cursor-pointer outline-none shadow-sm"&gt;
+&lt;select id="edit-s-gender" class="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-700 focus:border-blueAccent cursor-pointer outline-none shadow-sm"&gt;
 
 &lt;option value="Nam" \${s.gender==='Nam'?'selected':''}&gt;Nam&lt;/option&gt;&lt;option value="Nữ" \${s.gender==='Nữ'?'selected':''}&gt;Nữ&lt;/option&gt;
 
@@ -5046,9 +5736,9 @@ const modalHtml = \`
 
 &lt;div&gt;
 
-&lt;label class="block text-sm font-bold text-slate-600 mb-2"&gt;Nhóm thi đua&lt;/label&gt;
+&lt;label class="block text-sm font-bold text-slate-600 mb-1.5"&gt;Nhóm thi đua&lt;/label&gt;
 
-&lt;select id="edit-s-group" class="w-full px-5 py-3.5 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-700 focus:border-blueAccent cursor-pointer outline-none shadow-sm"&gt;
+&lt;select id="edit-s-group" class="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-700 focus:border-blueAccent cursor-pointer outline-none shadow-sm"&gt;
 
 \${groupOptions}
 
@@ -5060,21 +5750,21 @@ const modalHtml = \`
 
 &lt;!-- Ngày sinh & Lưu trú --&gt;
 
-&lt;div class="grid grid-cols-2 gap-5 mt-2"&gt;
+&lt;div class="grid grid-cols-2 gap-4"&gt;
 
 &lt;div&gt;
 
-&lt;label class="block text-sm font-bold text-slate-600 mb-2"&gt;Ngày tháng năm sinh&lt;/label&gt;
+&lt;label class="block text-\[11px\] font-bold text-slate-500 uppercase tracking-widest mb-1.5"&gt;Ngày sinh&lt;/label&gt;
 
-&lt;input type="date" id="edit-s-dob" value="\${escapeHtmlAttr(s.dob || '')}" class="w-full px-5 py-3.5 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-700 focus:border-blueAccent outline-none shadow-sm cursor-pointer"&gt;
+&lt;input type="date" id="edit-s-dob" value="\${escapeHtmlAttr(s.dob || '')}" class="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-700 focus:border-blueAccent outline-none shadow-sm cursor-pointer"&gt;
 
 &lt;/div&gt;
 
 &lt;div&gt;
 
-&lt;label class="block text-sm font-bold text-slate-600 mb-2"&gt;Hình thức lưu trú&lt;/label&gt;
+&lt;label class="block text-\[11px\] font-bold text-slate-500 uppercase tracking-widest mb-1.5"&gt;Lưu trú&lt;/label&gt;
 
-&lt;select id="edit-s-boarding" class="w-full px-5 py-3.5 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-700 focus:border-blueAccent cursor-pointer outline-none shadow-sm"&gt;
+&lt;select id="edit-s-boarding" class="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-700 focus:border-blueAccent cursor-pointer outline-none shadow-sm"&gt;
 
 &lt;option value="Ngoại trú" \${s.boardingType==='Ngoại trú'?'selected':''}&gt;Ngoại trú&lt;/option&gt;
 
@@ -5090,9 +5780,37 @@ const modalHtml = \`
 
 &lt;/div&gt;
 
-&lt;!-- MÃ TRA CỨU MỚI TẠI ĐÂY --&gt;
+&lt;!-- Dân tộc & Đoàn viên (MỚI THÊM) --&gt;
 
-&lt;div class="flex items-center gap-3 mt-1"&gt;
+&lt;div class="grid grid-cols-2 gap-4 bg-orange-50/50 p-3 rounded-2xl border border-orange-100"&gt;
+
+&lt;div&gt;
+
+&lt;label class="block text-\[11px\] font-bold text-slate-500 uppercase tracking-widest mb-1.5"&gt;Dân tộc&lt;/label&gt;
+
+&lt;input type="text" id="edit-s-ethnicity" value="\${escapeHtmlAttr(s.ethnicity || 'Kinh')}" class="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-700 focus:border-orange-400 outline-none shadow-sm"&gt;
+
+&lt;/div&gt;
+
+&lt;div&gt;
+
+&lt;label class="block text-\[11px\] font-bold text-slate-500 uppercase tracking-widest mb-1.5"&gt;Đoàn viên&lt;/label&gt;
+
+&lt;select id="edit-s-union" class="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-700 focus:border-orange-400 cursor-pointer outline-none shadow-sm"&gt;
+
+&lt;option value="Chưa" \${s.isUnionMember==='Chưa'?'selected':''}&gt;Chưa vào Đoàn&lt;/option&gt;
+
+&lt;option value="Rồi" \${s.isUnionMember==='Rồi'?'selected':''}&gt;Đã vào Đoàn&lt;/option&gt;
+
+&lt;/select&gt;
+
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;!-- Mã tra cứu --&gt;
+
+&lt;div class="flex items-center gap-3 pt-2"&gt;
 
 &lt;div class="flex items-center gap-1.5 text-\[#5468ff\] font-black text-sm"&gt;
 
@@ -5112,15 +5830,15 @@ const modalHtml = \`
 
 &lt;!-- Right Column --&gt;
 
-&lt;div class="flex-1 space-y-6"&gt;
+&lt;div class="flex-1 space-y-5"&gt;
 
-&lt;div class="text-\[12px\] font-black text-slate-400 uppercase tracking-widest mb-4"&gt;PHÁT TRIỂN CÁ NHÂN&lt;/div&gt;
+&lt;div class="text-\[12px\] font-black text-slate-400 uppercase tracking-widest mb-2 border-b border-slate-100 pb-2"&gt;PHÁT TRIỂN & KẾT QUẢ&lt;/div&gt;
 
 &lt;div&gt;
 
-&lt;label class="block text-sm font-bold text-slate-600 mb-2"&gt;Vai trò&lt;/label&gt;
+&lt;label class="block text-\[11px\] font-bold text-slate-500 uppercase tracking-widest mb-1.5"&gt;Vai trò trong lớp&lt;/label&gt;
 
-&lt;input type="text" id="edit-s-role" value="\${escapeHtmlAttr(s.role || '')}" placeholder="Lớp phó học tập..." class="w-full px-5 py-3 bg-white border border-slate-300 rounded-xl text-sm font-bold focus:border-blueAccent outline-none mb-3 shadow-sm"&gt;
+&lt;input type="text" id="edit-s-role" value="\${escapeHtmlAttr(s.role || '')}" placeholder="Lớp phó học tập..." class="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl text-sm font-bold focus:border-blueAccent outline-none mb-2 shadow-sm"&gt;
 
 &lt;div class="flex flex-wrap gap-2"&gt;\${roleOptions}&lt;/div&gt;
 
@@ -5128,9 +5846,9 @@ const modalHtml = \`
 
 &lt;div&gt;
 
-&lt;label class="block text-sm font-bold text-slate-600 mb-2 mt-4"&gt;Mục tiêu phấn đấu&lt;/label&gt;
+&lt;label class="block text-\[11px\] font-bold text-slate-500 uppercase tracking-widest mb-1.5 mt-4"&gt;Mục tiêu phấn đấu&lt;/label&gt;
 
-&lt;input type="text" id="edit-s-goal" value="\${escapeHtmlAttr(s.goal || '')}" placeholder="Học sinh xuất sắc..." class="w-full px-5 py-3 bg-white border border-slate-300 rounded-xl text-sm font-bold focus:border-blueAccent outline-none mb-3 shadow-sm"&gt;
+&lt;input type="text" id="edit-s-goal" value="\${escapeHtmlAttr(s.goal || '')}" placeholder="Học sinh xuất sắc..." class="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl text-sm font-bold focus:border-blueAccent outline-none mb-2 shadow-sm"&gt;
 
 &lt;div class="flex flex-wrap gap-2"&gt;\${goalOptions}&lt;/div&gt;
 
@@ -5138,11 +5856,57 @@ const modalHtml = \`
 
 &lt;div&gt;
 
-&lt;label class="block text-sm font-bold text-slate-600 mb-2 mt-4"&gt;Năng khiếu&lt;/label&gt;
+&lt;label class="block text-\[11px\] font-bold text-slate-500 uppercase tracking-widest mb-1.5 mt-4"&gt;Năng khiếu&lt;/label&gt;
 
-&lt;input type="text" id="edit-s-talent" value="\${escapeHtmlAttr(s.talent || '')}" placeholder="MC, Hát, Tiếng Anh..." class="w-full px-5 py-3 bg-white border border-slate-300 rounded-xl text-sm font-bold focus:border-blueAccent outline-none mb-3 shadow-sm"&gt;
+&lt;input type="text" id="edit-s-talent" value="\${escapeHtmlAttr(s.talent || '')}" placeholder="MC, Hát, Tiếng Anh..." class="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl text-sm font-bold focus:border-blueAccent outline-none mb-2 shadow-sm"&gt;
 
 &lt;div class="flex flex-wrap gap-2"&gt;\${talentOptions}&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;!-- Kết quả năm trước (MỚI THÊM) --&gt;
+
+&lt;div class="grid grid-cols-2 gap-4 bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100 mt-4"&gt;
+
+&lt;div&gt;
+
+&lt;label class="block text-\[11px\] font-bold text-slate-500 uppercase tracking-widest mb-2"&gt;Học lực (Năm trước)&lt;/label&gt;
+
+&lt;select id="edit-s-prev-academic" class="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-700 focus:border-emerald-500 outline-none shadow-sm cursor-pointer"&gt;
+
+&lt;option value=""&gt;- Chọn -&lt;/option&gt;
+
+&lt;option value="Tốt" \${s.prevAcademic==='Tốt'?'selected':''}&gt;Tốt (Giỏi)&lt;/option&gt;
+
+&lt;option value="Khá" \${s.prevAcademic==='Khá'?'selected':''}&gt;Khá&lt;/option&gt;
+
+&lt;option value="Đạt" \${s.prevAcademic==='Đạt'?'selected':''}&gt;Đạt (TB)&lt;/option&gt;
+
+&lt;option value="Chưa đạt" \${s.prevAcademic==='Chưa đạt'?'selected':''}&gt;Chưa đạt (Yếu)&lt;/option&gt;
+
+&lt;/select&gt;
+
+&lt;/div&gt;
+
+&lt;div&gt;
+
+&lt;label class="block text-\[11px\] font-bold text-slate-500 uppercase tracking-widest mb-2"&gt;Rèn luyện (Năm trước)&lt;/label&gt;
+
+&lt;select id="edit-s-prev-conduct" class="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-700 focus:border-emerald-500 outline-none shadow-sm cursor-pointer"&gt;
+
+&lt;option value=""&gt;- Chọn -&lt;/option&gt;
+
+&lt;option value="Tốt" \${s.prevConduct==='Tốt'?'selected':''}&gt;Tốt&lt;/option&gt;
+
+&lt;option value="Khá" \${s.prevConduct==='Khá'?'selected':''}&gt;Khá&lt;/option&gt;
+
+&lt;option value="Đạt" \${s.prevConduct==='Đạt'?'selected':''}&gt;Đạt&lt;/option&gt;
+
+&lt;option value="Chưa đạt" \${s.prevConduct==='Chưa đạt'?'selected':''}&gt;Chưa đạt&lt;/option&gt;
+
+&lt;/select&gt;
+
+&lt;/div&gt;
 
 &lt;/div&gt;
 
@@ -5152,15 +5916,15 @@ const modalHtml = \`
 
 &lt;!-- Footer --&gt;
 
-&lt;div class="p-6 bg-slate-50 border-t border-slate-100 flex justify-between items-center rounded-b-\[2rem\]"&gt;
+&lt;div class="p-5 bg-slate-50 border-t border-slate-100 flex justify-between items-center flex-shrink-0"&gt;
 
-\${id ? \`&lt;button onclick="deleteStudent(\${id}); closeModal('edit-student-modal')" class="px-6 py-3.5 bg-red-50 text-red-600 font-bold rounded-xl hover:bg-red-100 transition-colors flex items-center gap-2 shadow-sm border border-red-100"&gt;&lt;i class="ph-bold ph-trash"&gt;&lt;/i&gt; Xóa&lt;/button&gt;\` : '&lt;div&gt;&lt;/div&gt;'}
+\${id ? \`&lt;button onclick="deleteStudent(\${id}); closeModal('edit-student-modal')" class="px-5 py-3 bg-red-50 text-red-600 font-bold rounded-xl hover:bg-red-100 transition-colors flex items-center gap-2 shadow-sm border border-red-100"&gt;&lt;i class="ph-bold ph-trash"&gt;&lt;/i&gt; Xóa&lt;/button&gt;\` : '&lt;div&gt;&lt;/div&gt;'}
 
 &lt;div class="flex gap-3"&gt;
 
-&lt;button onclick="closeModal('edit-student-modal')" class="px-8 py-3.5 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-colors"&gt;Hủy&lt;/button&gt;
+&lt;button onclick="closeModal('edit-student-modal')" class="px-6 py-3 bg-white border border-slate-300 text-slate-600 font-bold rounded-xl hover:bg-slate-50 transition-colors shadow-sm"&gt;Hủy&lt;/button&gt;
 
-&lt;button onclick="saveStudentEdit()" class="px-10 py-3.5 bg-\[#0f172a\] text-white font-black rounded-xl hover:bg-black shadow-lg transition-all hover:-translate-y-0.5"&gt;Lưu Hồ Sơ&lt;/button&gt;
+&lt;button onclick="saveStudentEdit()" class="px-8 py-3 bg-\[#0f172a\] text-white font-black rounded-xl hover:bg-black shadow-lg transition-all hover:-translate-y-0.5"&gt;Lưu Hồ Sơ&lt;/button&gt;
 
 &lt;/div&gt;
 
@@ -5188,7 +5952,7 @@ return showToast("Vui lòng nhập họ và tên học sinh!", "error");
 
 }
 
-// 2. Thu thập toàn bộ thông tin trên form
+// 2. Thu thập toàn bộ thông tin trên form (Bao gồm 4 trường mới)
 
 const studentData = {
 
@@ -5210,7 +5974,15 @@ role: document.getElementById('edit-s-role').value.trim(),
 
 goal: document.getElementById('edit-s-goal').value.trim(),
 
-talent: document.getElementById('edit-s-talent').value.trim()
+talent: document.getElementById('edit-s-talent').value.trim(),
+
+ethnicity: document.getElementById('edit-s-ethnicity').value.trim() || 'Kinh',
+
+isUnionMember: document.getElementById('edit-s-union').value,
+
+prevAcademic: document.getElementById('edit-s-prev-academic').value,
+
+prevConduct: document.getElementById('edit-s-prev-conduct').value
 
 };
 
@@ -5223,6 +5995,8 @@ const index = state.students.findIndex(s => s.id === state.editingStudentId);
 if (index > -1) {
 
 state.students\[index\] = { ...state.students\[index\], ...studentData };
+
+if(typeof logBCSAction === 'function') logBCSAction('Sửa thông tin học sinh: ' + studentData.name);
 
 showToast("Đã cập nhật hồ sơ học sinh thành công!", "success");
 
@@ -5247,6 +6021,8 @@ history: \[\],
 comment: ''
 
 });
+
+if(typeof logBCSAction === 'function') logBCSAction('Thêm học sinh mới: ' + studentData.name);
 
 showToast("Đã thêm học sinh mới thành công!", "success");
 
@@ -5440,13 +6216,13 @@ closeModal('edit-group-modal');
 
 window.downloadTemplate = function() {
 
-const headers = \[\["Họ Tên (Bắt buộc)", "Giới tính", "Tổ thi đua", "Vai trò", "Mục tiêu phấn đấu", "Năng khiếu", "Ngày sinh (Năm-Tháng-Ngày)", "Hình thức lưu trú"\]\];
+const headers = \[\["Họ Tên (Bắt buộc)", "Giới tính", "Tổ thi đua", "Vai trò", "Mục tiêu phấn đấu", "Năng khiếu", "Ngày sinh (Năm-Tháng-Ngày)", "Hình thức lưu trú", "Dân tộc", "Đoàn viên (Rồi/Chưa)", "Học lực năm trước", "Rèn luyện năm trước"\]\];
 
 const sampleData = \[
 
-\["Nguyễn Văn A", "Nam", "Tổ 1", "Lớp trưởng", "Học sinh giỏi", "Toán", "2008-05-15", "Ngoại trú"\],
+\["Nguyễn Văn A", "Nam", "Tổ 1", "Lớp trưởng", "Học sinh giỏi", "Toán", "2008-05-15", "Ngoại trú", "Kinh", "Rồi", "Tốt", "Tốt"\],
 
-\["Trần Thị B", "Nữ", "Tổ 2", "Thành viên", "Tiến bộ", "Văn nghệ", "2008-08-20", "Bán trú"\]
+\["Trần Thị B", "Nữ", "Tổ 2", "Thành viên", "Tiến bộ", "Văn nghệ", "2008-08-20", "Bán trú", "Kinh", "Chưa", "Khá", "Tốt"\]
 
 \];
 
@@ -5456,7 +6232,7 @@ const ws = XLSX.utils.aoa_to_sheet(\[...headers, ...sampleData\]);
 
 // Căn chỉnh độ rộng các cột cho đẹp mắt
 
-ws\['!cols'\] = \[{wch: 25}, {wch: 10}, {wch: 15}, {wch: 15}, {wch: 20}, {wch: 15}, {wch: 25}, {wch: 20}\];
+ws\['!cols'\] = \[{wch: 25}, {wch: 10}, {wch: 15}, {wch: 15}, {wch: 20}, {wch: 15}, {wch: 25}, {wch: 20}, {wch: 15}, {wch: 20}, {wch: 20}, {wch: 20}\];
 
 const wb = XLSX.utils.book_new();
 
@@ -5464,7 +6240,7 @@ XLSX.utils.book_append_sheet(wb, ws, "Mau_Nhap_Hoc_Sinh");
 
 XLSX.writeFile(wb, "File_Mau_Nhap_Hoc_Sinh.xlsx");
 
-showToast("Đã tải xuống file Excel mẫu!", "success");
+showToast("Đã tải xuống file Excel mẫu có cập nhật trường mới!", "success");
 
 };
 
@@ -5474,7 +6250,7 @@ document.getElementById('modal-container').innerHTML = \`
 
 &lt;div class="fixed inset-0 bg-slate-900/70 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in" id="import-modal"&gt;
 
-&lt;div class="bg-white rounded-\[2rem\] shadow-2xl w-full max-w-xl overflow-hidden flex flex-col text-center pt-10 pb-8 px-8 relative"&gt;
+&lt;div class="bg-white rounded-\[2rem\] shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col text-center pt-10 pb-8 px-8 relative"&gt;
 
 &lt;button onclick="closeModal('import-modal')" class="absolute top-6 right-6 text-slate-400 hover:bg-slate-100 rounded-full p-2 transition-colors"&gt;&lt;i class="ph-bold ph-x text-xl"&gt;&lt;/i&gt;&lt;/button&gt;
 
@@ -5494,13 +6270,13 @@ document.getElementById('modal-container').innerHTML = \`
 
 &lt;div class="font-bold text-slate-700 text-base mb-1"&gt;Bấm để chọn file Excel (.xlsx)&lt;/div&gt;
 
-&lt;div class="text-\[11px\] text-slate-500 text-center leading-relaxed font-semibold"&gt;Cột A: Họ Tên | B: Giới tính | C: Tổ | D: Vai trò&lt;br&gt;E: Mục tiêu | F: Năng khiếu | G: Ngày sinh | H: Lưu trú&lt;/div&gt;
+&lt;div class="text-\[11px\] text-slate-500 text-center leading-relaxed font-semibold"&gt;Cột A: Họ Tên | B: Giới tính | C: Tổ | D: Vai trò&lt;br&gt;E: Mục tiêu | F: Năng khiếu | G: Ngày sinh | H: Lưu trú&lt;br&gt;&lt;span class="text-orange-600"&gt;I: Dân tộc | J: Đoàn viên | K: Học lực năm trước | L: Rèn luyện năm trước&lt;/span&gt;&lt;/div&gt;
 
 &lt;/div&gt;
 
 &lt;div class="relative py-2"&gt;&lt;div class="absolute inset-0 flex items-center"&gt;&lt;div class="w-full border-t border-slate-200"&gt;&lt;/div&gt;&lt;/div&gt;&lt;div class="relative flex justify-center"&gt;&lt;span class="bg-white px-4 text-\[10px\] text-slate-400 font-bold uppercase tracking-widest"&gt;Hoặc dán văn bản&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
 
-&lt;textarea id="import-paste-area" rows="4" placeholder="Nguyễn Văn A Nam Tổ 1 Lớp trưởng Học sinh giỏi Toán 2008-05-15 Ngoại trú" class="w-full px-5 py-4 border border-slate-300 rounded-2xl text-sm focus:border-blueAccent focus:ring-4 focus:ring-blue-100 outline-none resize-none bg-slate-50 font-medium font-mono"&gt;&lt;/textarea&gt;
+&lt;textarea id="import-paste-area" rows="4" placeholder="Dán dữ liệu copy từ Excel vào đây..." class="w-full px-5 py-4 border border-slate-300 rounded-2xl text-sm focus:border-blueAccent focus:ring-4 focus:ring-blue-100 outline-none resize-none bg-slate-50 font-medium font-mono"&gt;&lt;/textarea&gt;
 
 &lt;/div&gt;
 
@@ -5578,6 +6354,14 @@ dob: (row\[6\] || '').toString().trim() || '',
 
 boardingType: (row\[7\] || '').toString().trim() || 'Ngoại trú',
 
+ethnicity: (row\[8\] || '').toString().trim() || 'Kinh',
+
+isUnionMember: (row\[9\] || '').toString().trim() || 'Chưa',
+
+prevAcademic: (row\[10\] || '').toString().trim() || '',
+
+prevConduct: (row\[11\] || '').toString().trim() || '',
+
 avatarUrl: '', points: 0, stars: 0, code: generateUniqueCode(), history: \[\]
 
 });
@@ -5586,7 +6370,7 @@ addedCount++;
 
 });
 
-if (addedCount > 0) { saveData(); renderLayout(); closeModal('import-modal'); showToast(\`Đã nhập \${addedCount} học sinh!\`, "success"); }
+if (addedCount > 0) { saveData(); renderLayout(); closeModal('import-modal'); showToast(\`Đã nhập thành công \${addedCount} học sinh!\`, "success"); }
 
 }
 
@@ -5930,25 +6714,61 @@ document.getElementById('modal-container').innerHTML = \`
 
 }
 
-function executeResetPoints() {
+window.executeResetPoints = function() {
 
-if (document.getElementById('reset-confirm-input').value.trim().toUpperCase() !== 'XAC NHAN') return showToast("Gõ đúng chữ XAC NHAN", "error");
+if (document.getElementById('reset-confirm-input').value.trim().toUpperCase() !== 'XAC NHAN') {
 
-const target = document.getElementById('reset-target').value, type = document.getElementById('reset-type').value;
+return showToast("Gõ đúng chữ XAC NHAN", "error");
+
+}
+
+const target = document.getElementById('reset-target').value;
+
+const type = document.getElementById('reset-type').value;
 
 let count = 0;
 
 state.students.forEach(s => {
 
-let shouldReset = (target === 'all') || (target.startsWith('group_') && s.group === target.replace('group_', '')) || (target.startsWith('student_') && s.id.toString() === target.replace('student_', ''));
+let shouldReset = (target === 'all') ||
 
-if (shouldReset) { if (type === 'stars') s.stars = 0; else { s.points = 0; s.stars = 0; } count++; }
+(target.startsWith('group_') && s.group === target.replace('group_', '')) ||
+
+(target.startsWith('student_') && String(s.id) === target.replace('student_', ''));
+
+if (shouldReset) {
+
+if (type === 'stars') {
+
+s.stars = 0;
+
+} else {
+
+s.points = 0;
+
+s.stars = 0;
+
+// XÓA SẠCH HOÀN TOÀN LỊCH SỬ ĐỂ CÁC BÁO CÁO VỀ 0
+
+s.history = \[\];
+
+}
+
+count++;
+
+}
 
 });
 
-saveData(); renderLayout(); closeModal('reset-points-modal'); showToast(\`Đã đặt lại điểm cho \${count} học sinh!\`, "success");
+saveData();
 
-}
+renderLayout();
+
+closeModal('reset-points-modal');
+
+showToast(\`Đã làm sạch hoàn toàn điểm và lịch sử báo cáo cho \${count} học sinh!\`, "success");
+
+};
 
 function openWipeDataModal() {
 
@@ -7724,79 +8544,113 @@ reader.readAsBinaryString(file);
 
 // Hàm phân tích Excel tự động nhận diện Thứ và Tiết bóc dữ liệu ra state
 
+// Hàm phân tích Excel tự động (Thông minh - Không cần form mẫu cứng)
+
+// Hàm phân tích Excel tự động (Thông minh - Cân mọi định dạng)
+
 window.parseExcelToDailySchedule = function(rows) {
-
-let headerRowIdx = -1;
-
-// Tìm dòng header chứa các chữ "Thứ 2"
-
-for (let i = 0; i < rows.length; i++) {
-
-if (rows\[i\] && rows\[i\].some(cell => typeof cell === 'string' && cell.replace(/\\s+/g, '').toLowerCase().includes('thứ2'))) {
-
-headerRowIdx = i;
-
-break;
-
-}
-
-}
-
-if (headerRowIdx === -1) return; // Nếu form không có thứ, bỏ qua trích xuất tự động
 
 const schedule = { 1: \[\], 2: \[\], 3: \[\], 4: \[\], 5: \[\], 6: \[\] }; // Từ Thứ 2 (1) đến Thứ 7 (6)
 
-// Bảng quy đổi giờ chuẩn theo lịch của trường cô
+let headerRowIdx = -1;
 
-const timeMap = {
+let dayCols = {};
 
-1: '07:15 - 08:00',
+let timeColIdx = -1;
 
-2: '08:00 - 08:45',
+let periodColIdx = -1;
 
-3: '09:05 - 09:50',
+// Hàm hỗ trợ bỏ dấu tiếng Việt và khoảng trắng để so sánh dễ hơn
 
-4: '09:50 - 10:35',
+const normalizeText = (text) => {
 
-5: '10:45 - 11:30',
+if (!text) return '';
 
-6: '13:30 - 14:15',
+return String(text).toLowerCase()
 
-7: '14:15 - 15:00',
+.normalize("NFD").replace(/\[\\u0300-\\u036f\]/g, "")
 
-8: '15:15 - 16:00',
-
-'ca1': '16:15 - 17:45',
-
-'ca2': '18:30 - 20:00'
+.replace(/đ/g, "d").replace(/\\s+/g, "");
 
 };
 
-const headerRow = rows\[headerRowIdx\];
+// 1. Quét 15 dòng đầu để tìm dòng Tiêu đề (chứa các "Thứ")
 
-const dayColIndex = {};
+let maxDaysFound = 0;
 
-let tietColIdx = 1;
+for (let i = 0; i < Math.min(rows.length, 15); i++) {
 
-for(let c = 0; c < headerRow.length; c++) {
+const row = rows\[i\];
 
-const val = String(headerRow\[c\] || '').replace(/\\s+/g, '').toLowerCase();
+if (!row) continue;
 
-if(val.includes('thứ2')) dayColIndex\[1\] = c;
+let foundDays = 0;
 
-if(val.includes('thứ3')) dayColIndex\[2\] = c;
+let tempDayCols = {};
 
-if(val.includes('thứ4')) dayColIndex\[3\] = c;
+let tempTimeCol = -1, tempPeriodCol = -1;
 
-if(val.includes('thứ5')) dayColIndex\[4\] = c;
+for (let c = 0; c < row.length; c++) {
 
-if(val.includes('thứ6')) dayColIndex\[5\] = c;
+const cell = normalizeText(row\[c\]);
 
-if(val.includes('thứ7') || val.includes('thubay')) dayColIndex\[6\] = c;
+// Bắt mọi thể loại ghi chữ Thứ
 
-if(val.includes('tiết') || val.includes('ca')) tietColIdx = c;
+if (cell.includes('thu2') || cell === 'hai' || cell === 't2') { tempDayCols\[1\] = c; foundDays++; }
+
+else if (cell.includes('thu3') || cell === 'ba' || cell === 't3') { tempDayCols\[2\] = c; foundDays++; }
+
+else if (cell.includes('thu4') || cell === 'tu' || cell === 't4') { tempDayCols\[3\] = c; foundDays++; }
+
+else if (cell.includes('thu5') || cell === 'nam' || cell === 't5') { tempDayCols\[4\] = c; foundDays++; }
+
+else if (cell.includes('thu6') || cell === 'sau' || cell === 't6') { tempDayCols\[5\] = c; foundDays++; }
+
+else if (cell.includes('thu7') || cell.includes('thubay') || cell === 'bay' || cell === 't7') { tempDayCols\[6\] = c; foundDays++; }
+
+else if (cell.includes('thoigian') || cell.includes('time') || cell.includes('gio')) { tempTimeCol = c; }
+
+else if (cell.includes('tiet') || cell.includes('ca') || cell.includes('stt')) { tempPeriodCol = c; }
 
 }
+
+// Nếu tìm thấy ít nhất 2 ngày trong tuần, chắc chắn đây là dòng Header
+
+if (foundDays > maxDaysFound && foundDays >= 2) {
+
+maxDaysFound = foundDays;
+
+headerRowIdx = i;
+
+dayCols = tempDayCols;
+
+timeColIdx = tempTimeCol;
+
+periodColIdx = tempPeriodCol;
+
+}
+
+}
+
+if (headerRowIdx === -1) {
+
+console.warn("Không tìm thấy hàng tiêu đề chứa các 'Thứ' trong file Excel.");
+
+return;
+
+}
+
+// Nếu bảng không có cột Tiết, tự động lấy cột ngay trước cột Thứ 2 (nếu có), hoặc lấy cột 0
+
+if (periodColIdx === -1) {
+
+periodColIdx = (dayCols\[1\] > 0) ? dayCols\[1\] - 1 : 0;
+
+}
+
+let periodCounter = 1;
+
+// 2. Duyệt các dòng bên dưới dòng tiêu đề để bóc tách dữ liệu
 
 for (let i = headerRowIdx + 1; i < rows.length; i++) {
 
@@ -7804,81 +8658,103 @@ const row = rows\[i\];
 
 if (!row || row.length === 0) continue;
 
-const tietStr = String(row\[tietColIdx\] || '').trim().toLowerCase();
+// Xử lý cột Tiết (Lấy giá trị hoặc tự động đánh số nếu trống)
 
-let periodLabel = '';
+let periodStr = '';
 
-let timeString = '--:--';
+const pCellRaw = row\[periodColIdx\];
 
-// Nhận diện Ca 1, Ca 2 hoặc Tiết
+const pCellNorm = normalizeText(pCellRaw);
 
-if (tietStr.includes('ca 1') || tietStr === 'ca1' || tietStr === '9') {
+// Reset biến đếm nếu gặp dòng "Buổi chiều"
 
-periodLabel = 'Ca 1';
+if (pCellNorm.includes('chieu')) periodCounter = 1;
 
-timeString = timeMap\['ca1'\];
+if (pCellRaw && String(pCellRaw).trim() !== '') {
 
-} else if (tietStr.includes('ca 2') || tietStr === 'ca2' || tietStr === '10') {
+let val = String(pCellRaw).trim();
 
-periodLabel = 'Ca 2';
+if (!isNaN(val)) periodStr = \`Tiết \${val}\`; // Nếu chỉ ghi số 1, 2, 3
 
-timeString = timeMap\['ca2'\];
+else periodStr = val; // Giữ nguyên "Chào cờ", "SHL"
 
 } else {
 
-const tietNum = parseInt(tietStr);
-
-if (isNaN(tietNum)) continue;
-
-periodLabel = 'Tiết ' + tietNum;
-
-timeString = timeMap\[tietNum\] || '--:--';
+periodStr = \`Tiết \${periodCounter}\`;
 
 }
 
+// Xử lý cột Thời gian
+
+let timeStr = '--:--';
+
+if (timeColIdx !== -1 && row\[timeColIdx\]) {
+
+timeStr = String(row\[timeColIdx\]).trim().replace(/h/gi, ':');
+
+}
+
+let hasSubjectInRow = false;
+
+// 3. Trích xuất môn học cho từng Thứ
+
 for (let dayIndex = 1; dayIndex <= 6; dayIndex++) {
 
-const colIndex = dayColIndex\[dayIndex\];
+const colIndex = dayCols\[dayIndex\];
 
 if (colIndex === undefined) continue;
 
-const subject = row\[colIndex\];
+const subjectRaw = row\[colIndex\];
 
-if (subject && typeof subject === 'string' && subject.trim() !== '') {
+if (subjectRaw && typeof subjectRaw === 'string' && subjectRaw.trim() !== '') {
 
-let mon = subject.trim();
+hasSubjectInRow = true;
+
+let mon = subjectRaw.trim();
 
 let gv = 'GV Bộ Môn';
 
-// Tự động bóc tách môn và giáo viên nếu dùng dấu gạch ngang (Ví dụ: LÝ - Mào)
+// Thuật toán tách Môn và Giáo viên thông minh
 
-if (mon.includes('-')) {
-
-const parts = mon.split('-');
-
-mon = parts\[0\].trim();
-
-gv = parts\[1\].trim();
-
-} else if (mon.includes('\\n')) {
+if (mon.includes('\\n')) {
 
 const parts = mon.split('\\n');
 
 mon = parts\[0\].trim();
 
-gv = parts\[1\].trim();
+gv = parts.slice(1).join(' ').replace(/\[-\]/g, '').trim();
+
+} else if (mon.includes('-')) {
+
+const parts = mon.split('-');
+
+mon = parts\[0\].trim();
+
+gv = parts.slice(1).join('-').trim();
+
+} else if (mon.includes('(')) {
+
+const parts = mon.split('(');
+
+mon = parts\[0\].trim();
+
+gv = parts\[1\].replace(')', '').trim();
 
 }
 
+// Chỉ lấy nếu tên môn hợp lệ (bỏ qua rác)
+
+if (mon.length > 1) {
+
 schedule\[dayIndex\].push({
 
-period: periodLabel,
+period: periodStr.length > 15 ? \`Tiết \${periodCounter}\` : periodStr, // Rút gọn nếu chữ quá dài
 
-time: timeString,
+time: timeStr,
 
 subject: mon,
 
-teacher: gv
+teacher: gv || 'GV Bộ Môn'
 
 });
 
@@ -7888,11 +8764,15 @@ teacher: gv
 
 }
 
+// Nếu dòng này có môn học thì mới tăng bộ đếm tiết
+
+if (hasSubjectInRow) periodCounter++;
+
+}
+
 state.dailySchedule = schedule;
 
-};
-
-// ---------------------------------------------------------
+}; // ---------------------------------------------------------
 
 // CÁC HÀM HỖ TRỢ CHO BẢNG ĐIỂM NHANH (MỚI THÊM)
 
@@ -8138,6 +9018,72 @@ renderLayout();
 
 };
 
+// CÁC HÀM XỬ LÝ THÊM DÃY / GHẾ MỚI
+
+window.addColumn = function(direction) {
+
+if (!state.gridCols) state.gridCols = 7; // Mặc định 7 cột ban đầu
+
+let oldCols = state.gridCols;
+
+let oldRows = Math.ceil((state.totalSeats || 36) / oldCols);
+
+let newCols = oldCols + 1;
+
+let newSeatingChart = {};
+
+let newHiddenSeats = \[\];
+
+for (let r = 0; r < oldRows; r++) {
+
+for (let c = 0; c < oldCols; c++) {
+
+let oldIndex = r \* oldCols + c + 1;
+
+// Nếu thêm trái: Cột cũ dịch sang phải 1 đơn vị (+1). Nếu thêm phải: giữ nguyên cột cũ.
+
+let newIndex = direction === 'left' ? (r \* newCols + c + 2) : (r \* newCols + c + 1);
+
+let oldId = 'seat-' + oldIndex;
+
+let newId = 'seat-' + newIndex;
+
+if (state.seatingChart\[oldId\]) {
+
+newSeatingChart\[newId\] = state.seatingChart\[oldId\];
+
+}
+
+if (state.hiddenSeats && state.hiddenSeats.includes(oldId)) {
+
+newHiddenSeats.push(newId);
+
+}
+
+}
+
+}
+
+state.gridCols = newCols;
+
+state.totalSeats = oldRows \* newCols;
+
+state.seatingChart = newSeatingChart;
+
+state.hiddenSeats = newHiddenSeats;
+
+saveData();
+
+renderLayout();
+
+showToast(\`Đã thêm 1 dãy ghế vào bên \${direction === 'left' ? 'trái' : 'phải'}!\`, "success");
+
+};
+
+window.addColumnLeft = () => addColumn('left');
+
+window.addColumnRight = () => addColumn('right');
+
 window.addNewSeat = function() {
 
 if (!state.totalSeats) state.totalSeats = 36;
@@ -8165,8 +9111,6 @@ const maxSeats = state.totalSeats || 36;
 for (let i = 1; i <= maxSeats; i++) {
 
 const seatId = 'seat-'+i;
-
-// Lấy các ghế trống và KHÔNG bị ẩn
 
 if (!state.seatingChart\[seatId\] && !(state.hiddenSeats && state.hiddenSeats.includes(seatId))) {
 
@@ -8196,8 +9140,6 @@ saveData(); renderLayout(); showToast("Đã xếp chỗ tự động!", "success
 
 };
 
-// --- GIAO DIỆN SƠ ĐỒ LỚP HỌC CHUYÊN NGHIỆP ---
-
 // --- GIAO DIỆN SƠ ĐỒ LỚP HỌC CHUYÊN NGHIỆP TỐI ƯU UI/UX ---
 
 function renderViewSoDoLop() {
@@ -8208,6 +9150,8 @@ if (!state.hiddenSeats) state.hiddenSeats = \[\];
 
 if (!state.totalSeats) state.totalSeats = 36; // Mặc định 36 ghế
 
+if (!state.gridCols) state.gridCols = 7; // Mặc định 7 cột/dãy
+
 const unassignedStudents = state.students.filter(s => !Object.values(state.seatingChart).includes(s.id));
 
 let seatsHtml = '';
@@ -8215,8 +9159,6 @@ let seatsHtml = '';
 for (let i = 1; i <= state.totalSeats; i++) {
 
 const seatId = 'seat-' + i;
-
-// 1. Ghế bị ẩn
 
 if (state.hiddenSeats.includes(seatId)) {
 
@@ -8239,8 +9181,6 @@ continue;
 }
 
 const studentId = state.seatingChart\[seatId\];
-
-// 2. Ghế đã có học sinh
 
 if (studentId) {
 
@@ -8286,8 +9226,6 @@ delete state.seatingChart\[seatId\];
 
 }
 
-// 3. Ghế trống
-
 if (!studentId || !state.students.find(s => s.id === studentId)) {
 
 seatsHtml += \`
@@ -8307,8 +9245,6 @@ seatsHtml += \`
 }
 
 }
-
-// Danh sách chờ
 
 const unassignedHtml = unassignedStudents.length > 0
 
@@ -8352,17 +9288,21 @@ Sơ Đồ Lớp Học
 
 &lt;/h2&gt;
 
-&lt;p class="text-slate-500 text-sm font-medium mt-2"&gt;Sử dụng nút "-" trên ghế trống để xóa bớt ghế (tạo lối đi).&lt;/p&gt;
+&lt;p class="text-slate-500 text-sm font-medium mt-2"&gt;Dùng nút + Dãy Trái / Phải để mở rộng. Vuốt/Cuộn ngang nếu sơ đồ quá rộng.&lt;/p&gt;
 
 &lt;/div&gt;
 
-&lt;div class="flex gap-3 flex-wrap justify-end sm:justify-start"&gt;
+&lt;div class="flex gap-2 flex-wrap justify-end sm:justify-start"&gt;
 
-&lt;button onclick="addNewSeat()" class="px-5 py-3 bg-emerald-50 text-emerald-600 font-bold text-sm rounded-xl hover:bg-emerald-100 transition-colors border border-emerald-100 shadow-sm flex items-center"&gt;&lt;i class="ph-bold ph-plus mr-2 text-lg"&gt;&lt;/i&gt; Thêm ghế&lt;/button&gt;
+&lt;button onclick="addColumnLeft()" class="px-3 py-2 bg-emerald-50 text-emerald-600 font-bold text-xs rounded-xl hover:bg-emerald-100 border border-emerald-100 shadow-sm flex items-center" title="Thêm dãy bên trái"&gt;&lt;i class="ph-bold ph-align-left mr-1 text-sm"&gt;&lt;/i&gt; + Dãy Trái&lt;/button&gt;
 
-&lt;button onclick="clearAllSeats()" class="px-5 py-3 bg-rose-50 text-rose-600 font-bold text-sm rounded-xl hover:bg-rose-100 transition-colors border border-rose-100 shadow-sm flex items-center"&gt;&lt;i class="ph-bold ph-arrow-counter-clockwise mr-2 text-lg"&gt;&lt;/i&gt; Thu hồi&lt;/button&gt;
+&lt;button onclick="addColumnRight()" class="px-3 py-2 bg-emerald-50 text-emerald-600 font-bold text-xs rounded-xl hover:bg-emerald-100 border border-emerald-100 shadow-sm flex items-center" title="Thêm dãy bên phải"&gt;&lt;i class="ph-bold ph-align-right mr-1 text-sm"&gt;&lt;/i&gt; + Dãy Phải&lt;/button&gt;
 
-&lt;button onclick="autoArrangeSeats()" class="px-6 py-3 bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-black text-sm rounded-xl hover:shadow-lg hover:shadow-indigo-500/30 transition-all flex items-center transform hover:-translate-y-0.5"&gt;&lt;i class="ph-bold ph-magic-wand mr-2 text-lg text-yellow-300"&gt;&lt;/i&gt; Xếp tự động&lt;/button&gt;
+&lt;button onclick="addNewSeat()" class="px-3 py-2 bg-slate-100 text-slate-600 font-bold text-xs rounded-xl hover:bg-slate-200 border border-slate-200 shadow-sm flex items-center" title="Thêm 1 ghế ở cuối"&gt;&lt;i class="ph-bold ph-plus mr-1 text-sm"&gt;&lt;/i&gt; Thêm ghế&lt;/button&gt;
+
+&lt;button onclick="clearAllSeats()" class="px-3 py-2 bg-rose-50 text-rose-600 font-bold text-xs rounded-xl hover:bg-rose-100 border border-rose-100 shadow-sm flex items-center"&gt;&lt;i class="ph-bold ph-arrow-counter-clockwise mr-1 text-sm"&gt;&lt;/i&gt; Thu hồi&lt;/button&gt;
+
+&lt;button onclick="autoArrangeSeats()" class="px-4 py-2 bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-black text-xs rounded-xl hover:shadow-lg transition-all flex items-center"&gt;&lt;i class="ph-bold ph-magic-wand mr-1 text-sm text-yellow-300"&gt;&lt;/i&gt; Xếp tự động&lt;/button&gt;
 
 &lt;/div&gt;
 
@@ -8370,7 +9310,7 @@ Sơ Đồ Lớp Học
 
 &lt;div class="flex flex-col lg:flex-row gap-8 flex-1 min-h-\[600px\]"&gt;
 
-&lt;!-- CỘT TRÁI: Bản Đồ Lớp (Hiệu ứng giấy kẻ lưới Blueprint) --&gt;
+&lt;!-- CỘT TRÁI: Bản Đồ Lớp --&gt;
 
 &lt;div class="flex-1 bg-slate-50/50 bg-\[radial-gradient(#cbd5e1_1px,transparent_1px)\] \[background-size:20px_20px\] rounded-\[2.5rem\] p-6 md:p-8 shadow-inner border border-slate-200 flex flex-col overflow-hidden h-\[700px\] lg:h-auto relative"&gt;
 
@@ -8400,17 +9340,17 @@ Sơ Đồ Lớp Học
 
 &lt;/div&gt;
 
-&lt;!-- Bọc lưới chỗ ngồi --&gt;
+&lt;!-- Bọc lưới chỗ ngồi (CÓ CHỨC NĂNG CO GIÃN CHỐNG TRÀN VIỀN) --&gt;
 
-&lt;div class="flex-1 overflow-y-auto custom-scrollbar pr-3 pb-6 z-10"&gt;
+&lt;div class="flex-1 overflow-auto custom-scrollbar pr-3 pb-6 z-10 w-full relative"&gt;
 
-&lt;div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-4 md:gap-5"&gt;
+&lt;div class="grid gap-3 md:gap-4 w-full transition-all duration-300 mx-auto" style="grid-template-columns: repeat(\${state.gridCols}, minmax(110px, 1fr)); min-width: \${state.gridCols \* 120}px;"&gt;
 
 \${seatsHtml}
 
 &lt;/div&gt;
 
-&lt;div class="text-center mt-10 text-\[11px\] font-black text-slate-300 uppercase tracking-widest flex items-center justify-center gap-4"&gt;
+&lt;div class="text-center mt-10 text-\[11px\] font-black text-slate-300 uppercase tracking-widest flex items-center justify-center gap-4" style="min-width: \${state.gridCols \* 120}px;"&gt;
 
 &lt;div class="h-px bg-slate-300 flex-1 max-w-\[100px\]"&gt;&lt;/div&gt;
 
@@ -8426,11 +9366,11 @@ VỊ TRÍ CUỐI LỚP
 
 &lt;!-- CỘT PHẢI: Danh sách chờ --&gt;
 
-&lt;div class="w-full lg:w-\[380px\] flex-shrink-0 bg-white rounded-\[2.5rem\] p-7 shadow-\[0_8px_30px_rgba(0,0,0,0.04)\] border border-slate-100 flex flex-col h-\[600px\] lg:h-auto z-10" ondragover="onDragOverList(event)" ondrop="onDropList(event)"&gt;
+&lt;div class="w-full lg:w-\[320px\] flex-shrink-0 bg-white rounded-\[2.5rem\] p-7 shadow-\[0_8px_30px_rgba(0,0,0,0.04)\] border border-slate-100 flex flex-col h-\[600px\] lg:h-auto z-10" ondragover="onDragOverList(event)" ondrop="onDropList(event)"&gt;
 
 &lt;div class="flex justify-between items-center mb-5"&gt;
 
-&lt;h3 class="font-black text-slate-800 uppercase tracking-wide text-base flex items-center gap-2"&gt;&lt;i class="ph-fill ph-users-three text-indigo-500 text-xl"&gt;&lt;/i&gt; DANH SÁCH CHỜ&lt;/h3&gt;
+&lt;h3 class="font-black text-slate-800 uppercase tracking-wide text-sm flex items-center gap-2"&gt;&lt;i class="ph-fill ph-users-three text-indigo-500 text-xl"&gt;&lt;/i&gt; HỌC SINH CHỜ&lt;/h3&gt;
 
 &lt;span class="bg-indigo-50 text-indigo-700 text-xs font-black px-3 py-1.5 rounded-xl border border-indigo-100 shadow-sm"&gt;\${unassignedStudents.length} HS&lt;/span&gt;
 
@@ -8438,7 +9378,7 @@ VỊ TRÍ CUỐI LỚP
 
 &lt;div class="text-xs text-slate-500 mb-6 font-medium bg-slate-50 p-4 rounded-2xl border border-slate-100 leading-relaxed text-center"&gt;
 
-Cầm và kéo học sinh từ đây và thả vào &lt;b class="text-slate-700"&gt;Ghế trống&lt;/b&gt; bên trái.
+Cầm và kéo học sinh từ đây và thả vào &lt;b class="text-slate-700"&gt;Ghế trống&lt;/b&gt;.
 
 &lt;/div&gt;
 
@@ -8486,495 +9426,95 @@ const days = \[
 
 \];
 
-// Khung giờ chuẩn theo yêu cầu của cô
+const excelDay = state.activeDay - 1;
 
-const morningSlots = \[
+let morningSlots = \[\];
 
-{ id: 'm1', period: 'Tiết 1 Sáng', time: '07:15 - 08:00' },
+let afternoonSlots = \[\];
 
-{ id: 'm2', period: 'Tiết 2 Sáng', time: '08:00 - 08:45' },
+// Đảm bảo có dữ liệu lịch chuẩn (Nếu trống thì tự tạo 8 tiết và gắn nhãn Sáng/Chiều)
 
-{ id: 'm3', period: 'Tiết 3 Sáng', time: '09:05 - 09:50' }, // (8h45-9h05 ra chơi)
+if (!state.dailySchedule) state.dailySchedule = {};
 
-{ id: 'm4', period: 'Tiết 4 Sáng', time: '09:50 - 10:35' },
+if (!state.dailySchedule\[excelDay\] || state.dailySchedule\[excelDay\].length === 0) {
 
-{ id: 'm5', period: 'Tiết 5 Sáng', time: '10:45 - 11:30' }
+state.dailySchedule\[excelDay\] = \[
+
+{ period: 'Tiết 1', time: '07:15 - 08:00', session: 'Sáng' },
+
+{ period: 'Tiết 2', time: '08:00 - 08:45', session: 'Sáng' },
+
+{ period: 'Tiết 3', time: '09:05 - 09:50', session: 'Sáng' },
+
+{ period: 'Tiết 4', time: '09:50 - 10:35', session: 'Sáng' },
+
+{ period: 'Tiết 5', time: '10:45 - 11:30', session: 'Sáng' }
 
 \];
 
-const afternoonSlots = \[
+if (state.activeDay !== 7) {
 
-{ id: 'a1', period: 'Tiết 1 Chiều', time: '13:30 - 14:15' },
+state.dailySchedule\[excelDay\].push(
 
-{ id: 'a2', period: 'Tiết 2 Chiều', time: '14:15 - 15:00' },
+{ period: 'Tiết 6', time: '13:30 - 14:15', session: 'Chiều' },
 
-{ id: 'a3', period: 'Tiết 3 Chiều', time: '15:15 - 16:00' }
+{ period: 'Tiết 7', time: '14:15 - 15:00', session: 'Chiều' },
 
-\];
+{ period: 'Tiết 8', time: '15:15 - 16:00', session: 'Chiều' }
 
-const renderSlotsHtml = (slots) => {
-
-// Danh sách các môn học theo yêu cầu của cô
-
-const subjectOptions = \[
-
-"Toán", "Văn", "Lý", "Hóa", "Sinh",
-
-"Công nghệ", "Thể dục", "TNHN", "Tin học",
-
-"Lịch Sử", "Anh văn", "Địa lý", "GDCD", "SHDC", "SHCN"
-
-\].map(sub => \`&lt;option value="\${sub}" \${data.subject === sub ? 'selected' : ''}&gt;\${sub}&lt;/option&gt;\`).join('');
-
-return slots.map(slot => {
-
-const key = \`\${state.activeDay}\_\${slot.id}\`;
-
-const data = state.teachingSchedule\[key\] || { subject: '', teacher: '' };
-
-return \`
-
-&lt;div class="bg-\[#1e2343\] border border-blue-400/20 rounded-2xl p-4 shadow-sm hover:border-blue-400/50 transition-all flex flex-col justify-between group relative"&gt;
-
-&lt;div class="flex justify-between items-center text-blue-200 text-\[11px\] font-bold mb-3"&gt;
-
-&lt;span class="bg-blue-900/60 px-2.5 py-1 rounded-lg border border-blue-400/10"&gt;\${slot.period}&lt;/span&gt;
-
-&lt;span class="flex items-center gap-1 text-slate-300"&gt;&lt;i class="ph-bold ph-clock text-amber-400"&gt;&lt;/i&gt; \${slot.time}&lt;/span&gt;
-
-&lt;/div&gt;
-
-&lt;div class="space-y-2 mb-3"&gt;
-
-&lt;!-- Ô chọn môn học dạng thả xuống (Dropdown) đồng bộ màu Xanh Navy --&gt;
-
-&lt;div class="relative"&gt;
-
-&lt;select onchange="updateTeachingSlot(\${state.activeDay}, '\${slot.id}', 'subject', this.value)" class="w-full bg-\[#141830\] border border-blue-400/20 rounded-xl px-3 py-2.5 text-white font-black text-sm outline-none focus:border-amber-400 transition-colors appearance-none cursor-pointer"&gt;
-
-&lt;option value="" class="text-slate-400"&gt;+ Chọn môn học&lt;/option&gt;
-
-\${subjectOptions}
-
-&lt;/select&gt;
-
-&lt;i class="ph-bold ph-caret-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-xs"&gt;&lt;/i&gt;
-
-&lt;/div&gt;
-
-&lt;!-- Ô nhập tên giáo viên --&gt;
-
-&lt;input type="text" value="\${escapeHtmlAttr(data.teacher)}" placeholder="Nhập tên giáo viên..." onchange="updateTeachingSlot(\${state.activeDay}, '\${slot.id}', 'teacher', this.value)" class="w-full bg-\[#141830\] border border-blue-400/20 rounded-xl px-3 py-2 text-blue-200 text-xs font-bold outline-none focus:border-amber-400 transition-colors"&gt;
-
-&lt;/div&gt;
-
-&lt;/div&gt;
-
-\`;
-
-}).join('');
-
-};
-
-const dayTabsHtml = days.map(day => {
-
-const isActive = state.activeDay === day.id;
-
-return \`
-
-&lt;button onclick="state.activeDay = \${day.id}; renderLayout();" class="px-6 py-3 rounded-2xl text-sm font-black transition-all \${isActive ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/30 scale-105' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}"&gt;
-
-\${day.label} \${day.id === 7 ? '&lt;span class="text-\[10px\] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded ml-1"&gt;4 Tiết&lt;/span&gt;' : ''}
-
-&lt;/button&gt;
-
-\`;
-
-}).join('');
-
-// Thứ 7 chỉ học sáng 4 tiết
-
-const isSaturday = state.activeDay === 7;
-
-return \`
-
-&lt;div class="max-w-7xl mx-auto space-y-8 animate-fade-in pb-12 pt-2"&gt;
-
-&lt;!-- Header tiêu đề --&gt;
-
-&lt;div class="flex flex-col md:flex-row justify-between items-start md:items-center py-2 border-b border-slate-200 pb-6 gap-4"&gt;
-
-&lt;div&gt;
-
-&lt;h2 class="text-2xl md:text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3"&gt;
-
-&lt;div class="p-2.5 bg-blue-50 text-blueAccent rounded-xl border border-blue-100 shadow-sm"&gt;&lt;i class="ph-fill ph-notebook text-2xl"&gt;&lt;/i&gt;&lt;/div&gt;
-
-Lịch Báo Giảng Theo Tiết
-
-&lt;/h2&gt;
-
-&lt;p class="text-slate-500 text-sm font-medium mt-1"&gt;Phân công môn học và giáo viên giảng dạy chi tiết theo khung giờ chuẩn.&lt;/p&gt;
-
-&lt;/div&gt;
-
-&lt;/div&gt;
-
-&lt;!-- Thanh chọn Thứ trong tuần --&gt;
-
-&lt;div class="flex flex-wrap gap-3 bg-white p-4 rounded-\[2rem\] shadow-sm border border-slate-200"&gt;
-
-\${dayTabsHtml}
-
-&lt;/div&gt;
-
-&lt;!-- GIAO DIỆN CHÍNH NỀN XANH NAVY ĐỒNG BỘ --&gt;
-
-&lt;div class="bg-\[#0f172a\] rounded-\[2.5rem\] p-6 md:p-8 shadow-xl border border-slate-800 space-y-8 relative overflow-hidden"&gt;
-
-&lt;div class="absolute top-0 right-0 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl -mr-20 -mt-20 z-0 pointer-events-none"&gt;&lt;/div&gt;
-
-&lt;!-- BUỔI SÁNG --&gt;
-
-&lt;div class="space-y-4 relative z-10"&gt;
-
-&lt;div class="flex items-center gap-3 text-amber-400 font-black text-base uppercase tracking-wider border-b border-slate-800 pb-3"&gt;
-
-&lt;i class="ph-fill ph-sun text-2xl"&gt;&lt;/i&gt; Buổi Sáng (\${isSaturday ? '4 Tiết' : '5 Tiết'})
-
-&lt;/div&gt;
-
-&lt;div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4"&gt;
-
-\${renderSlotsHtml(isSaturday ? morningSlots.slice(0, 4) : morningSlots)}
-
-&lt;/div&gt;
-
-&lt;/div&gt;
-
-&lt;!-- BUỔI CHIỀU (Ẩn đi nếu là Thứ 7) --&gt;
-
-\${!isSaturday ? \`
-
-&lt;div class="space-y-4 relative z-10 pt-4"&gt;
-
-&lt;div class="flex items-center gap-3 text-blue-400 font-black text-base uppercase tracking-wider border-b border-slate-800 pb-3"&gt;
-
-&lt;i class="ph-fill ph-moon-stars text-2xl"&gt;&lt;/i&gt; Buổi Chiều (3 Tiết)
-
-&lt;/div&gt;
-
-&lt;div class="grid grid-cols-1 md:grid-cols-3 gap-4"&gt;
-
-\${renderSlotsHtml(afternoonSlots)}
-
-&lt;/div&gt;
-
-&lt;/div&gt;
-
-\` : \`
-
-&lt;div class="p-6 bg-slate-900/60 rounded-2xl border border-slate-800 text-center text-slate-400 italic text-sm"&gt;
-
-☕ Thứ Bảy lớp chỉ học buổi sáng theo quy định.
-
-&lt;/div&gt;
-
-\`}
-
-&lt;/div&gt;
-
-&lt;/div&gt;
-
-\`;
+);
 
 }
 
-// ==========================================
+}
 
-// --- TÍNH NĂNG LỊCH BÁO GIẢNG THEO TIẾT ---
+// Phân chia Sáng / Chiều thông minh: Khóa chặt vị trí không cho nhảy lộn xộn
 
-// ==========================================
+state.dailySchedule\[excelDay\].forEach((cls, index) => {
 
-function renderViewLichBaoGiang() {
+// Gắn mác Sáng/Chiều cho dữ liệu cũ chưa có (Dựa vào giờ bắt đầu)
 
-if (!state.teachingSchedule) state.teachingSchedule = {};
+if (!cls.session) {
 
-if (!state.activeDay) state.activeDay = 2; // Mặc định hiển thị Thứ 2
+if (cls.time && cls.time.match(/^(1\[2-9\]|2\[0-3\])/)) {
 
-const days = \[
+cls.session = 'Chiều'; // Nếu từ 12h trở đi là Chiều
 
-{ id: 2, label: 'Thứ Hai' },
+} else if (cls.time && cls.time.match(/^(0?\[0-9\]|1\[0-1\])/)) {
 
-{ id: 3, label: 'Thứ Ba' },
+cls.session = 'Sáng'; // Dưới 12h là Sáng
 
-{ id: 4, label: 'Thứ Tư' },
+} else {
 
-{ id: 5, label: 'Thứ Năm' },
-
-{ id: 6, label: 'Thứ Sáu' },
-
-{ id: 7, label: 'Thứ Bảy' }
-
-\];
-
-// Khung giờ chuẩn theo yêu cầu của cô
-
-const morningSlots = \[
-
-{ id: 'm1', period: 'Tiết 1 Sáng', time: '07:15 - 08:00' },
-
-{ id: 'm2', period: 'Tiết 2 Sáng', time: '08:00 - 08:45' },
-
-{ id: 'm3', period: 'Tiết 3 Sáng', time: '09:05 - 09:50' }, // (8h45-9h05 ra chơi)
-
-{ id: 'm4', period: 'Tiết 4 Sáng', time: '09:50 - 10:35' },
-
-{ id: 'm5', period: 'Tiết 5 Sáng', time: '10:45 - 11:30' }
-
-\];
-
-const afternoonSlots = \[
-
-{ id: 'a1', period: 'Tiết 1 Chiều', time: '13:30 - 14:15' },
-
-{ id: 'a2', period: 'Tiết 2 Chiều', time: '14:15 - 15:00' },
-
-{ id: 'a3', period: 'Tiết 3 Chiều', time: '15:15 - 16:00' }
-
-\];
-
-const renderSlotsHtml = (slots) => {
-
-return slots.map(slot => {
-
-const key = \`\${state.activeDay}\_\${slot.id}\`;
-
-const data = state.teachingSchedule\[key\] || { subject: '', teacher: '' };
-
-// Danh sách các môn học theo yêu cầu của cô
-
-const subjectOptions = \[
-
-"Toán", "Văn", "Lý", "Hóa", "Sinh",
-
-"Công nghệ", "Thể dục", "TNHN", "Tin học",
-
-"Lịch Sử", "Anh văn", "Địa lý", "GDCD", "SHDC", "SHCN"
-
-\].map(sub => \`&lt;option value="\${sub}" \${data.subject === sub ? 'selected' : ''}&gt;\${sub}&lt;/option&gt;\`).join('');
-
-return \`
-
-&lt;div class="bg-\[#1e2343\] border border-blue-400/20 rounded-2xl p-4 shadow-sm hover:border-blue-400/50 transition-all flex flex-col justify-between group relative"&gt;
-
-&lt;div class="flex justify-between items-center text-blue-200 text-\[11px\] font-bold mb-3"&gt;
-
-&lt;span class="bg-blue-900/60 px-2.5 py-1 rounded-lg border border-blue-400/10"&gt;\${slot.period}&lt;/span&gt;
-
-&lt;span class="flex items-center gap-1 text-slate-300"&gt;&lt;i class="ph-bold ph-clock text-amber-400"&gt;&lt;/i&gt; \${slot.time}&lt;/span&gt;
-
-&lt;/div&gt;
-
-&lt;div class="space-y-2 mb-3"&gt;
-
-&lt;!-- Ô chọn môn học dạng thả xuống (Dropdown) --&gt;
-
-&lt;div class="relative"&gt;
-
-&lt;select onchange="updateTeachingSlot(\${state.activeDay}, '\${slot.id}', 'subject', this.value)" class="w-full bg-\[#141830\] border border-blue-400/20 rounded-xl px-3 py-2.5 text-white font-black text-sm outline-none focus:border-amber-400 transition-colors appearance-none cursor-pointer"&gt;
-
-&lt;option value="" class="text-slate-400"&gt;+ Chọn môn học&lt;/option&gt;
-
-\${subjectOptions}
-
-&lt;/select&gt;
-
-&lt;i class="ph-bold ph-caret-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-xs"&gt;&lt;/i&gt;
-
-&lt;/div&gt;
-
-&lt;!-- Ô nhập tên giáo viên --&gt;
-
-&lt;input type="text" value="\${escapeHtmlAttr(data.teacher)}" placeholder="Nhập tên giáo viên..." onchange="updateTeachingSlot(\${state.activeDay}, '\${slot.id}', 'teacher', this.value)" class="w-full bg-\[#141830\] border border-blue-400/20 rounded-xl px-3 py-2 text-blue-200 text-xs font-bold outline-none focus:border-amber-400 transition-colors"&gt;
-
-&lt;/div&gt;
-
-&lt;/div&gt;
-
-\`;
-
-}).join('');
-
-};
-
-const dayTabsHtml = days.map(day => {
-
-const isActive = state.activeDay === day.id;
-
-return \`
-
-&lt;button onclick="state.activeDay = \${day.id}; renderLayout();" class="px-6 py-3 rounded-2xl text-sm font-black transition-all \${isActive ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/30 scale-105' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}"&gt;
-
-\${day.label} \${day.id === 7 ? '&lt;span class="text-\[10px\] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded ml-1"&gt;4 Tiết&lt;/span&gt;' : ''}
-
-&lt;/button&gt;
-
-\`;
-
-}).join('');
-
-// Thứ 7 chỉ học sáng 4 tiết
-
-const isSaturday = state.activeDay === 7;
-
-return \`
-
-&lt;div class="max-w-7xl mx-auto space-y-8 animate-fade-in pb-12 pt-2"&gt;
-
-&lt;!-- Header tiêu đề --&gt;
-
-&lt;div class="flex flex-col md:flex-row justify-between items-start md:items-center py-2 border-b border-slate-200 pb-6 gap-4"&gt;
-
-&lt;div&gt;
-
-&lt;h2 class="text-2xl md:text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3"&gt;
-
-&lt;div class="p-2.5 bg-blue-50 text-blueAccent rounded-xl border border-blue-100 shadow-sm"&gt;&lt;i class="ph-fill ph-notebook text-2xl"&gt;&lt;/i&gt;&lt;/div&gt;
-
-Lịch Báo Giảng Theo Tiết
-
-&lt;/h2&gt;
-
-&lt;p class="text-slate-500 text-sm font-medium mt-1"&gt;Phân công môn học và giáo viên giảng dạy chi tiết theo khung giờ chuẩn.&lt;/p&gt;
-
-&lt;/div&gt;
-
-&lt;/div&gt;
-
-&lt;!-- Thanh chọn Thứ trong tuần --&gt;
-
-&lt;div class="flex flex-wrap gap-3 bg-white p-4 rounded-\[2rem\] shadow-sm border border-slate-200"&gt;
-
-\${dayTabsHtml}
-
-&lt;/div&gt;
-
-&lt;!-- GIAO DIỆN CHÍNH NỀN XANH NAVY ĐỒNG BỘ --&gt;
-
-&lt;div class="bg-\[#0f172a\] rounded-\[2.5rem\] p-6 md:p-8 shadow-xl border border-slate-800 space-y-8 relative overflow-hidden"&gt;
-
-&lt;div class="absolute top-0 right-0 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl -mr-20 -mt-20 z-0 pointer-events-none"&gt;&lt;/div&gt;
-
-&lt;!-- BUỔI SÁNG --&gt;
-
-&lt;div class="space-y-4 relative z-10"&gt;
-
-&lt;div class="flex items-center gap-3 text-amber-400 font-black text-base uppercase tracking-wider border-b border-slate-800 pb-3"&gt;
-
-&lt;i class="ph-fill ph-sun text-2xl"&gt;&lt;/i&gt; Buổi Sáng (\${isSaturday ? '4 Tiết' : '5 Tiết'})
-
-&lt;/div&gt;
-
-&lt;div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4"&gt;
-
-\${renderSlotsHtml(isSaturday ? morningSlots.slice(0, 4) : morningSlots)}
-
-&lt;/div&gt;
-
-&lt;/div&gt;
-
-&lt;!-- BUỔI CHIỀU (Ẩn đi nếu là Thứ 7) --&gt;
-
-\${!isSaturday ? \`
-
-&lt;div class="space-y-4 relative z-10 pt-4"&gt;
-
-&lt;div class="flex items-center gap-3 text-blue-400 font-black text-base uppercase tracking-wider border-b border-slate-800 pb-3"&gt;
-
-&lt;i class="ph-fill ph-moon-stars text-2xl"&gt;&lt;/i&gt; Buổi Chiều (3 Tiết)
-
-&lt;/div&gt;
-
-&lt;div class="grid grid-cols-1 md:grid-cols-3 gap-4"&gt;
-
-\${renderSlotsHtml(afternoonSlots)}
-
-&lt;/div&gt;
-
-&lt;/div&gt;
-
-\` : \`
-
-&lt;div class="p-6 bg-slate-900/60 rounded-2xl border border-slate-800 text-center text-slate-400 italic text-sm"&gt;
-
-☕ Thứ Bảy lớp chỉ học buổi sáng theo quy định.
-
-&lt;/div&gt;
-
-\`}
-
-&lt;/div&gt;
-
-&lt;/div&gt;
-
-\`;
+cls.session = index < 5 ? 'Sáng' : 'Chiều'; // Phương án dự phòng
 
 }
 
-// ==========================================
+}
 
-// --- TÍNH NĂNG LỊCH BÁO GIẢNG THEO TIẾT ---
+const slot = {
 
-// ==========================================
+id: 's_' + index,
 
-function renderViewLichBaoGiang() {
+period: cls.period,
 
-if (!state.teachingSchedule) state.teachingSchedule = {};
+time: cls.time,
 
-if (!state.activeDay) state.activeDay = 2; // Mặc định hiển thị Thứ 2
+realIndex: index
 
-const days = \[
+};
 
-{ id: 2, label: 'Thứ Hai' },
+if (cls.session === 'Sáng') {
 
-{ id: 3, label: 'Thứ Ba' },
+morningSlots.push(slot);
 
-{ id: 4, label: 'Thứ Tư' },
+} else {
 
-{ id: 5, label: 'Thứ Năm' },
+afternoonSlots.push(slot);
 
-{ id: 6, label: 'Thứ Sáu' },
+}
 
-{ id: 7, label: 'Thứ Bảy' }
-
-\];
-
-// Khung giờ chuẩn theo yêu cầu của cô
-
-const morningSlots = \[
-
-{ id: 'm1', period: 'Tiết 1 Sáng', time: '07:15 - 08:00' },
-
-{ id: 'm2', period: 'Tiết 2 Sáng', time: '08:00 - 08:45' },
-
-{ id: 'm3', period: 'Tiết 3 Sáng', time: '09:05 - 09:50' }, // (8h45-9h05 ra chơi)
-
-{ id: 'm4', period: 'Tiết 4 Sáng', time: '09:50 - 10:35' },
-
-{ id: 'm5', period: 'Tiết 5 Sáng', time: '10:45 - 11:30' }
-
-\];
-
-const afternoonSlots = \[
-
-{ id: 'a1', period: 'Tiết 1 Chiều', time: '13:30 - 14:15' },
-
-{ id: 'a2', period: 'Tiết 2 Chiều', time: '14:15 - 15:00' },
-
-{ id: 'a3', period: 'Tiết 3 Chiều', time: '15:15 - 16:00' }
-
-\];
+});
 
 const renderSlotsHtml = (slots) => {
 
@@ -8982,23 +9522,21 @@ return slots.map(slot => {
 
 const key = \`\${state.activeDay}\_\${slot.id}\`;
 
-// Vẫn dùng biến data.teacher trong code nhưng giao diện sẽ hiển thị là Lớp
-
 const data = state.teachingSchedule\[key\] || { subject: '', teacher: '' };
-
-// Danh sách các môn học (Đã thêm "Phân hóa")
 
 const subjectOptions = \[
 
-"Toán", "Văn", "Lý", "Hóa", "Sinh",
+"Toán", "Tiếng Việt", "Ngữ Văn", "Vật Lí", "Hóa Học", "Sinh Học", "Khoa học tự nhiên",
 
-"Công nghệ", "Thể dục", "TNHN", "Tin học",
+"Lịch Sử", "Địa Lí", "Lịch sử & Địa lý", "Tiếng Anh", "Đạo đức", "GDCD", "KTPL",
 
-"Lịch Sử", "Anh văn", "Địa lý", "GDCD", "SHDC", "SHCN", "Phân hóa"
+"Tự nhiên & Xã hội", "Khoa học", "Công Nghệ", "Tin Học", "Giáo dục thể chất",
+
+"Âm Nhạc", "Mĩ Thuật", "Nghệ Thuật", "Giáo dục QPAN", "HĐTN, HN", "GDĐP",
+
+"SHDC", "SHCN", "Phân hóa", "Tự chọn"
 
 \].map(sub => \`&lt;option value="\${sub}" \${data.subject === sub ? 'selected' : ''}&gt;\${sub}&lt;/option&gt;\`).join('');
-
-// Danh sách các lớp
 
 const classList = \[
 
@@ -9013,6 +9551,14 @@ const classOptions = classList.map(cls => \`&lt;option value="\${cls}" \${data.t
 return \`
 
 &lt;div class="bg-\[#1e2343\] border border-blue-400/20 rounded-2xl p-4 shadow-sm hover:border-blue-400/50 transition-all flex flex-col justify-between group relative"&gt;
+
+&lt;!-- NÚT XÓA TIẾT --&gt;
+
+&lt;button onclick="deleteTeachingSlot(\${state.activeDay}, \${slot.realIndex})" class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md z-10" title="Xóa tiết học này"&gt;
+
+&lt;i class="ph-bold ph-x text-\[10px\]"&gt;&lt;/i&gt;
+
+&lt;/button&gt;
 
 &lt;div class="flex justify-between items-center text-blue-200 text-\[11px\] font-bold mb-3"&gt;
 
@@ -9070,7 +9616,7 @@ return \`
 
 &lt;button onclick="state.activeDay = \${day.id}; renderLayout();" class="px-6 py-3 rounded-2xl text-sm font-black transition-all \${isActive ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/30 scale-105' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}"&gt;
 
-\${day.label} \${day.id === 7 ? '&lt;span class="text-\[10px\] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded ml-1"&gt;4 Tiết&lt;/span&gt;' : ''}
+\${day.label}
 
 &lt;/button&gt;
 
@@ -9078,15 +9624,75 @@ return \`
 
 }).join('');
 
-// Thứ 7 chỉ học sáng 4 tiết
+let contentHtml = '';
 
-const isSaturday = state.activeDay === 7;
+if (morningSlots.length > 0) {
+
+contentHtml += \`
+
+&lt;div class="space-y-4 relative z-10"&gt;
+
+&lt;div class="flex items-center gap-3 text-amber-400 font-black text-base uppercase tracking-wider border-b border-slate-800 pb-3"&gt;
+
+&lt;i class="ph-fill ph-sun text-2xl"&gt;&lt;/i&gt; Buổi Sáng (\${morningSlots.length} Tiết)
+
+&lt;/div&gt;
+
+&lt;div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4"&gt;
+
+\${renderSlotsHtml(morningSlots)}
+
+&lt;/div&gt;
+
+&lt;/div&gt;\`;
+
+}
+
+if (afternoonSlots.length > 0) {
+
+contentHtml += \`
+
+&lt;div class="space-y-4 relative z-10 pt-4"&gt;
+
+&lt;div class="flex items-center gap-3 text-blue-400 font-black text-base uppercase tracking-wider border-b border-slate-800 pb-3"&gt;
+
+&lt;i class="ph-fill ph-moon-stars text-2xl"&gt;&lt;/i&gt; Buổi Chiều (\${afternoonSlots.length} Tiết)
+
+&lt;/div&gt;
+
+&lt;div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"&gt;
+
+\${renderSlotsHtml(afternoonSlots)}
+
+&lt;/div&gt;
+
+&lt;/div&gt;\`;
+
+} else if (state.activeDay === 7 && state.dailySchedule) {
+
+contentHtml += \`
+
+&lt;div class="p-6 mt-4 bg-slate-900/60 rounded-2xl border border-slate-800 text-center text-slate-400 italic text-sm relative z-10"&gt;
+
+☕ Thứ Bảy lớp chỉ học buổi sáng theo quy định.
+
+&lt;/div&gt;\`;
+
+} else if (morningSlots.length > 0 && afternoonSlots.length === 0) {
+
+contentHtml += \`
+
+&lt;div class="p-6 mt-4 bg-slate-900/60 rounded-2xl border border-slate-800 text-center text-slate-400 italic text-sm relative z-10"&gt;
+
+☕ Không có lịch học buổi chiều.
+
+&lt;/div&gt;\`;
+
+}
 
 return \`
 
 &lt;div class="max-w-7xl mx-auto space-y-8 animate-fade-in pb-12 pt-2"&gt;
-
-&lt;!-- Header tiêu đề --&gt;
 
 &lt;div class="flex flex-col md:flex-row justify-between items-start md:items-center py-2 border-b border-slate-200 pb-6 gap-4"&gt;
 
@@ -9100,13 +9706,11 @@ Lịch Báo Giảng Theo Tiết
 
 &lt;/h2&gt;
 
-&lt;p class="text-slate-500 text-sm font-medium mt-1"&gt;Phân công môn học và giáo viên giảng dạy chi tiết theo khung giờ chuẩn.&lt;/p&gt;
+&lt;p class="text-slate-500 text-sm font-medium mt-1"&gt;Dùng nút xóa ở góc phải thẻ tiết học để ẩn bớt tiết trống.&lt;/p&gt;
 
 &lt;/div&gt;
 
 &lt;/div&gt;
-
-&lt;!-- Thanh chọn Thứ trong tuần --&gt;
 
 &lt;div class="flex flex-wrap gap-3 bg-white p-4 rounded-\[2rem\] shadow-sm border border-slate-200"&gt;
 
@@ -9114,59 +9718,11 @@ Lịch Báo Giảng Theo Tiết
 
 &lt;/div&gt;
 
-&lt;!-- GIAO DIỆN CHÍNH NỀN XANH NAVY ĐỒNG BỘ --&gt;
-
 &lt;div class="bg-\[#0f172a\] rounded-\[2.5rem\] p-6 md:p-8 shadow-xl border border-slate-800 space-y-8 relative overflow-hidden"&gt;
 
 &lt;div class="absolute top-0 right-0 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl -mr-20 -mt-20 z-0 pointer-events-none"&gt;&lt;/div&gt;
 
-&lt;!-- BUỔI SÁNG --&gt;
-
-&lt;div class="space-y-4 relative z-10"&gt;
-
-&lt;div class="flex items-center gap-3 text-amber-400 font-black text-base uppercase tracking-wider border-b border-slate-800 pb-3"&gt;
-
-&lt;i class="ph-fill ph-sun text-2xl"&gt;&lt;/i&gt; Buổi Sáng (\${isSaturday ? '4 Tiết' : '5 Tiết'})
-
-&lt;/div&gt;
-
-&lt;div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4"&gt;
-
-\${renderSlotsHtml(isSaturday ? morningSlots.slice(0, 4) : morningSlots)}
-
-&lt;/div&gt;
-
-&lt;/div&gt;
-
-&lt;!-- BUỔI CHIỀU (Ẩn đi nếu là Thứ 7) --&gt;
-
-\${!isSaturday ? \`
-
-&lt;div class="space-y-4 relative z-10 pt-4"&gt;
-
-&lt;div class="flex items-center gap-3 text-blue-400 font-black text-base uppercase tracking-wider border-b border-slate-800 pb-3"&gt;
-
-&lt;i class="ph-fill ph-moon-stars text-2xl"&gt;&lt;/i&gt; Buổi Chiều (3 Tiết)
-
-&lt;/div&gt;
-
-&lt;div class="grid grid-cols-1 md:grid-cols-3 gap-4"&gt;
-
-\${renderSlotsHtml(afternoonSlots)}
-
-&lt;/div&gt;
-
-&lt;/div&gt;
-
-\` : \`
-
-&lt;div class="p-6 bg-slate-900/60 rounded-2xl border border-slate-800 text-center text-slate-400 italic text-sm"&gt;
-
-☕ Thứ Bảy lớp chỉ học buổi sáng theo quy định.
-
-&lt;/div&gt;
-
-\`}
+\${contentHtml}
 
 &lt;/div&gt;
 
@@ -9188,7 +9744,55 @@ state.teachingSchedule\[key\]\[field\] = value.trim();
 
 saveData();
 
-showToast("Đã cập nhật lịch báo giảng!", "success");
+};
+
+// HÀM XÓA VÀ TỰ ĐỘNG ĐẨY SỐ THỨ TỰ LÊN TRÊN (BẢN AN TOÀN CHỐNG LỖI)
+
+window.deleteTeachingSlot = function(dayId, index) {
+
+const excelDay = dayId - 1;
+
+if (!state.dailySchedule || !state.dailySchedule\[excelDay\]) return;
+
+if (confirm("Cô có chắc muốn xóa tiết này không? Tên các tiết sẽ được đánh số lại tăng dần nhưng vẫn giữ nguyên buổi Sáng/Chiều.")) {
+
+state.dailySchedule\[excelDay\].splice(index, 1);
+
+// Cập nhật lại tên tiết cho liền mạch (VD: Sáng 4 tiết thì Chiều bắt đầu từ Tiết 5)
+
+state.dailySchedule\[excelDay\].forEach((cls, i) => {
+
+cls.period = "Tiết " + (i + 1);
+
+});
+
+// Dịch chuyển dữ liệu môn/giáo viên đã chọn từ ô dưới lên ô trên
+
+for (let i = index; i <= 20; i++) {
+
+let currKey = dayId + "\_s_" + i;
+
+let nextKey = dayId + "\_s_" + (i + 1);
+
+if (state.teachingSchedule\[nextKey\]) {
+
+state.teachingSchedule\[currKey\] = state.teachingSchedule\[nextKey\];
+
+} else {
+
+delete state.teachingSchedule\[currKey\];
+
+}
+
+}
+
+saveData();
+
+renderLayout();
+
+showToast("Đã xóa tiết và đánh số thứ tự lại thành công!", "success");
+
+}
 
 };
 
@@ -9568,89 +10172,137 @@ if (typeof triggerConfetti === 'function') triggerConfetti();
 
 function renderLoginScreen() {
 
-const currentRole = state.auth.role || 'gvcn';
+const roleLabels = {
 
-// ĐÃ SỬA LỖI: Dùng biến riêng loginBannerUrl thay vì bannerUrl chung
+'gvcn': 'Giáo viên chủ nhiệm',
 
-const bannerBg = (state.theme && state.theme.loginBannerUrl) ? state.theme.loginBannerUrl : '<https://images.unsplash.com/photo-1577896851231-70ef18881754?q=80&w=1000&auto=format&fit=crop>';
+'bcs': 'Ban cán sự lớp',
+
+'bgh': 'Ban giám hiệu'
+
+};
+
+// CSS tạo hiệu ứng các dụng cụ học tập bay lên dễ thương
+
+const animationStyle = \`
+
+&lt;style&gt;
+
+@keyframes floatUpLogin {
+
+0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+
+10% { opacity: 0.6; }
+
+90% { opacity: 0.6; }
+
+100% { transform: translateY(-20vh) rotate(360deg); opacity: 0; }
+
+}
+
+.login-item { position: absolute; bottom: -10%; animation: floatUpLogin linear infinite; color: rgba(255, 255, 255, 0.15); pointer-events: none; z-index: 0; }
+
+.d-1 { animation-duration: 14s; left: 5%; font-size: 3.5rem; }
+
+.d-2 { animation-duration: 20s; left: 20%; font-size: 5rem; animation-delay: 2s;}
+
+.d-3 { animation-duration: 16s; left: 35%; font-size: 2.5rem; animation-delay: 5s;}
+
+.d-4 { animation-duration: 24s; left: 55%; font-size: 6rem; animation-delay: 1s;}
+
+.d-5 { animation-duration: 18s; left: 75%; font-size: 4rem; animation-delay: 4s;}
+
+.d-6 { animation-duration: 22s; left: 88%; font-size: 3rem; animation-delay: 7s;}
+
+&lt;/style&gt;
+
+\`;
 
 return \`
 
-&lt;div class="fixed inset-0 z-50 flex bg-slate-50 animate-fade-in font-sans"&gt;
+\${animationStyle}
 
-&lt;!-- Bên trái: Khung ảnh dễ thương (chiếm 2/3) --&gt;
+&lt;!-- NỀN XANH NAVY TỐI --&gt;
 
-&lt;div class="hidden lg:flex w-2/3 bg-blue-50/50 relative overflow-hidden items-center justify-center p-12"&gt;
+&lt;div class="fixed inset-0 z-50 flex items-center justify-center bg-\[#0f172a\] overflow-hidden animate-fade-in font-sans p-4"&gt;
 
-&lt;!-- Hình nền trang trí dạng bong bóng mờ (Blob Pastel) --&gt;
+&lt;!-- CÁC DỤNG CỤ HỌC TẬP TRÔI NỔI PHÍA SAU --&gt;
 
-&lt;div class="absolute top-\[-10%\] left-\[-10%\] w-\[30rem\] h-\[30rem\] bg-pink-200 rounded-full mix-blend-multiply filter blur-3xl opacity-50"&gt;&lt;/div&gt;
+&lt;i class="ph-fill ph-pencil login-item d-1"&gt;&lt;/i&gt;
 
-&lt;div class="absolute top-\[20%\] right-\[-10%\] w-\[30rem\] h-\[30rem\] bg-yellow-200 rounded-full mix-blend-multiply filter blur-3xl opacity-50"&gt;&lt;/div&gt;
+&lt;i class="ph-fill ph-book-open login-item d-2"&gt;&lt;/i&gt;
 
-&lt;div class="absolute bottom-\[-20%\] left-\[20%\] w-\[30rem\] h-\[30rem\] bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-50"&gt;&lt;/div&gt;
+&lt;i class="ph-fill ph-backpack login-item d-3"&gt;&lt;/i&gt;
 
-&lt;!-- Cụm Khung Ảnh Chính --&gt;
+&lt;i class="ph-fill ph-flask login-item d-4"&gt;&lt;/i&gt;
 
-&lt;div class="relative z-10 w-full max-w-4xl mx-auto"&gt;
+&lt;i class="ph-fill ph-palette login-item d-5"&gt;&lt;/i&gt;
 
-&lt;!-- Nút tải ảnh lên --&gt;
+&lt;i class="ph-fill ph-ruler login-item d-6"&gt;&lt;/i&gt;
 
-&lt;div class="absolute -top-6 -right-6 z-30"&gt;
+&lt;!-- KHUNG ĐĂNG NHẬP CHÍNH --&gt;
 
-&lt;button onclick="document.getElementById('login-banner-upload').click()" class="bg-white text-blueAccent hover:text-pink-500 hover:scale-110 shadow-\[0_10px_30px_rgba(0,0,0,0.15)\] p-4 rounded-full transition-all flex items-center justify-center border-4 border-white group" title="Thay đổi ảnh lớp học"&gt;
+&lt;div class="bg-white rounded-\[2rem\] shadow-\[0_20px_60px_rgba(0,0,0,0.5)\] flex flex-col md:flex-row w-full max-w-5xl overflow-hidden min-h-\[600px\] relative z-10"&gt;
 
-&lt;i class="ph-bold ph-camera text-3xl group-hover:animate-bounce-slight"&gt;&lt;/i&gt;
+&lt;!-- CỘT TRÁI (Bên chứa ảnh) --&gt;
+
+&lt;div class="hidden md:flex w-1/2 bg-slate-50 flex-col items-center justify-center p-12 border-r border-slate-100 relative"&gt;
+
+&lt;!-- LOGO TRƯỜNG (Tự co giãn 100% không vỡ) --&gt;
+
+&lt;div class="border-2 border-dashed border-pink-200 rounded-2xl p-2 mb-8 flex items-center justify-center bg-white shadow-sm z-10 w-full max-w-\[280px\] h-\[80px\] relative cursor-pointer group" onclick="document.getElementById('login-logo-upload').click()"&gt;
+
+\${state.theme.schoolLogo
+
+? \`&lt;img src="\${state.theme.schoolLogo}" class="w-full h-full object-contain"&gt;\`
+
+: \`&lt;span class="text-pink-600 font-black text-lg tracking-wide text-center px-4"&gt;BẤM ĐỂ TẢI LOGO TRƯỜNG&lt;/span&gt;\`
+
+}
+
+&lt;div class="absolute inset-0 bg-black/50 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"&gt;
+
+&lt;i class="ph-bold ph-camera text-white text-2xl"&gt;&lt;/i&gt;
+
+&lt;/div&gt;
+
+&lt;input type="file" id="login-logo-upload" class="hidden" accept="image/\*" onchange="handleLoginLogoUpload(event)"&gt;
+
+&lt;/div&gt;
+
+&lt;!-- ẢNH KHÔNG GIAN HỌC TẬP --&gt;
+
+&lt;div class="relative w-full aspect-square rounded-\[2rem\] overflow-hidden shadow-lg z-10 group"&gt;
+
+&lt;img src="\${state.theme.loginBannerUrl || '<https://images.unsplash.com/photo-1577896851231-70ef18881754?q=80&w=1000'}>" class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-700"&gt;
+
+&lt;div class="absolute top-4 left-4 bg-white/90 p-2 rounded-xl text-pink-500 shadow-sm"&gt;&lt;i class="ph-fill ph-heart text-xl"&gt;&lt;/i&gt;&lt;/div&gt;
+
+&lt;!-- NÚT TẢI ẢNH (Máy ảnh) --&gt;
+
+&lt;button onclick="document.getElementById('login-cover-upload').click()" class="absolute top-4 right-4 bg-white/90 p-2 rounded-xl text-blue-500 shadow-sm hover:bg-blue-50 transition-colors z-20 cursor-pointer"&gt;
+
+&lt;i class="ph-fill ph-camera text-xl"&gt;&lt;/i&gt;
 
 &lt;/button&gt;
 
-&lt;input type="file" id="login-banner-upload" class="hidden" accept="image/\*" onchange="handleLoginBannerUpload(event)"&gt;
+&lt;input type="file" id="login-cover-upload" class="hidden" accept="image/\*" onchange="handleLoginCoverUpload(event)"&gt;
 
-&lt;/div&gt;
+&lt;div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-6 pt-12 text-white"&gt;
 
-&lt;!-- Khung viền ảnh (Style khung tranh bo tròn nổi 3D) --&gt;
+&lt;span class="bg-yellow-400 text-slate-900 text-\[10px\] font-black px-3 py-1 rounded-lg uppercase tracking-widest shadow-sm"&gt;KHÔNG GIAN HỌC TẬP&lt;/span&gt;
 
-&lt;div class="bg-white/80 backdrop-blur-sm p-4 md:p-6 rounded-\[3.5rem\] shadow-\[0_20px_60px_rgba(0,0,0,0.08)\] transform rotate-1 hover:rotate-0 transition-transform duration-500 relative border border-white"&gt;
+&lt;h2 class="text-4xl font-black mt-3 mb-1 shadow-sm"&gt;\${state.admin.className || 'LỚP 12A1'}&lt;/h2&gt;
 
-&lt;!-- Chibi / Trái tim trang trí góc --&gt;
-
-&lt;div class="absolute -top-8 -left-8 bg-pink-100 text-pink-500 w-20 h-20 rounded-\[1.5rem\] flex items-center justify-center shadow-lg border-4 border-white transform -rotate-12 z-20"&gt;
-
-&lt;i class="ph-fill ph-heart text-4xl animate-pulse"&gt;&lt;/i&gt;
-
-&lt;/div&gt;
-
-&lt;div class="w-full h-\[500px\] rounded-\[2.5rem\] overflow-hidden relative group shadow-inner bg-slate-100"&gt;
-
-&lt;img src="\${bannerBg}" class="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" alt="Ảnh lớp"&gt;
-
-&lt;!-- Lớp phủ Gradient mượt mà để hiện chữ --&gt;
-
-&lt;div class="absolute inset-0 bg-gradient-to-t from-\[#1e1b4b\] via-\[#1e1b4b\]/40 to-transparent opacity-90"&gt;&lt;/div&gt;
-
-&lt;!-- Chữ đè lên ảnh --&gt;
-
-&lt;div class="absolute bottom-0 left-0 w-full p-10 md:p-12 text-white transform transition-transform duration-500"&gt;
-
-&lt;div class="flex items-center gap-2 mb-4"&gt;
-
-&lt;span class="bg-white/20 backdrop-blur-md px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest border border-white/30 flex items-center gap-1.5"&gt;&lt;i class="ph-fill ph-stars text-yellow-300"&gt;&lt;/i&gt; Không Gian Học Tập&lt;/span&gt;
-
-&lt;/div&gt;
-
-&lt;h1 class="text-6xl font-black tracking-tight mb-4 drop-shadow-lg"&gt;\${state.admin.className || 'LỚP 12A1'}&lt;/h1&gt;
-
-&lt;p class="text-indigo-100 font-medium text-base max-w-2xl leading-relaxed drop-shadow-md"&gt;Nơi gieo mầm tri thức và lưu giữ những kỷ niệm thanh xuân rực rỡ nhất của tuổi học trò.&lt;/p&gt;
+&lt;p class="text-sm font-medium opacity-90 leading-relaxed text-slate-200"&gt;Nơi gieo mầm tri thức và lưu giữ những kỷ niệm thanh xuân rực rỡ nhất của tuổi học trò.&lt;/p&gt;
 
 &lt;/div&gt;
 
 &lt;/div&gt;
 
-&lt;/div&gt;
+&lt;!-- Tagline --&gt;
 
-&lt;!-- Nhãn dán dễ thương nổi bên ngoài --&gt;
-
-&lt;div class="absolute -bottom-8 right-12 bg-gradient-to-r from-yellow-100 to-amber-100 text-amber-700 px-8 py-3.5 rounded-2xl shadow-xl border-4 border-white font-black text-sm transform rotate-6 animate-bounce-slight z-20"&gt;
+&lt;div class="mt-8 bg-yellow-100/80 text-yellow-700 text-sm font-bold px-6 py-2.5 rounded-full z-10 border border-yellow-200 shadow-sm"&gt;
 
 ✨ Mỗi ngày đến trường là một niềm vui!
 
@@ -9658,137 +10310,79 @@ return \`
 
 &lt;/div&gt;
 
-&lt;/div&gt;
+&lt;!-- CỘT PHẢI (Form Đăng nhập) --&gt;
 
-&lt;!-- Bên phải: Khung đăng nhập (chiếm 1/3) --&gt;
-
-&lt;div class="w-full lg:w-1/3 flex items-center justify-center p-6 sm:p-10 bg-white relative z-20 shadow-\[-20px_0_40px_rgba(0,0,0,0.03)\] overflow-y-auto custom-scrollbar"&gt;
-
-&lt;div class="bg-white w-full max-w-md rounded-\[2.5rem\] p-8 sm:p-10 shadow-2xl border border-slate-100 relative"&gt;
-
-&lt;!-- Logo / Tiêu đề --&gt;
+&lt;div class="w-full md:w-1/2 p-8 md:p-14 flex flex-col justify-center bg-white relative z-10"&gt;
 
 &lt;div class="text-center mb-8"&gt;
 
-&lt;div class="w-16 h-16 bg-\[#1e1b4b\] rounded-\[1.2rem\] mx-auto flex items-center justify-center shadow-lg mb-5 text-white text-2xl font-black transform transition-transform hover:scale-110"&gt;
+&lt;div class="w-14 h-14 bg-\[#1e1b4b\] text-white rounded-2xl mx-auto flex items-center justify-center mb-5 shadow-lg"&gt;&lt;i class="ph-fill ph-graduation-cap text-3xl"&gt;&lt;/i&gt;&lt;/div&gt;
 
-&lt;i class="ph-fill ph-graduation-cap text-orange-400"&gt;&lt;/i&gt;
+&lt;h2 class="text-2xl font-black text-slate-800"&gt;Đăng Nhập Quản Trị&lt;/h2&gt;
 
-&lt;/div&gt;
-
-&lt;h3 class="text-2xl font-black text-slate-800 tracking-tight"&gt;Đăng Nhập Quản Trị&lt;/h3&gt;
-
-&lt;p class="text-\[10px\] text-slate-400 font-bold uppercase tracking-widest mt-1.5"&gt;Xác thực phân quyền hệ thống&lt;/p&gt;
+&lt;p class="text-\[11px\] text-slate-500 uppercase tracking-widest mt-1.5 font-bold"&gt;Xác thực phân quyền hệ thống&lt;/p&gt;
 
 &lt;/div&gt;
 
-&lt;!-- Lựa chọn vai trò đăng nhập --&gt;
+&lt;!-- Tab Phân Quyền --&gt;
 
-&lt;div class="flex bg-slate-100 p-1.5 rounded-2xl mb-8"&gt;
+&lt;div class="flex bg-slate-50 p-1.5 rounded-2xl mb-4 border border-slate-100 shadow-inner"&gt;
 
-&lt;button onclick="state.auth.role='gvcn'; renderLayout();" class="flex-1 py-3 rounded-\[1rem\] text-xs font-black transition-all \${currentRole==='gvcn' ? 'bg-\[#1e1b4b\] text-white shadow-md' : 'text-slate-500 hover:text-slate-800'}"&gt;GV Chủ Nhiệm&lt;/button&gt;
+&lt;button onclick="state.loginRoleSelect='gvcn'; renderLayout();" class="flex-1 py-3 rounded-xl text-sm font-bold transition-all \${state.loginRoleSelect === 'gvcn' ? 'bg-\[#1e1b4b\] text-white shadow-md' : 'text-slate-500 hover:text-slate-800'}"&gt;GVCN&lt;/button&gt;
 
-&lt;button onclick="state.auth.role='bancansu'; renderLayout();" class="flex-1 py-3 rounded-\[1rem\] text-xs font-black transition-all \${currentRole==='bancansu' ? 'bg-\[#1e1b4b\] text-white shadow-md' : 'text-slate-500 hover:text-slate-800'}"&gt;Ban Cán Sự&lt;/button&gt;
+&lt;button onclick="state.loginRoleSelect='bcs'; renderLayout();" class="flex-1 py-3 rounded-xl text-sm font-bold transition-all \${state.loginRoleSelect === 'bcs' ? 'bg-\[#1e1b4b\] text-white shadow-md' : 'text-slate-500 hover:text-slate-800'}"&gt;BCS&lt;/button&gt;
 
-&lt;/div&gt;
-
-&lt;!-- Form đăng nhập tương ứng vai trò --&gt;
-
-&lt;div class="space-y-4"&gt;
-
-\${currentRole === 'gvcn' ? \`
-
-&lt;div&gt;
-
-&lt;label class="block text-\[11px\] font-bold text-slate-500 mb-2 uppercase tracking-widest"&gt;Email GVCN&lt;/label&gt;
-
-&lt;div class="relative"&gt;
-
-&lt;input type="email" id="login-email" placeholder="Email Firebase Authentication" class="w-full pl-11 pr-4 py-3.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-800 outline-none focus:border-blueAccent shadow-sm transition-colors"&gt;
-
-&lt;i class="ph-bold ph-envelope absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg"&gt;&lt;/i&gt;
+&lt;button onclick="state.loginRoleSelect='bgh'; renderLayout();" class="flex-1 py-3 rounded-xl text-sm font-bold transition-all \${state.loginRoleSelect === 'bgh' ? 'bg-\[#1e1b4b\] text-white shadow-md' : 'text-slate-500 hover:text-slate-800'}"&gt;BGH&lt;/button&gt;
 
 &lt;/div&gt;
 
-&lt;/div&gt;
+&lt;div class="text-center text-sm font-semibold text-blue-600 bg-blue-50 py-2.5 rounded-xl mb-6 border border-blue-100"&gt;
 
-&lt;div&gt;
-
-&lt;label class="block text-\[11px\] font-bold text-slate-500 mb-2 uppercase tracking-widest"&gt;Mật khẩu&lt;/label&gt;
-
-&lt;div class="relative"&gt;
-
-&lt;input type="password" id="login-password" placeholder="••••••••" class="w-full pl-11 pr-4 py-3.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-800 outline-none focus:border-blueAccent shadow-sm transition-colors"&gt;
-
-&lt;i class="ph-bold ph-lock absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg"&gt;&lt;/i&gt;
+Bạn đang đăng nhập với tư cách \${roleLabels\[state.loginRoleSelect\]}.
 
 &lt;/div&gt;
 
-&lt;/div&gt;
+&lt;!-- Input Mật khẩu --&gt;
 
-&lt;div class="flex items-center gap-2 pt-1 mb-2"&gt;
+&lt;div class="mb-6 relative"&gt;
 
-&lt;input type="checkbox" id="remember-me" class="w-4 h-4 rounded text-blueAccent border-slate-300 cursor-pointer"&gt;
-
-&lt;label for="remember-me" class="text-xs font-bold text-slate-600 cursor-pointer"&gt;Ghi nhớ tài khoản&lt;/label&gt;
+&lt;input type="password" id="login-password" placeholder="Nhập mật khẩu..." class="w-full px-5 py-4 border-2 border-slate-100 rounded-2xl text-base font-bold focus:border-\[#1e1b4b\] focus:ring-4 focus:ring-indigo-50 outline-none transition-all text-center placeholder:text-slate-300" onkeypress="if(event.key === 'Enter') handleLogin()"&gt;
 
 &lt;/div&gt;
 
-&lt;button onclick="handleLogin()" class="w-full py-4 bg-blueAccent hover:bg-blue-600 text-white font-black rounded-xl shadow-\[0_8px_20px_rgba(59,130,246,0.3)\] hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 text-sm mt-2"&gt;
+&lt;button onclick="handleLogin()" class="w-full py-4 bg-\[#1e1b4b\] text-white font-black text-sm rounded-2xl hover:bg-\[#312e81\] shadow-lg hover:shadow-indigo-900/20 transition-all flex items-center justify-center gap-2 mb-8"&gt;
 
-&lt;i class="ph-bold ph-sign-in text-lg"&gt;&lt;/i&gt; ĐĂNG NHẬP AN TOÀN
+&lt;i class="ph-bold ph-shield-check text-lg"&gt;&lt;/i&gt; TRUY CẬP HỆ THỐNG
 
 &lt;/button&gt;
 
-\` : \`
+&lt;!-- Ngăn cách --&gt;
 
-&lt;div class="p-5 bg-indigo-50 rounded-2xl border border-indigo-100 text-center mb-4"&gt;
-
-&lt;p class="text-xs font-bold text-indigo-900 leading-relaxed"&gt;Ban cán sự được cấp quyền truy cập nhanh vào các mục: &lt;b class="text-blueAccent"&gt;Học sinh, Thời khóa biểu, Điểm danh&lt;/b&gt;.&lt;/p&gt;
-
-&lt;/div&gt;
-
-&lt;button onclick="handleLogin()" class="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-black rounded-xl shadow-\[0_8px_20px_rgba(16,185,129,0.3)\] hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 text-sm mt-4"&gt;
-
-&lt;i class="ph-bold ph-shield-check text-lg"&gt;&lt;/i&gt; TRUY CẬP BAN CÁN SỰ
-
-&lt;/button&gt;
-
-\`}
-
-&lt;/div&gt;
-
-&lt;!-- Đường phân cách Phụ huynh / Học sinh --&gt;
-
-&lt;div class="relative my-8"&gt;
+&lt;div class="relative mb-8 text-center"&gt;
 
 &lt;div class="absolute inset-0 flex items-center"&gt;&lt;div class="w-full border-t border-slate-200"&gt;&lt;/div&gt;&lt;/div&gt;
 
-&lt;div class="relative flex justify-center"&gt;&lt;span class="bg-white px-4 text-\[10px\] text-slate-400 font-bold uppercase tracking-widest"&gt;Phụ huynh / Học sinh&lt;/span&gt;&lt;/div&gt;
+&lt;span class="bg-white px-4 text-\[10px\] font-black text-slate-400 uppercase tracking-widest relative z-10"&gt;PHỤ HUYNH / HỌC SINH&lt;/span&gt;
 
 &lt;/div&gt;
 
-&lt;!-- Nút tra cứu mã (Đã nâng cấp thành ô nhập trực tiếp) --&gt;
+&lt;!-- Cổng tra cứu PHHS --&gt;
 
-&lt;div class="bg-orange-50 p-4 rounded-\[1.5rem\] border border-orange-100"&gt;
-
-&lt;p class="text-\[11px\] font-bold text-orange-800 text-center mb-3"&gt;Nhập mã học sinh (5 số) để xem điểm & nề nếp&lt;/p&gt;
+&lt;p class="text-center text-xs text-orange-500 font-bold mb-3"&gt;Nhập mã tra cứu (5 số) để xem điểm & nề nếp&lt;/p&gt;
 
 &lt;div class="flex gap-2"&gt;
 
-&lt;input type="text" id="direct-lookup-code" placeholder="Ví dụ: 12345" class="w-full px-4 py-3 bg-white border border-orange-200 rounded-xl text-center text-xl font-black tracking-\[0.2em\] text-orange-600 outline-none focus:border-orange-500 shadow-inner transition-colors" maxlength="5" onkeypress="if(event.key === 'Enter') performDirectLookup()"&gt;
+&lt;input type="text" id="login-lookup-code" placeholder="Vd: 38323" maxlength="5" class="flex-1 px-5 py-4 border-2 border-orange-100 bg-orange-50/30 rounded-2xl text-lg font-black text-center tracking-\[0.2em\] text-slate-800 focus:border-orange-400 outline-none transition-colors" onkeypress="if(event.key === 'Enter') performParentLookupFromLogin()"&gt;
 
-&lt;button onclick="performDirectLookup()" class="px-6 bg-gradient-to-r from-orange-400 to-red-500 hover:from-orange-500 hover:to-red-600 text-white rounded-xl shadow-md transition-all flex items-center justify-center transform hover:-translate-y-0.5" title="Tra cứu"&gt;
+&lt;button onclick="performParentLookupFromLogin()" class="w-14 bg-orange-500 text-white font-bold rounded-2xl hover:bg-orange-600 shadow-md transition-colors flex items-center justify-center"&gt;
 
-&lt;i class="ph-bold ph-magnifying-glass text-2xl"&gt;&lt;/i&gt;
+&lt;i class="ph-bold ph-magnifying-glass text-xl"&gt;&lt;/i&gt;
 
 &lt;/button&gt;
 
 &lt;/div&gt;
 
-&lt;/div&gt;
-
-&lt;div class="text-\[9px\] text-slate-400 text-center mt-8 leading-relaxed font-bold uppercase tracking-widest flex items-center justify-center gap-1.5"&gt;
+&lt;div class="text-center text-\[9px\] text-slate-400 font-medium mt-4 flex items-center justify-center gap-1"&gt;
 
 &lt;i class="ph-fill ph-lock-key"&gt;&lt;/i&gt; Phiên đăng nhập được mã hóa an toàn
 
@@ -9800,17 +10394,13 @@ return \`
 
 &lt;/div&gt;
 
-&lt;!-- SỬA LỖI Ở ĐÂY: Thêm khung chứa ẩn để hiện Bảng Điểm Phụ Huynh --&gt;
-
-&lt;div id="modal-container"&gt;&lt;/div&gt;
-
 \`;
 
 }
 
-// --- HÀM TẢI ẢNH LÊN CHO MÀN HÌNH ĐĂNG NHẬP ---
+// Xử lý nén và lưu Logo Trường (Dùng object-contain để ảnh nằm gọn trong khung)
 
-window.handleLoginBannerUpload = function(event) {
+window.handleLoginLogoUpload = function(event) {
 
 const file = event.target.files\[0\];
 
@@ -9820,67 +10410,99 @@ compressImage(file, (dataUrl) => {
 
 if (!state.theme) state.theme = {};
 
-// ĐÃ SỬA LỖI: Lưu vào một kho riêng tên là loginBannerUrl
-
-state.theme.loginBannerUrl = dataUrl;
+state.theme.schoolLogo = dataUrl;
 
 saveData();
 
 renderLayout();
 
-showToast("Đã thay đổi ảnh bìa ngoài màn hình đăng nhập!", "success");
+showToast("Đã cập nhật Logo hệ thống!", "success");
+
+}, 800, 0.9);
+
+};
+
+// Xử lý nén và lưu ảnh Không gian học tập (Dùng object-cover để tràn viền đẹp mắt)
+
+window.handleLoginCoverUpload = function(event) {
+
+const file = event.target.files\[0\];
+
+if (!file) return;
+
+compressImage(file, (dataUrl) => {
+
+if (!state.theme) state.theme = {};
+
+state.theme.loginBannerUrl = dataUrl; // Đã tách riêng thành loginBannerUrl
+
+saveData();
+
+renderLayout();
+
+showToast("Đã cập nhật Không gian học tập!", "success");
 
 }, 1200, 0.8);
 
 };
 
+// Logic xử lý đăng nhập với các mật khẩu được yêu cầu
+
 window.handleLogin = function() {
 
-if (!state.auth) state.auth = { loggedIn: false, role: 'gvcn' };
+const pwd = document.getElementById('login-password').value;
 
-const currentRole = state.auth.role;
+// MẬT KHẨU CÔ YÊU CẦU ĐÂY NHÉ:
 
-// 1. Nếu là GVCN đăng nhập
+const passwords = {
 
-if (currentRole === 'gvcn') {
+'gvcn': '12345',
 
-const email = document.getElementById('login-email').value.trim();
+'bcs': '123',
 
-const pass = document.getElementById('login-password').value.trim();
+'bgh': '1234'
 
-// CÔ THAY ĐỔI TÀI KHOẢN VÀ MẬT KHẨU Ở DÒNG DƯỚI NÀY NHÉ:
+};
 
-if (email === '<cothuy@hoasen.edu.vn>' && pass === 'hoasen123') {
+if (pwd === passwords\[state.loginRoleSelect\]) {
 
 state.auth.loggedIn = true;
 
-state.currentTab = 'tong-quan'; // Đăng nhập xong tự nhảy vào Tổng quan
+state.auth.role = state.loginRoleSelect;
+
+state.currentTab = 'tong-quan'; // Đưa về trang chủ
 
 renderLayout();
 
-showToast("Đăng nhập thành công với quyền GVCN!", "success");
+showToast(\`Đăng nhập thành công (\${state.loginRoleSelect.toUpperCase()})\`, "success");
 
 } else {
 
-showToast("Sai Email hoặc Mật khẩu. Vui lòng thử lại!", "error");
+showToast("Mật khẩu không chính xác!", "error");
 
 }
 
-}
+};
 
-// 2. Nếu là Ban cán sự đăng nhập
+// Cổng Phụ Huynh / Học Sinh (Mật khẩu chính là mã tra cứu của học sinh)
 
-else if (currentRole === 'bancansu') {
+window.performParentLookupFromLogin = function() {
 
-// Ban cán sự bấm nút là vào thẳng (không cần pass)
+const code = document.getElementById('login-lookup-code').value.trim();
 
-state.auth.loggedIn = true;
+if (!code) return showToast("Vui lòng nhập mã tra cứu", "error");
 
-state.currentTab = 'hoc-sinh'; // Tự động mở tab Học sinh cho BCS
+const student = state.students.find(s => s.code === code);
 
-renderLayout();
+if (student) {
 
-showToast("Truy cập thành công với quyền Ban Cán Sự!", "success");
+// Đăng nhập bằng mã tra cứu thành công
+
+showParentView(student.id);
+
+} else {
+
+showToast("Mã tra cứu không chính xác!", "error");
 
 }
 
@@ -9892,499 +10514,969 @@ state.auth.loggedIn = false;
 
 renderLayout();
 
-showToast("Đã đăng xuất tài khoản!", "info");
+};
+
+window.logBCSAction = function(actionDesc) {
+
+if (state.auth && state.auth.role === 'bcs') {
+
+if (!state.auditLogs) state.auditLogs = \[\];
+
+const now = new Date();
+
+const timeStr = \`\${String(now.getHours()).padStart(2, '0')}:\${String(now.getMinutes()).padStart(2, '0')} \${String(now.getDate()).padStart(2, '0')}/\${String(now.getMonth()+1).padStart(2, '0')}\`;
+
+state.auditLogs.unshift({ time: timeStr, action: actionDesc });
+
+if (state.auditLogs.length > 50) state.auditLogs.pop();
+
+}
 
 };
 
-window.renderLoginScreen = function() {
+// GỌI HÀM KHỞI TẠO LẦN ĐẦU
 
-const bgAnimation = \`
+applyStateDefaults();
 
-&lt;style&gt;
+// Load data from local storage if exists
 
-@keyframes gradientNavy {
+const savedData = localStorage.getItem('classManagerData');
 
-0% { background-position: 0% 50%; }
+if (savedData) {
 
-50% { background-position: 100% 50%; }
-
-100% { background-position: 0% 50%; }
+try { state = { ...state, ...JSON.parse(savedData) }; } catch(e) {}
 
 }
 
-.bg-animated-navy {
+applyStateDefaults();
 
-background: linear-gradient(-45deg, #1e3a8a, #312e81, #0f172a, #3b82f6);
+window.saveData = function() { localStorage.setItem('classManagerData', JSON.stringify(state)); };
 
-background-size: 300% 300%;
+renderLayout();
 
-animation: gradientNavy 12s ease infinite;
+window.openAuditLogModal = function() {
 
-}
+const logs = state.auditLogs || \[\];
 
-/\* FIX LỖI CUỘN MÀN HÌNH ĐĂNG NHẬP TRÊN ĐIỆN THOẠI \*/
+let html = logs.map(l => \`
 
-.login-wrapper {
+&lt;div class="flex gap-4 items-start p-4 border-b border-slate-100 hover:bg-slate-50 transition-colors"&gt;
 
-min-height: 100dvh;
+&lt;div class="text-xs font-black text-slate-400 whitespace-nowrap bg-slate-100 px-2 py-1 rounded-lg"&gt;\${l.time}&lt;/div&gt;
 
-display: flex;
+&lt;div class="text-sm font-bold text-slate-700 mt-0.5"&gt;\${l.action}&lt;/div&gt;
 
-align-items: center; /\* <--- Đã sửa thành center để căn giữa màn hình PC \*/
+&lt;/div&gt;
 
-justify-content: center;
+\`).join('');
 
-padding: 2rem 1rem;
+if(!html) html = '&lt;div class="p-10 text-center text-slate-400 italic font-medium"&gt;Chưa có nhật ký hoạt động nào của Ban cán sự.&lt;/div&gt;';
 
-overflow-y: auto;
+document.getElementById('modal-container').innerHTML = \`
 
-}
+&lt;div class="fixed inset-0 bg-slate-900/70 z-\[100\] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in" id="audit-log-modal"&gt;
 
-@media (min-width: 768px) {
+&lt;div class="bg-white rounded-\[2rem\] shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-\[80vh\]"&gt;
 
-.login-wrapper {
+&lt;div class="bg-\[#1e1b4b\] text-white p-5 flex justify-between items-center px-6"&gt;
 
-align-items: center;
+&lt;h3 class="font-black text-lg flex items-center gap-2"&gt;&lt;i class="ph-fill ph-clipboard-text text-yellow-400"&gt;&lt;/i&gt; NHẬT KÝ BAN CÁN SỰ&lt;/h3&gt;
 
-padding: 1rem;
+&lt;button onclick="closeModal('audit-log-modal')" class="bg-white/10 hover:bg-white/20 p-2 rounded-full transition-colors"&gt;&lt;i class="ph-bold ph-x"&gt;&lt;/i&gt;&lt;/button&gt;
 
-}
+&lt;/div&gt;
 
-}
+&lt;div class="flex-1 overflow-y-auto custom-scrollbar p-2"&gt;
 
-&lt;/style&gt;
+\${html}
+
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;/div&gt;
 
 \`;
 
-return \`
+}
 
-\${bgAnimation}
+// --- HÀM GHI NHẬT KÝ THAO TÁC CỦA BAN CÁN SỰ ---
 
-&lt;div class="login-wrapper bg-animated-navy custom-scrollbar"&gt;
+window.logBCSAction = function(actionDesc) {
 
-&lt;div class="bg-white rounded-\[2rem\] shadow-2xl flex flex-col md:flex-row w-full max-w-5xl overflow-hidden relative z-10 animate-fade-in"&gt;
+if (!state.auditLogs) state.auditLogs = \[\];
 
-&lt;!-- CỘT TRÁI: Khu vực hiển thị ảnh --&gt;
+const now = new Date();
 
-&lt;div class="w-full md:w-1/2 p-6 md:p-10 flex flex-col items-center justify-center bg-white relative border-b md:border-b-0 md:border-r border-slate-100"&gt;
+const timeStr = \`\${String(now.getHours()).padStart(2, '0')}:\${String(now.getMinutes()).padStart(2, '0')} \${String(now.getDate()).padStart(2, '0')}/\${String(now.getMonth() + 1).padStart(2, '0')}/\${now.getFullYear()}\`;
 
-&lt;!-- Khung viền đứt tải ảnh trường --&gt;
+state.auditLogs.unshift({
 
-&lt;div class="w-full h-20 md:h-24 border-2 border-dashed border-slate-300 rounded-2xl overflow-hidden mb-6 flex justify-center items-center relative group cursor-pointer hover:border-blue-400 transition-colors shadow-sm bg-slate-50/50" onclick="document.getElementById('school-logo-upload').click()" title="Bấm để đổi ảnh logo trường"&gt;
+id: Date.now(),
 
-&lt;img src="\${(state.theme && state.theme.schoolLogoUrl) ? state.theme.schoolLogoUrl : '<https://truonghoasen.com/wp-content/uploads/2023/10/logo-hoa-sen-01.png'}>" class="w-full h-full object-contain p-1" alt="School Logo" id="school-logo-img"&gt;
+time: timeStr,
 
-&lt;div class="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"&gt;
+actor: (state.auth && state.auth.role === 'bcs') ? 'Ban Cán Sự' : (state.auth && state.auth.role === 'bgh') ? 'Ban Giám Hiệu' : 'GVCN',
 
-&lt;i class="ph-bold ph-camera text-white text-2xl"&gt;&lt;/i&gt;
+content: actionDesc
 
-&lt;/div&gt;
+});
 
-&lt;input type="file" id="school-logo-upload" class="hidden" accept="image/\*" onchange="handleSchoolLogoUpload(event)"&gt;
+// Giới hạn lưu tối đa 100 log gần nhất
 
-&lt;/div&gt;
-
-&lt;!-- Khung tải ảnh lớp học --&gt;
-
-&lt;div class="relative w-full h-\[300px\] md:h-\[400px\] rounded-\[2rem\] overflow-hidden shadow-lg group"&gt;
-
-&lt;img src="\${(state.theme && state.theme.loginClassImg) ? state.theme.loginClassImg : (state.admin.classAvatarUrl || '<https://placehold.co/600x800/1e1b4b/ffffff?text=L%E1%BB%9AP+H%E1%BB%8CC')}>" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" id="login-class-img"&gt;
-
-&lt;button class="absolute top-4 right-4 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-xl text-blue-600 shadow-md flex items-center justify-center hover:bg-blue-50 transition-colors z-20" onclick="document.getElementById('login-class-upload').click()" title="Đổi ảnh lớp"&gt;
-
-&lt;i class="ph-bold ph-camera text-xl"&gt;&lt;/i&gt;
-
-&lt;/button&gt;
-
-&lt;input type="file" id="login-class-upload" class="hidden" accept="image/\*" onchange="handleLoginClassUpload(event)"&gt;
-
-&lt;div class="absolute top-4 left-4 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-xl text-pink-500 shadow-md flex items-center justify-center z-20"&gt;
-
-&lt;i class="ph-fill ph-heart text-xl animate-pulse"&gt;&lt;/i&gt;
-
-&lt;/div&gt;
-
-&lt;div class="absolute inset-0 bg-gradient-to-t from-\[#1e1b4b\]/90 via-\[#1e1b4b\]/20 to-transparent flex flex-col justify-end p-6 z-10 pointer-events-none"&gt;
-
-&lt;span class="bg-amber-400 text-\[#1e1b4b\] text-\[10px\] font-black px-3 py-1.5 rounded-lg w-max mb-3 tracking-widest shadow-sm"&gt;KHÔNG GIAN HỌC TẬP&lt;/span&gt;
-
-&lt;h1 class="text-white text-3xl font-black mb-2 shadow-sm"&gt;\${state.admin.className || 'LỚP 12A1'}&lt;/h1&gt;
-
-&lt;p class="text-blue-50 text-xs font-medium leading-relaxed opacity-90"&gt;Nơi gieo mầm tri thức và lưu giữ những kỷ niệm thanh xuân rực rỡ nhất của tuổi học trò.&lt;/p&gt;
-
-&lt;/div&gt;
-
-&lt;/div&gt;
-
-&lt;div class="mt-6 bg-yellow-100/80 text-yellow-700 px-6 py-2.5 rounded-full text-xs font-bold flex items-center gap-2 shadow-sm border border-yellow-200"&gt;
-
-&lt;i class="ph-fill ph-sparkle text-yellow-500"&gt;&lt;/i&gt; Mỗi ngày đến trường là một niềm vui!
-
-&lt;/div&gt;
-
-&lt;/div&gt;
-
-&lt;!-- CỘT PHẢI: Form đăng nhập --&gt;
-
-&lt;div class="w-full md:w-1/2 p-6 md:p-12 flex flex-col justify-center bg-white"&gt;
-
-&lt;div class="w-14 h-14 bg-\[#1e1b4b\] text-white rounded-2xl flex items-center justify-center text-3xl shadow-md mx-auto mb-5 transform hover:rotate-12 transition-transform"&gt;
-
-&lt;i class="ph-fill ph-graduation-cap"&gt;&lt;/i&gt;
-
-&lt;/div&gt;
-
-&lt;h2 class="text-2xl font-black text-slate-800 text-center mb-1"&gt;Đăng Nhập Quản Trị&lt;/h2&gt;
-
-&lt;p class="text-\[10px\] text-slate-500 font-bold uppercase tracking-widest text-center mb-8"&gt;Xác thực phân quyền hệ thống&lt;/p&gt;
-
-&lt;div class="flex bg-slate-100 p-1.5 rounded-xl mb-4 shadow-inner"&gt;
-
-&lt;button onclick="selectLoginRole('gvcn')" id="btn-role-gvcn" class="flex-1 py-2.5 rounded-lg text-sm font-bold bg-\[#1e1b4b\] text-white shadow-sm transition-all"&gt;GVCN&lt;/button&gt;
-
-&lt;button onclick="selectLoginRole('bancansu')" id="btn-role-bancansu" class="flex-1 py-2.5 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-800 transition-all"&gt;BCS&lt;/button&gt;
-
-&lt;button onclick="selectLoginRole('bgh')" id="btn-role-bgh" class="flex-1 py-2.5 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-800 transition-all"&gt;BGH&lt;/button&gt;
-
-&lt;/div&gt;
-
-&lt;input type="hidden" id="login-role" value="gvcn"&gt;
-
-&lt;div id="login-role-desc" class="text-center text-xs font-medium text-blue-600 bg-blue-50 p-3 rounded-xl border border-blue-100 mb-6 transition-all"&gt;
-
-Bạn đang đăng nhập với tư cách Giáo viên chủ nhiệm.
-
-&lt;/div&gt;
-
-&lt;div class="mb-6 relative group"&gt;
-
-&lt;input type="password" id="login-password" placeholder="Nhập mật khẩu..." class="w-full px-5 py-3.5 bg-white border-2 border-slate-200 rounded-xl text-center text-lg font-black text-slate-800 tracking-\[0.2em\] focus:border-\[#1e1b4b\] focus:ring-4 focus:ring-indigo-100 transition-all outline-none" onkeypress="if(event.key === 'Enter') processLogin()"&gt;
-
-&lt;/div&gt;
-
-&lt;button onclick="processLogin()" class="w-full py-4 bg-\[#1e1b4b\] text-white font-black rounded-xl shadow-lg hover:bg-\[#312e81\] hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 mb-8 tracking-wide"&gt;
-
-&lt;i class="ph-bold ph-shield-check text-xl"&gt;&lt;/i&gt; TRUY CẬP HỆ THỐNG
-
-&lt;/button&gt;
-
-&lt;div class="relative py-2 mb-6"&gt;
-
-&lt;div class="absolute inset-0 flex items-center"&gt;&lt;div class="w-full border-t border-slate-200"&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;div class="relative flex justify-center"&gt;&lt;span class="bg-white px-4 text-\[10px\] text-slate-400 font-bold uppercase tracking-widest"&gt;Phụ huynh / Học sinh&lt;/span&gt;&lt;/div&gt;
-
-&lt;/div&gt;
-
-&lt;div class="bg-orange-50/50 rounded-2xl p-6 border border-orange-100 flex flex-col items-center relative overflow-hidden group w-full mb-4"&gt;
-
-&lt;div class="text-xs font-bold text-orange-600 mb-4 text-center"&gt;Nhập mã tra cứu (5 số) để xem điểm & nề nếp&lt;/div&gt;
-
-&lt;div class="flex gap-3 w-full"&gt;
-
-&lt;input type="text" id="direct-lookup-code" placeholder="Vd: 38323" class="flex-1 px-4 py-3 bg-white border border-orange-200 rounded-xl text-center font-black text-slate-800 tracking-\[0.2em\] outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all shadow-sm" maxlength="5" onkeypress="if(event.key === 'Enter') performDirectLookup()"&gt;
-
-&lt;button onclick="performDirectLookup()" class="w-14 h-auto bg-\[#f97316\] text-white rounded-xl flex items-center justify-center shadow-md hover:bg-\[#ea580c\] transition-all"&gt;&lt;i class="ph-bold ph-magnifying-glass text-xl"&gt;&lt;/i&gt;&lt;/button&gt;
-
-&lt;/div&gt;
-
-&lt;/div&gt;
-
-&lt;div class="text-\[9px\] text-slate-400 font-medium flex items-center justify-center gap-1"&gt;
-
-&lt;i class="ph-fill ph-lock-key"&gt;&lt;/i&gt; Phiên đăng nhập được mã hóa an toàn
-
-&lt;/div&gt;
-
-&lt;/div&gt;
-
-&lt;/div&gt;
-
-&lt;/div&gt;
-
-&lt;div id="modal-container" class="print:hidden"&gt;&lt;/div&gt;
-
-\`;
-
-};
-
-// --- HÀM TẢI ẢNH LOGO TRƯỜNG ---
-
-window.handleSchoolLogoUpload = function(event) {
-
-const file = event.target.files\[0\];
-
-if (!file) return;
-
-compressImage(file, (dataUrl) => {
-
-if(!state.theme) state.theme = {};
-
-state.theme.schoolLogoUrl = dataUrl;
-
-const img = document.getElementById('school-logo-img');
-
-if(img) img.src = dataUrl;
+if (state.auditLogs.length > 100) state.auditLogs.pop();
 
 saveData();
 
-showToast("Đã cập nhật logo trường!", "success");
-
-}, 800, 0.8);
-
 };
 
-// --- HÀM TẢI ẢNH LỚP HỌC ---
+// --- HÀM MỞ MODAL XEM NHẬT KÝ ---
 
-window.handleLoginClassUpload = function(event) {
+window.openAuditLogModal = function() {
 
-const file = event.target.files\[0\];
+const logs = state.auditLogs || \[\];
 
-if (!file) return;
+let logsHtml = '';
 
-compressImage(file, (dataUrl) => {
+if (logs.length === 0) {
 
-if(!state.theme) state.theme = {};
-
-state.theme.loginClassImg = dataUrl;
-
-const img = document.getElementById('login-class-img');
-
-if(img) img.src = dataUrl;
-
-saveData();
-
-showToast("Đã cập nhật ảnh lớp học!", "success");
-
-}, 1200, 0.8);
-
-};
-
-// --- HÀM ĐỔI TAB QUYỀN ĐĂNG NHẬP ---
-
-window.selectLoginRole = function(role) {
-
-document.getElementById('login-role').value = role;
-
-const roles = \['gvcn', 'bancansu', 'bgh'\];
-
-roles.forEach(r => {
-
-const btn = document.getElementById('btn-role-' + r);
-
-if (r === role) {
-
-btn.className = "flex-1 py-2.5 rounded-lg text-sm font-bold bg-\[#1e1b4b\] text-white shadow-sm transition-all";
+logsHtml = \`&lt;div class="text-center py-12 text-slate-400 italic"&gt;Chưa có nhật ký hoạt động nào được ghi nhận.&lt;/div&gt;\`;
 
 } else {
 
-btn.className = "flex-1 py-2.5 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-800 transition-all bg-transparent";
+logsHtml = logs.map(l => \`
+
+&lt;div class="flex items-start gap-3 p-3.5 bg-white border border-slate-100 rounded-xl shadow-sm mb-2.5"&gt;
+
+&lt;div class="p-2 bg-indigo-50 text-indigo-600 rounded-lg"&gt;&lt;i class="ph-bold ph-clipboard-text text-base"&gt;&lt;/i&gt;&lt;/div&gt;
+
+&lt;div class="flex-1 min-w-0"&gt;
+
+&lt;div class="text-xs font-bold text-slate-800 mb-1"&gt;\${l.content}&lt;/div&gt;
+
+&lt;div class="text-\[10px\] text-slate-400 font-bold uppercase flex items-center gap-2"&gt;
+
+&lt;span&gt;⏰ \${l.time}&lt;/span&gt;
+
+&lt;span&gt;•&lt;/span&gt;
+
+&lt;span class="text-indigo-600"&gt;Thực hiện bởi: \${l.actor}&lt;/span&gt;
+
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+\`).join('');
+
+}
+
+const modalHtml = \`
+
+&lt;div class="fixed inset-0 bg-slate-900/70 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in" id="audit-log-modal"&gt;
+
+&lt;div class="bg-white rounded-\[2rem\] shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-\[85vh\]"&gt;
+
+&lt;div class="bg-primary text-white p-6 flex justify-between items-center px-8 relative"&gt;
+
+&lt;h3 class="font-black text-xl flex items-center gap-2"&gt;&lt;i class="ph-bold ph-clipboard-text text-accent"&gt;&lt;/i&gt; NHẬT KÝ HOẠT ĐỘNG BAN CÁN SỰ&lt;/h3&gt;
+
+&lt;button onclick="closeModal('audit-log-modal')" class="bg-white/10 hover:bg-white/20 p-2 rounded-full transition-colors"&gt;&lt;i class="ph-bold ph-x text-lg"&gt;&lt;/i&gt;&lt;/button&gt;
+
+&lt;/div&gt;
+
+&lt;div class="p-6 bg-slate-50 flex-1 overflow-y-auto custom-scrollbar"&gt;
+
+\${logsHtml}
+
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+\`;
+
+document.getElementById('modal-container').innerHTML = modalHtml;
+
+};
+
+// --- HÀM CHUYỂN TAB ĐÃ ĐƯỢC BỔ SUNG PHÂN QUYỀN ---
+
+window.switchTab = function(tabId) {
+
+// Giới hạn tab cho Ban cán sự (bcs)
+
+if (state.auth && state.auth.role === 'bcs') {
+
+const allowed = \['tong-quan', 'hoc-sinh', 'thoi-khoa-bieu', 'so-do-lop', 'diem-danh'\];
+
+if (!allowed.includes(tabId)) {
+
+showToast("Ban cán sự chỉ có quyền truy cập Trang chủ, Học sinh, TKB, Sơ đồ lớp và Điểm danh!", "error");
+
+return;
+
+}
+
+}
+
+// Giới hạn tab cho Ban giám hiệu (bgh)
+
+if (state.auth && state.auth.role === 'bgh') {
+
+const allowed = \['tong-quan', 'hoc-sinh', 'so-do-lop', 'diem-danh', 'bao-cao', 'tram-dong-hanh'\];
+
+if (!allowed.includes(tabId)) {
+
+showToast("Ban giám hiệu chỉ có quyền truy cập Trang chủ, Học sinh, Sơ đồ, Điểm danh, Sổ theo dõi và Trạm đồng hành!", "error");
+
+return;
+
+}
+
+}
+
+if (tabId === 'cai-dat') {
+
+state.settingsTab = 'thong-tin';
+
+}
+
+state.currentTab = tabId;
+
+renderLayout();
+
+};
+
+window.updateGvcnGrade = function(studentId, grade) {
+
+const s = state.students.find(x => x.id === studentId);
+
+if (s) {
+
+s.gvcnGrade = grade;
+
+saveData();
+
+renderLayout();
+
+}
+
+};
+
+window.chotNhanhTheoDeXuat = function() {
+
+let count = 0;
+
+state.students.forEach(s => {
+
+if (!s.gvcnGrade) {
+
+const pts = s.points || 0;
+
+if (pts >= 80) s.gvcnGrade = "Tốt";
+
+else if (pts >= 60) s.gvcnGrade = "Khá";
+
+else if (pts >= 40) s.gvcnGrade = "Đạt";
+
+else s.gvcnGrade = "Chưa đạt";
+
+count++;
 
 }
 
 });
 
-const descEl = document.getElementById('login-role-desc');
-
-if (role === 'gvcn') {
-
-descEl.innerText = "Bạn đang đăng nhập với tư cách Giáo viên chủ nhiệm.";
-
-descEl.className = "text-center text-xs font-medium text-blue-600 bg-blue-50 p-3 rounded-xl border border-blue-100 mb-6 transition-all";
-
-}
-
-else if (role === 'bancansu') {
-
-descEl.innerText = "Ban cán sự được truy cập nhanh các mục: Học sinh, Thời khóa biểu, Điểm danh.";
-
-descEl.className = "text-center text-xs font-medium text-emerald-600 bg-emerald-50 p-3 rounded-xl border border-emerald-100 mb-6 transition-all";
-
-}
-
-else if (role === 'bgh') {
-
-descEl.innerText = "Ban giám hiệu được xem báo cáo, sơ đồ lớp và tình hình chuyên cần.";
-
-descEl.className = "text-center text-xs font-medium text-purple-600 bg-purple-50 p-3 rounded-xl border border-purple-100 mb-6 transition-all";
-
-}
-
-};
-
-// --- XỬ LÝ KIỂM TRA MẬT KHẨU ---
-
-window.processLogin = function() {
-
-const role = document.getElementById('login-role').value;
-
-const pass = document.getElementById('login-password').value;
-
-let isValid = false;
-
-// Passwords cài đặt sẵn
-
-if (role === 'gvcn' && pass === '123456') isValid = true;
-
-else if (role === 'bancansu' && pass === '123') isValid = true;
-
-else if (role === 'bgh' && pass === '12A1') isValid = true;
-
-if (isValid) {
-
-state.auth = { loggedIn: true, role: role };
+if (count > 0) {
 
 saveData();
-
-showToast("Đăng nhập hệ thống thành công!", "success");
-
-state.currentTab = 'tong-quan';
 
 renderLayout();
 
-} else {
-
-showToast("Mật khẩu không chính xác!", "error");
-
-}
-
-};
-
-// --- XỬ LÝ TRA CỨU CỦA PHỤ HUYNH ---
-
-window.performDirectLookup = function() {
-
-const code = document.getElementById('direct-lookup-code').value.trim();
-
-if (!code) return showToast("Vui lòng nhập mã tra cứu!", "error");
-
-const student = state.students.find(s => s.code === code);
-
-if (student) {
-
-showToast("Đang tải dữ liệu...", "success");
-
-setTimeout(() => {
-
-if(typeof showParentView === 'function') {
-
-showParentView(student.id);
-
-}
-
-}, 400);
+showToast(\`Đã chốt xếp loại cho \${count} học sinh!\`, 'success');
 
 } else {
 
-showToast("Mã tra cứu không chính xác!", "error");
+showToast(\`Tất cả học sinh đã được chốt xếp loại!\`, 'success');
 
 }
 
-};
+};window.filterNhatKyTable = function() {
 
-window.startApp = function() {
+const input = document.getElementById('search-nhatky');
 
-try {
+if (!input) return;
 
-const savedData = localStorage.getItem('chuyen_tau_data');
+const filter = input.value.toLowerCase().trim();
 
-if (savedData) {
+const rows = document.querySelectorAll('.nhatky-row');
 
-state = { ...state, ...JSON.parse(savedData) };
+let count = 0;
 
-applyStateDefaults();
+rows.forEach(row => {
+
+const name = row.getAttribute('data-name') || '';
+
+if (name.includes(filter)) {
+
+row.style.display = '';
+
+count++;
 
 } else {
 
-initDefaultStudents();
-
-applyStateDefaults();
-
-saveData();
+row.style.display = 'none';
 
 }
 
-} catch (err) {
+});
 
-initDefaultStudents();
+const countEl = document.getElementById('nhatky-count');
 
-applyStateDefaults();
-
-saveData();
-
-}
-
-isDataLoaded = true;
-
-renderLayout();
+if (countEl) countEl.innerText = count;
 
 };
 
-function saveData() {
-
-try {
-
-localStorage.setItem('chuyen_tau_data', JSON.stringify(state));
-
-} catch (e) {
-
-console.warn("Không thể lưu localStorage:", e);
-
-}
-
-}
-
-window.onload = function() {
-
-if (typeof window.startApp === 'function') {
-
-window.startApp();
-
-} else {
-
-console.error("Không tìm thấy hàm khởi động startApp!");
-
-}
-
-};
-
-window.deleteHistoryRecord = function(studentId, historyId) {
+window.copyParentMessage = function(studentId) {
 
 const student = state.students.find(s => s.id === studentId);
 
 if (!student) return;
 
-const historyIndex = student.history.findIndex(h => h.id === historyId);
+// Sắp xếp lịch sử theo thời gian từ cũ nhất đến mới nhất
 
-if (historyIndex > -1) {
+const sortedHistory = \[...(student.history || \[\])\].sort((a, b) => new Date(a.date) - new Date(b.date));
 
-const h = student.history\[historyIndex\];
+if (sortedHistory.length === 0) {
 
-if (confirm(\`Cô có chắc chắn muốn xóa lịch sử: "\${h.reason}" và hoàn tác \${h.points} điểm này không?\`)) {
+showToast("Học sinh này chưa có ghi nhận nào!", "error");
 
-// 1. Trả lại điểm số
+return;
 
-student.points = (student.points || 0) - h.points;
+}
 
-student.stars = Math.max(0, (student.stars || 0) - h.points); // Cập nhật lại cả Sao đổi quà
+const startDateObj = new Date(sortedHistory\[0\].date);
 
-// 2. Xóa dòng lịch sử
+const endDateObj = new Date(sortedHistory\[sortedHistory.length - 1\].date);
 
-student.history.splice(historyIndex, 1);
+const startDateStr = \`\${String(startDateObj.getDate()).padStart(2, '0')}/\${String(startDateObj.getMonth()+1).padStart(2, '0')}/\${startDateObj.getFullYear()}\`;
 
-// 3. Lưu và tải lại giao diện
+const endDateStr = \`\${String(endDateObj.getDate()).padStart(2, '0')}/\${String(endDateObj.getMonth()+1).padStart(2, '0')}/\${endDateObj.getFullYear()}\`;
+
+let message = \`Kính gửi PHHS em \${student.name},\\n\\nGVCN xin thông báo về tình hình rèn luyện của bạn \${student.name} từ ngày \${startDateStr} đến ngày \${endDateStr}\\n\\nChi tiết:\\n\`;
+
+let hasNegative = false;
+
+sortedHistory.forEach(h => {
+
+const dObj = new Date(h.date);
+
+const dStr = \`\${String(dObj.getDate()).padStart(2, '0')}/\${String(dObj.getMonth()+1).padStart(2, '0')}\`;
+
+if (h.points < 0) {
+
+message += \`- Ngày \${dStr}: \${h.reason} (\${h.points} điểm)\\n\`;
+
+hasNegative = true;
+
+} else {
+
+message += \`- Ngày \${dStr}: \${h.reason} (+\${h.points} điểm)\\n\`;
+
+}
+
+});
+
+message += '\\n';
+
+if (hasNegative) {
+
+message += \`Mong quý Phụ huynh phối hợp GVCN nhắc nhở em học tập và rèn luyện.\\n\`;
+
+} else {
+
+message += \`Mong quý Phụ huynh tiếp tục động viên em phát huy.\\n\`;
+
+}
+
+message += \`Trân trọng!\`;
+
+navigator.clipboard.writeText(message).then(() => {
+
+showToast(\`Đã sao chép tin nhắn của \${student.name}\`, "success");
+
+}).catch(err => {
+
+showToast("Lỗi khi sao chép!", "error");
+
+});
+
+};
+
+// --- XỬ LÝ PHÂN CÔNG TRỰC NHẬT / PHẠT ---
+
+window.saveDutyAssignment = function() {
+
+const studentId = document.getElementById('duty-student').value;
+
+const task = document.getElementById('duty-task').value.trim();
+
+const startDate = document.getElementById('duty-start').value;
+
+const endDate = document.getElementById('duty-end').value;
+
+if (!studentId || !task || !startDate || !endDate) {
+
+return showToast("Vui lòng điền đủ thông tin phân công!", "error");
+
+}
+
+if (new Date(endDate) < new Date(startDate)) {
+
+return showToast("Ngày kết thúc phải sau hoặc bằng ngày bắt đầu!", "error");
+
+}
+
+if (!state.dutyAssignments) state.dutyAssignments = \[\];
+
+state.dutyAssignments.unshift({
+
+id: Date.now(),
+
+studentId: parseInt(studentId),
+
+task: task,
+
+startDate: startDate,
+
+endDate: endDate
+
+});
 
 saveData();
 
-renderLayout(); // Cập nhật điểm ngoài màn hình chính
+renderLayout();
 
-openStudentHistoryModal(studentId); // Mở lại bảng lịch sử mới
+showToast("Đã phân công trực nhật thành công!", "success");
 
-showToast("Đã xóa lịch sử và hoàn tác điểm thành công!", "success");
+};
+
+window.deleteDutyAssignment = function(id) {
+
+if (confirm("Xác nhận học sinh này đã hoàn thành nhiệm vụ trực nhật/phạt?")) {
+
+state.dutyAssignments = state.dutyAssignments.filter(d => d.id !== id);
+
+saveData();
+
+renderLayout();
+
+showToast("Đã hoàn thành nhiệm vụ!", "success");
 
 }
 
+};
+
+window.exportDutyExcel = function() {
+
+if (!state.dutyAssignments || state.dutyAssignments.length === 0) {
+
+return showToast("Không có danh sách trực nhật để xuất!", "error");
+
 }
+
+const data = \[
+
+\["DANH SÁCH PHÂN CÔNG TRỰC NHẬT / LÀM THÊM"\],
+
+\[\], // dòng trống
+
+\["STT", "Họ và Tên", "Tổ", "Nhiệm Vụ", "Từ Ngày", "Đến Ngày", "Trạng Thái"\]
+
+\];
+
+const now = new Date();
+
+state.dutyAssignments.forEach((d, idx) => {
+
+const student = state.students.find(s => s.id === d.studentId);
+
+const sName = student ? student.name : "Không xác định";
+
+const sGroup = student ? student.group : "";
+
+const eDateObj = new Date(d.endDate);
+
+eDateObj.setHours(23, 59, 59);
+
+const diffTime = eDateObj - now;
+
+const diffDays = Math.ceil(diffTime / (1000 \* 60 \* 60 \* 24));
+
+let status = "Còn hạn";
+
+if (diffDays < 0) status = "Đã hết hạn";
+
+else if (diffDays === 0) status = "Hạn cuối hôm nay";
+
+data.push(\[
+
+idx + 1,
+
+sName,
+
+sGroup,
+
+d.task,
+
+formatDateForDisplay(d.startDate),
+
+formatDateForDisplay(d.endDate),
+
+status
+
+\]);
+
+});
+
+// Gọi thư viện xuất Excel
+
+const ws = XLSX.utils.aoa_to_sheet(data);
+
+ws\['!cols'\] = \[{wch: 5}, {wch: 25}, {wch: 15}, {wch: 30}, {wch: 15}, {wch: 15}, {wch: 15}\];
+
+const wb = XLSX.utils.book_new();
+
+XLSX.utils.book_append_sheet(wb, ws, "DS_Truc_Nhat");
+
+XLSX.writeFile(wb, \`DanhSach_TrucNhat_\${getTodayString()}.xlsx\`);
+
+showToast("Đã xuất file Excel phân công trực nhật!", "success");
+
+};
+
+// ==========================================
+
+// --- TÍNH NĂNG KẾ HOẠCH & SƠ KẾT TUẦN ---
+
+// ==========================================
+
+if (typeof window.currentPlanMonth === 'undefined') {
+
+const \_d = new Date();
+
+window.currentPlanMonth = \`\${\_d.getFullYear()}-\${String(\_d.getMonth() + 1).padStart(2, '0')}\`;
+
+}
+
+function renderViewKeHoach() {
+
+if (!state.plans) state.plans = {};
+
+const mKey = window.currentPlanMonth;
+
+// Khởi tạo dữ liệu tháng nếu chưa có
+
+if (!state.plans\[mKey\]) {
+
+state.plans\[mKey\] = {
+
+noiDung: '', trongTam: '',
+
+sdb: \[0, 0, 0, 0, 0\], // Sổ đầu bài 5 tuần
+
+rank: \['', '', '', '', ''\] // Xếp hạng 5 tuần
+
+};
+
+}
+
+const planData = state.plans\[mKey\];
+
+// --- THUẬT TOÁN TỰ ĐỘNG LẤY SỐ LIỆU TỪ APP ---
+
+let autoStats = {
+
+tre: \[0, 0, 0, 0, 0\], // Đi trễ
+
+nghi: \[0, 0, 0, 0, 0\], // Nghỉ học (P + KP)
+
+khen: \[0, 0, 0, 0, 0\], // Việc tốt / Khen thưởng (> 0 điểm)
+
+phat: \[0, 0, 0, 0, 0\] // Vi phạm / Nhắc nhở (< 0 điểm)
+
+};
+
+const \[year, month\] = mKey.split('-');
+
+// Hàm tính Tuần (1-5) dựa vào ngày trong tháng
+
+const getWeekIndex = (day) => Math.min(4, Math.floor((day - 1) / 7));
+
+// 1. Quét dữ liệu điểm danh
+
+if (state.attendanceRecords) {
+
+Object.keys(state.attendanceRecords).forEach(recordKey => {
+
+const dateStr = recordKey.split('\_')\[0\]; // Lấy phần ngày (VD: 2026-09-15)
+
+if (dateStr.startsWith(mKey)) {
+
+const day = parseInt(dateStr.split('-')\[2\]);
+
+const wIdx = getWeekIndex(day);
+
+Object.values(state.attendanceRecords\[recordKey\]).forEach(status => {
+
+if (status === 'late') autoStats.tre\[wIdx\]++;
+
+if (status === 'excused' || status === 'unexcused') autoStats.nghi\[wIdx\]++;
+
+});
+
+}
+
+});
+
+}
+
+// 2. Quét dữ liệu thi đua (Khen / Phạt)
+
+state.students.forEach(s => {
+
+if (s.history) {
+
+s.history.forEach(h => {
+
+if (h.date && h.date.startsWith(mKey)) {
+
+// Không tính lại điểm do hệ thống tự cộng khi điểm danh (tránh lặp kép)
+
+if (h.isAttendance) return;
+
+const day = parseInt(h.date.split('-')\[2\]);
+
+const wIdx = getWeekIndex(day);
+
+if (h.points > 0) autoStats.khen\[wIdx\]++;
+
+if (h.points < 0) autoStats.phat\[wIdx\]++;
+
+}
+
+});
+
+}
+
+});
+
+// Hàm tạo các ô nhập liệu cho phần thủ công (Sổ đầu bài, Xếp hạng)
+
+const renderInputs = (type) => {
+
+let html = '';
+
+let total = 0;
+
+for (let i = 0; i < 5; i++) {
+
+const val = planData\[type\]\[i\];
+
+if (type === 'sdb') total += (parseInt(val) || 0);
+
+html += \`&lt;td class="p-2 border border-slate-200"&gt;&lt;input type="\${type==='sdb'?'number':'text'}" value="\${val}" onchange="updatePlanData('\${mKey}', '\${type}', \${i}, this.value)" class="w-full text-center font-bold text-slate-700 bg-transparent outline-none focus:bg-amber-50 rounded px-1"&gt;&lt;/td&gt;\`;
+
+}
+
+html += \`&lt;td class="p-2 border border-slate-200 text-center font-black text-amber-600 bg-amber-50/50"&gt;\${type==='sdb' ? total : '-'}&lt;/td&gt;\`;
+
+return html;
+
+};
+
+// Hàm tạo các ô dữ liệu tự động
+
+const renderAutoCells = (arr, colorClass) => {
+
+let html = '';
+
+let total = 0;
+
+for (let i = 0; i < 5; i++) {
+
+total += arr\[i\];
+
+html += \`&lt;td class="p-3 border border-slate-200 text-center font-bold \${arr\[i\] &gt; 0 ? colorClass : 'text-slate-300'}">\${arr\[i\]}&lt;/td&gt;\`;
+
+}
+
+html += \`&lt;td class="p-3 border border-slate-200 text-center font-black \${total &gt; 0 ? colorClass : 'text-slate-300'} bg-slate-50">\${total}&lt;/td&gt;\`;
+
+return html;
+
+};
+
+return \`
+
+&lt;div class="max-w-6xl mx-auto space-y-6 animate-fade-in pb-12 pt-2"&gt;
+
+&lt;!-- Tiêu đề & Chọn tháng --&gt;
+
+&lt;div class="flex flex-col sm:flex-row justify-between items-start sm:items-center py-4 border-b border-slate-200 pb-6 gap-4"&gt;
+
+&lt;div&gt;
+
+&lt;h2 class="text-2xl md:text-3xl font-black text-\[#1e1b4b\] tracking-tight flex items-center gap-3"&gt;
+
+&lt;div class="p-2.5 bg-blue-50 text-blueAccent rounded-xl shadow-sm"&gt;&lt;i class="ph-fill ph-calendar-star text-2xl"&gt;&lt;/i&gt;&lt;/div&gt;
+
+Kế Hoạch & Sơ Kết
+
+&lt;/h2&gt;
+
+&lt;p class="text-slate-500 text-sm font-medium mt-1"&gt;Lập kế hoạch tuần và theo dõi thống kê thi đua tự động.&lt;/p&gt;
+
+&lt;/div&gt;
+
+&lt;input type="month" value="\${mKey}" onchange="window.currentPlanMonth = this.value; renderLayout();" class="px-5 py-3 bg-white border border-slate-200 rounded-xl text-sm font-black text-slate-700 shadow-sm outline-none focus:border-blueAccent cursor-pointer"&gt;
+
+&lt;/div&gt;
+
+&lt;!-- KHU VỰC 1: KẾ HOẠCH THÁNG --&gt;
+
+&lt;div class="bg-white rounded-\[2rem\] p-6 md:p-8 shadow-sm border border-slate-200 relative overflow-hidden group"&gt;
+
+&lt;div class="absolute top-0 right-0 w-40 h-40 bg-blue-50 rounded-bl-full -mr-10 -mt-10 z-0 opacity-50"&gt;&lt;/div&gt;
+
+&lt;div class="flex justify-between items-center mb-6 relative z-10"&gt;
+
+&lt;h3 class="font-black text-slate-800 uppercase tracking-wide text-lg flex items-center gap-2"&gt;
+
+&lt;i class="ph-fill ph-notepad text-blueAccent"&gt;&lt;/i&gt; NỘI DUNG KẾ HOẠCH THÁNG \${month}/\${year}
+
+&lt;/h3&gt;
+
+&lt;button onclick="document.getElementById('upload-word').click()" class="px-4 py-2 bg-indigo-50 text-indigo-700 font-bold rounded-xl hover:bg-indigo-100 transition-colors text-xs flex items-center gap-2 border border-indigo-100 shadow-sm"&gt;
+
+&lt;i class="ph-bold ph-file-doc text-lg"&gt;&lt;/i&gt; Tải file Word (.docx)
+
+&lt;/button&gt;
+
+&lt;input type="file" id="upload-word" class="hidden" accept=".docx" onchange="handleWordUpload(event, '\${mKey}')"&gt;
+
+&lt;/div&gt;
+
+&lt;div class="space-y-4 relative z-10"&gt;
+
+&lt;div&gt;
+
+&lt;label class="block text-\[11px\] font-bold text-slate-500 mb-2 uppercase tracking-widest"&gt;Nội dung kế hoạch&lt;/label&gt;
+
+&lt;textarea id="plan-noidung" onchange="updatePlanText('\${mKey}', 'noiDung', this.value)" rows="4" placeholder="VD: Ổn định nề nếp, Sơ kết học kì 1..." class="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium text-slate-700 outline-none focus:border-blueAccent focus:bg-white transition-all resize-y shadow-inner leading-relaxed"&gt;\${planData.noiDung}&lt;/textarea&gt;
+
+&lt;/div&gt;
+
+&lt;div&gt;
+
+&lt;label class="block text-\[11px\] font-bold text-slate-500 mb-2 uppercase tracking-widest text-rose-500"&gt;Trọng tâm&lt;/label&gt;
+
+&lt;input type="text" id="plan-trongtam" onchange="updatePlanText('\${mKey}', 'trongTam', this.value)" value="\${escapeHtmlAttr(planData.trongTam)}" placeholder="VD: Đảm bảo chuyên cần sau Tết..." class="w-full px-5 py-3.5 bg-rose-50/30 border border-rose-100 rounded-xl text-sm font-bold text-rose-700 outline-none focus:border-rose-400 transition-all shadow-sm"&gt;
+
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;!-- KHU VỰC 2: BẢNG SƠ KẾT TỰ ĐỘNG --&gt;
+
+&lt;div class="bg-white rounded-\[2rem\] shadow-sm border border-slate-200 overflow-hidden"&gt;
+
+&lt;div class="p-6 md:p-8 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white"&gt;
+
+&lt;h3 class="font-black text-slate-800 uppercase tracking-wide text-lg flex items-center gap-2"&gt;
+
+&lt;i class="ph-fill ph-chart-line-up text-emerald-500"&gt;&lt;/i&gt; SƠ KẾT THÁNG \${month}
+
+&lt;/h3&gt;
+
+&lt;p class="text-xs font-bold text-slate-400 mt-1"&gt;Các chỉ số được tổng hợp tự động từ phần Điểm Danh và Tích Điểm.&lt;/p&gt;
+
+&lt;/div&gt;
+
+&lt;div class="p-4 md:p-6 overflow-x-auto custom-scrollbar"&gt;
+
+&lt;table class="w-full min-w-\[700px\] border-collapse text-sm"&gt;
+
+&lt;thead&gt;
+
+&lt;tr class="bg-\[#1e1b4b\] text-white"&gt;
+
+&lt;th class="p-3 text-left font-bold border border-slate-700 rounded-tl-xl"&gt;Nội dung / Tiêu chí&lt;/th&gt;
+
+&lt;th class="p-3 text-center font-bold border border-slate-700 w-16"&gt;Tuần 1&lt;/th&gt;
+
+&lt;th class="p-3 text-center font-bold border border-slate-700 w-16"&gt;Tuần 2&lt;/th&gt;
+
+&lt;th class="p-3 text-center font-bold border border-slate-700 w-16"&gt;Tuần 3&lt;/th&gt;
+
+&lt;th class="p-3 text-center font-bold border border-slate-700 w-16"&gt;Tuần 4&lt;/th&gt;
+
+&lt;th class="p-3 text-center font-bold border border-slate-700 w-16"&gt;Tuần 5&lt;/th&gt;
+
+&lt;th class="p-3 text-center font-black text-amber-300 border border-slate-700 w-20 rounded-tr-xl"&gt;THÁNG&lt;/th&gt;
+
+&lt;/tr&gt;
+
+&lt;/thead&gt;
+
+&lt;tbody&gt;
+
+&lt;tr class="hover:bg-slate-50 transition-colors"&gt;
+
+&lt;td class="p-3 border border-slate-200 font-bold text-slate-700 flex items-center gap-2"&gt;&lt;i class="ph-bold ph-clock text-yellow-500"&gt;&lt;/i&gt; Số lượt học sinh đi trễ&lt;/td&gt;
+
+\${renderAutoCells(autoStats.tre, 'text-yellow-600')}
+
+&lt;/tr&gt;
+
+&lt;tr class="hover:bg-slate-50 transition-colors"&gt;
+
+&lt;td class="p-3 border border-slate-200 font-bold text-slate-700 flex items-center gap-2"&gt;&lt;i class="ph-bold ph-user-minus text-rose-500"&gt;&lt;/i&gt; Số lượt học sinh nghỉ học&lt;/td&gt;
+
+\${renderAutoCells(autoStats.nghi, 'text-rose-600')}
+
+&lt;/tr&gt;
+
+&lt;tr class="hover:bg-amber-50/30 transition-colors bg-slate-50/50"&gt;
+
+&lt;td class="p-3 border border-slate-200 font-bold text-slate-700 flex items-center gap-2"&gt;
+
+&lt;i class="ph-bold ph-book-open text-blue-500"&gt;&lt;/i&gt; Số lượt vi phạm sổ đầu bài
+
+&lt;span class="text-\[9px\] bg-white border border-slate-200 px-1.5 py-0.5 rounded text-slate-400"&gt;Nhập tay&lt;/span&gt;
+
+&lt;/td&gt;
+
+\${renderInputs('sdb')}
+
+&lt;/tr&gt;
+
+&lt;tr class="hover:bg-slate-50 transition-colors"&gt;
+
+&lt;td class="p-3 border border-slate-200 font-bold text-slate-700 flex items-center gap-2"&gt;&lt;i class="ph-bold ph-warning-circle text-orange-500"&gt;&lt;/i&gt; Số lượt vi phạm (Quản nhiệm)&lt;/td&gt;
+
+\${renderAutoCells(autoStats.phat, 'text-orange-600')}
+
+&lt;/tr&gt;
+
+&lt;tr class="hover:bg-slate-50 transition-colors"&gt;
+
+&lt;td class="p-3 border border-slate-200 font-bold text-slate-700 flex items-center gap-2"&gt;&lt;i class="ph-bold ph-star text-emerald-500"&gt;&lt;/i&gt; Số HS được khen, làm việc tốt&lt;/td&gt;
+
+\${renderAutoCells(autoStats.khen, 'text-emerald-600')}
+
+&lt;/tr&gt;
+
+&lt;tr class="hover:bg-amber-50/30 transition-colors bg-slate-50/50"&gt;
+
+&lt;td class="p-3 border border-slate-200 font-bold text-slate-700 flex items-center gap-2"&gt;
+
+&lt;i class="ph-bold ph-trophy text-amber-500"&gt;&lt;/i&gt; Xếp hạng lớp
+
+&lt;span class="text-\[9px\] bg-white border border-slate-200 px-1.5 py-0.5 rounded text-slate-400"&gt;Nhập tay&lt;/span&gt;
+
+&lt;/td&gt;
+
+\${renderInputs('rank')}
+
+&lt;/tr&gt;
+
+&lt;/tbody&gt;
+
+&lt;/table&gt;
+
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+\`;
+
+}
+
+// --- CÁC HÀM XỬ LÝ DỮ LIỆU ---
+
+window.updatePlanText = function(month, field, value) {
+
+state.plans\[month\]\[field\] = value;
+
+saveData();
+
+showToast("Đã lưu nội dung!", "success");
+
+};
+
+window.updatePlanData = function(month, type, index, value) {
+
+state.plans\[month\]\[type\]\[index\] = value;
+
+saveData();
+
+renderLayout(); // Render lại để tính tổng cột Tháng
+
+};
+
+// Hàm đọc file Word bằng thư viện Mammoth
+
+window.handleWordUpload = function(event, monthKey) {
+
+const file = event.target.files\[0\];
+
+if (!file) return;
+
+const reader = new FileReader();
+
+reader.onload = function(loadEvent) {
+
+const arrayBuffer = loadEvent.target.result;
+
+// Gọi Mammoth để chuyển Word thành text
+
+mammoth.extractRawText({ arrayBuffer: arrayBuffer })
+
+.then(function(result) {
+
+const text = result.value;
+
+document.getElementById('plan-noidung').value = text;
+
+state.plans\[monthKey\].noiDung = text;
+
+saveData();
+
+showToast("Đã tải nội dung từ file Word thành công!", "success");
+
+})
+
+.catch(function(err) {
+
+console.error(err);
+
+showToast("Lỗi khi đọc file Word. Hãy đảm bảo file đúng định dạng .docx", "error");
+
+});
+
+};
+
+reader.readAsArrayBuffer(file);
+
+event.target.value = ''; // Reset input
 
 };
 

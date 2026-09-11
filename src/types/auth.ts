@@ -1,4 +1,4 @@
-﻿export type UserRole = 'gvcn' | 'bancansu' | 'bgh' | 'student' | 'parent' | 'admin';
+export type UserRole = 'gvcn' | 'teacher' | 'bancansu' | 'bgh' | 'bgh_viewer' | 'student' | 'parent' | 'admin';
 
 export interface UserProfile {
   id: string;

@@ -1,4 +1,4 @@
-﻿import { supabase } from './supabaseClient';
+import { supabase } from './supabaseClient';
 import type { UserProfile, UserRole, ClassInfo } from '../types/auth';
 
 export interface ClassMembershipData {
@@ -76,13 +76,24 @@ export const authService = {
       return null;
     }
 
+    const roleMapping: Record<string, UserRole> = {
+      teacher: 'gvcn',
+      gvcn: 'gvcn',
+      admin: 'admin',
+      student: 'student',
+      parent: 'parent',
+      bancansu: 'bancansu',
+      bgh: 'bgh',
+      bgh_viewer: 'bgh',
+    };
+
     return {
       id: data.id,
       email: data.email,
       fullName: data.full_name,
       phone: data.phone,
       avatarUrl: data.avatar_url,
-      role: data.system_role as UserRole,
+      role: roleMapping[data.system_role] || 'gvcn',
     };
   },
 

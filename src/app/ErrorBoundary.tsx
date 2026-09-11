@@ -1,4 +1,4 @@
-﻿import { Component, ErrorInfo, ReactNode } from 'react';
+import { Component, ErrorInfo, ReactNode } from 'react';
 import { Button } from '../components/common/Button';
 
 interface Props {
@@ -41,9 +41,15 @@ export class ErrorBoundary extends Component<Props, State> {
               ⚠️
             </div>
             <h2 className="text-xl font-bold text-slate-800 mb-2">Đã xảy ra lỗi giao diện</h2>
-            <p className="text-sm text-slate-500 mb-6 leading-relaxed">
+            <p className="text-sm text-slate-500 mb-4 leading-relaxed">
               Hệ thống ghi nhận sự cố bất ngờ. Dữ liệu của Thầy vẫn an toàn. Vui lòng bấm thử lại hoặc tải lại trang.
             </p>
+            {this.state.error && (
+              <div className="text-left bg-rose-50 border border-rose-200 rounded-xl p-3 mb-6 overflow-auto max-h-48 text-xs font-mono text-rose-800 whitespace-pre-wrap break-all">
+                <p className="font-bold mb-1">Chi tiết lỗi: {this.state.error.name}: {this.state.error.message}</p>
+                <p className="text-[11px] text-rose-600">{this.state.error.stack}</p>
+              </div>
+            )}
             <div className="flex gap-3 justify-center">
               <Button onClick={this.handleReset} variant="outline" size="md">
                 Thử lại

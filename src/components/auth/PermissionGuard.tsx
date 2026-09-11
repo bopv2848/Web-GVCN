@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { ForbiddenPage } from '../../features/auth/pages/ForbiddenPage';
 import type { UserRole } from '../../types/auth';
@@ -15,10 +15,10 @@ export const PermissionGuard: React.FC<PermissionGuardProps> = ({
   requiredPermission,
 }) => {
   const { user, membership } = useAuth();
-  const currentRole = user?.role || 'gvcn';
+  const currentRole = (user?.role === 'teacher' ? 'gvcn' : user?.role) || 'gvcn';
 
   // 1. Kiểm tra Role
-  const hasRole = allowedRoles.includes(currentRole);
+  const hasRole = allowedRoles.includes(currentRole as UserRole);
 
   // 2. Kiểm tra Permission cụ thể (nếu có)
   let hasSpecificPermission = true;

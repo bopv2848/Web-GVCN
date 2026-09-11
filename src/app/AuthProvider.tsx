@@ -1,17 +1,17 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { AuthContext } from '../hooks/useAuthContext';
 import { supabase } from '../services/supabaseClient';
 import { authService, type ClassMembershipData } from '../services/authService';
 import type { UserProfile, ClassInfo } from '../types/auth';
 
 const fallbackClass: ClassInfo = {
-  id: '33333333-3333-3333-3333-333333333333',
-  name: 'LỚP 12A1',
-  gradeLevel: 12,
-  schoolName: 'THPT THANH XUÂN',
+  id: '66666666-6666-6666-6666-666666666666',
+  name: 'LỚP 6A6',
+  gradeLevel: 6,
+  schoolName: 'TRƯỜNG THCS NGUYỄN VĂN TRỖI',
   academicYear: '2026 - 2027',
-  themeTitle: 'CHUYẾN TÀU THANH XUÂN 12A1',
-  themeMonth: 'CHỦ ĐIỂM THÁNG 9: MÁI TRƯỜNG MẾN YÊU',
+  themeTitle: 'CHUYẾN TÀU THANH XUÂN 6A6 • GVCN THẦY PHAN VĂN BỘ',
+  themeMonth: 'CHỦ ĐIỂM THÁNG 9: TRUYỀN THỐNG NHÀ TRƯỜNG',
 };
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {

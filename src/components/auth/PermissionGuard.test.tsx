@@ -1,4 +1,4 @@
-﻿import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { PermissionGuard } from './PermissionGuard';
@@ -6,7 +6,7 @@ import { AuthContext } from '../../hooks/useAuthContext';
 import type { UserProfile, ClassInfo } from '../../types/auth';
 
 const mockClass: ClassInfo = {
-  id: '33333333-3333-3333-3333-333333333333',
+  id: '66666666-6666-6666-6666-666666666666',
   name: 'LỚP 12A1',
   gradeLevel: 12,
   schoolName: 'THPT THANH XUÂN',

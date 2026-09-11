@@ -1,4 +1,4 @@
-﻿import React, { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { allNavItems } from './navItems';
@@ -12,7 +12,7 @@ interface MobileDrawerProps {
 export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) => {
   const { user } = useAuth();
   const location = useLocation();
-  const currentRole = user?.role || 'gvcn';
+  const currentRole = (user?.role === 'teacher' ? 'gvcn' : user?.role) || 'gvcn';
 
   // Automatically close drawer when navigating
   useEffect(() => {

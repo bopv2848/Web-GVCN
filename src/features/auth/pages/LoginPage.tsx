@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
 import { Button } from '../../../components/common/Button';
@@ -151,11 +151,55 @@ export const LoginPage: React.FC = () => {
                 type="submit"
                 variant="primary"
                 size="lg"
-                className="w-full"
+                className="w-full font-bold shadow-md shadow-primary/20"
                 isLoading={isLoading}
               >
                 ĐĂNG NHẬP HỆ THỐNG
               </Button>
+            </div>
+
+            {/* Quick Login for Testing */}
+            <div className="mt-4 pt-3 border-t border-dashed border-slate-200">
+              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 text-center">
+                ⚡ Đăng nhập nhanh 1-Click (Dành cho Thầy nghiệm thu):
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  disabled={isLoading}
+                  onClick={() => {
+                    setEmail('gvcn.lop6a6@gmail.com');
+                    setPassword('Gvcn6A6@2026');
+                    login('gvcn.lop6a6@gmail.com', 'Gvcn6A6@2026').then(() => navigate(from, { replace: true })).catch((err) => setErrorMessage(err.message || 'Lỗi đăng nhập'));
+                  }}
+                  className="p-2.5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-xl text-left transition-all group cursor-pointer"
+                >
+                  <div className="text-[11px] font-black text-indigo-900 flex items-center gap-1">
+                    <span>👩‍🏫</span> GVCN Lớp 6A6
+                  </div>
+                  <div className="text-[10px] text-indigo-600 font-medium truncate mt-0.5">
+                    Thầy Phan Văn Bộ
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={isLoading}
+                  onClick={() => {
+                    setEmail('bcs.lop6a6@gmail.com');
+                    setPassword('Bcs6A6@2026');
+                    login('bcs.lop6a6@gmail.com', 'Bcs6A6@2026').then(() => navigate(from, { replace: true })).catch((err) => setErrorMessage(err.message || 'Lỗi đăng nhập'));
+                  }}
+                  className="p-2.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl text-left transition-all group cursor-pointer"
+                >
+                  <div className="text-[11px] font-black text-emerald-900 flex items-center gap-1">
+                    <span>🧑‍🎓</span> Ban Cán Sự 6A6
+                  </div>
+                  <div className="text-[10px] text-emerald-600 font-medium truncate mt-0.5">
+                    Lê Ngọc Anh
+                  </div>
+                </button>
+              </div>
             </div>
           </form>
         ) : (

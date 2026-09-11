@@ -1,118 +1,131 @@
-﻿# MA TRẬN KIỂM THỬ NGHIỆM THU (ACCEPTANCE TEST MATRIX)
-**Dự án:** Hệ thống Quản trị Lớp học Web-GVCN (Bản Production)  
-**Tác giả:** AI Lead Engineer & QA Specialist  
-**Trạng thái:** Chờ chủ dự án duyệt kiến trúc  
+# 🧪 MA TRẬN KIỂM THỬ NGHIỆM THU TOÀN DIỆN (ACCEPTANCE TEST MATRIX)
+**Dự án:** Web-GVCN (Hệ thống Quản lý Lớp học dành cho Giáo viên Chủ nhiệm)  
+**Tiêu chuẩn kiểm thử:** Vitest (Unit/Integration), Playwright (E2E), OWASP Top 10 (Security Audit)  
+**Tác giả:** AI Lead Engineer & Product Architect  
+**Ngày ban hành:** 11/09/2026  
+**Trạng thái:** DỰ THẢO KIẾN TRÚC – CHỜ CHỦ DỰ ÁN DUYỆT
 
 ---
 
-## 1. MA TRẬN KIỂM THỬ THEO VAI TRÒ NGƯỜI DÙNG (ROLE-BASED TEST MATRIX)
+## 1. NGUYÊN TẮC NGHIỆM THU (TESTING GOVERNANCE)
 
-| Mã kiểm thử | Vai trò thực hiện | Hành động kiểm thử | Kết quả mong đợi (Expected Outcome) | Trạng thái |
-|---|---|---|---|---|
-| **TEST-ROLE-01** | Khách vãng lai (Chưa Auth) | Cố tình truy cập URL `/dashboard` hoặc `/students` | Bị chặn ngay tại `ProtectedRoute`, tự động chuyển hướng về `/login`. | Thiết kế sẵn |
-| **TEST-ROLE-02** | GVCN | Đăng nhập tài khoản GVCN đã được phân công Lớp 12A1 | Truy cập đầy đủ 11 tính năng: Học sinh, Tích điểm, Điểm danh, Trạm đồng hành, Sơ đồ, Báo cáo, Cài đặt. | Thiết kế sẵn |
-| **TEST-ROLE-03** | Ban Cán Sự (BCS) | Đăng nhập tài khoản BCS Lớp 12A1 | Chỉ thấy các menu được cấp quyền; menu "Trạm đồng hành" và "Cài đặt nâng cao" bị ẩn hoàn toàn. | Thiết kế sẵn |
-| **TEST-ROLE-04** | BCS | Thử gọi API đọc `companion_cases` qua lệnh console hoặc Postman | Nhận mã lỗi `403 Forbidden` hoặc mảng rỗng `[]` từ Supabase RLS. | Thiết kế sẵn |
-| **TEST-ROLE-05** | Ban Giám Hiệu (BGH) | Đăng nhập tài khoản BGH | Xem được báo cáo và sơ đồ các lớp thuộc trường; không có nút "Sửa học sinh", "Xóa điểm" hay "Đổi quà". | Thiết kế sẵn |
-| **TEST-ROLE-06** | Phụ huynh A | Truy cập xem bảng điểm bằng tài khoản đã liên kết với Học sinh A | Chỉ hiển thị kết quả của Học sinh A; không hiển thị danh sách hay điểm của Học sinh B. | Thiết kế sẵn |
-| **TEST-ROLE-07** | GVCN Lớp A | Cố tình gửi request sửa thông tin học sinh thuộc Lớp B | Supabase RLS chặn với lỗi vi phạm chính sách bảo mật (Policy Violation). | Thiết kế sẵn |
+Theo cam kết kỹ thuật của dự án Web-GVCN:
+1. **Không khẳng định "an toàn", "hoàn thành" hoặc "production-ready" nếu chưa có bằng chứng kiểm thử đạt 100%.**
+2. Mọi tính năng cốt lõi bắt buộc phải có bài kiểm thử tự động (Automated Tests) kết hợp kiểm thử hành vi thực tế trên máy tính và điện thoại.
+3. Bài kiểm thử thất bại (Failed test) ở mức **Critical** hoặc **High** sẽ tự động khóa quy trình triển khai (Block Deployment).
 
 ---
 
-## 2. KIỂM THỬ BẢO MẬT & TÍNH TOÀN VẸN DỮ LIỆU (SECURITY & DATA INTEGRITY)
+## 2. MA TRẬN KIỂM THỬ THEO VAI TRÒ (ROLE-BASED TEST MATRIX)
 
-### 2.1. Kiểm thử XSS (Cross-Site Scripting Injection)
-- **Kịch bản:** Tải lên file Excel chứa tên học sinh: `<script>alert('XSS')</script>` hoặc `<img src=x onerror=fetch('http://attacker.com')>`.
-- **Kỳ vọng:** React escape tự động chuỗi ký tự; dữ liệu hiển thị dạng văn bản thuần trên giao diện, không có bất kỳ mã JavaScript nào được thực thi trong trình duyệt.
-
-### 2.2. Kiểm thử Tính toàn vẹn Sổ cái Điểm (Append-Only Math Verification)
-- **Kịch bản:**
-  1. Học sinh có $0$ sao ban đầu.
-  2. Cộng $+10$ sao (Lý do: "Phát biểu hay"). Sổ cái ghi nhận dòng #1 ($+10$). Tổng số dư $= 10$.
-  3. Đổi quà tiêu tốn $-6$ sao. Sổ cái ghi nhận dòng #2 ($-6$). Tổng số dư $= 4$.
-  4. GVCN phát hiện dòng #1 nhập nhầm và bấm "Hoàn tác".
-  5. Hệ thống ghi nhận dòng #3 ($-10$, `reversal_of_id: #1`).
-- **Kỳ vọng:**
-  - Bản ghi gốc #1 không bị xóa khỏi cơ sở dữ liệu.
-  - Tổng số dư được tính lại: $10 - 6 - 10 = -2$ sao (hoặc hệ thống cảnh báo không đủ số dư để hoàn tác nếu số dư không âm).
-  - Lịch sử hiển thị minh bạch toàn bộ 3 dòng giao dịch kèm người thực hiện và ngày giờ.
-
-### 2.3. Kiểm thử Bảo mật Cổng Tra cứu Phụ huynh (Brute-force Resistance)
-- **Kịch bản:** Kẻ xấu dùng script tự động gửi $10.000$ mã token ngẫu nhiên trong 1 phút để dò quét thông tin học sinh.
-- **Kỳ vọng:**
-  - Sau 5 lần nhập sai liên tiếp, hệ thống kích hoạt Rate-limit (khóa tạm 15 phút hoặc yêu cầu giải Captcha).
-  - Token liên kết có độ dài 32 ký tự ngẫu nhiên (UUIDv4 / Cryptographic string), xác suất đoán trúng là $1 / 2^{128}$ (bất khả thi về mặt toán học).
+| Mã test | Vai trò | Hành động thực hiện | Kết quả mong đợi (Expected Result) | Mức độ ưu tiên | Trạng thái |
+|:---:|:---:|:---|:---|:---:|:---:|
+| `TC-ROLE-01` | **GVCN** | Đăng nhập tài khoản chính chủ | Vào đúng Dashboard toàn quyền; hiển thị đầy đủ menu và dữ liệu học sinh | P0 (Bắt buộc) | Sẵn sàng test |
+| `TC-ROLE-02` | **GVCN** | Mở phân hệ "Trạm Đồng Hành" | Xem được toàn bộ danh sách học sinh cá biệt và biện pháp can thiệp | P0 (Bắt buộc) | Sẵn sàng test |
+| `TC-ROLE-03` | **GVCN** | Nhập danh sách học sinh từ file Excel | Thêm mới 40 học sinh vào DB, tự động chia tổ và gán ảnh mặc định thành công | P0 (Bắt buộc) | Sẵn sàng test |
+| `TC-ROLE-04` | **BCS** | Đăng nhập tài khoản Ban cán sự | Chỉ thấy các menu được phân công: Điểm danh, Chấm điểm, Sơ đồ, Trợ giảng | P0 (Bắt buộc) | Sẵn sàng test |
+| `TC-ROLE-05` | **BCS** | Cố tình truy cập route `/tram-dong-hanh` | Bị Route Guard chặn lại, điều hướng về trang chủ và hiện thông báo từ chối quyền | P0 (Bắt buộc) | Sẵn sàng test |
+| `TC-ROLE-06` | **BCS** | Bấm xóa hồ sơ học sinh hoặc sửa cài đặt lớp | Không hiển thị nút xóa/sửa trên UI; nếu gọi API ngầm thì DB trả về `403 Forbidden` | P0 (Bắt buộc) | Sẵn sàng test |
+| `TC-ROLE-07` | **BCS** | Điểm danh buổi sáng trong ngày | Lưu thành công vào cơ sở dữ liệu; hiển thị người điểm danh là "Ban cán sự" | P0 (Bắt buộc) | Sẵn sàng test |
+| `TC-ROLE-08` | **BGH** | Xem báo cáo chuyên cần và sổ theo dõi | Xem được biểu đồ và danh sách thống kê; toàn bộ nút sửa/xóa/cộng điểm bị ẩn | P1 (Quan trọng) | Sẵn sàng test |
+| `TC-ROLE-09` | **Phụ huynh** | Nhập Mã học sinh + Mã PIN tra cứu | Chỉ hiển thị hồ sơ, điểm nỗ lực và chuyên cần của đúng người con được liên kết | P0 (Bắt buộc) | Sẵn sàng test |
+| `TC-ROLE-10` | **Khách lạ** | Mở trình duyệt ẩn danh vào hệ thống | Không xem được bất kỳ thông tin nào ngoài màn hình đăng nhập | P0 (Bắt buộc) | Sẵn sàng test |
 
 ---
 
-## 3. KỊCH BẢN KIỂM THỬ TRỌNG YẾU (GIVEN – WHEN – THEN SCENARIOS)
+## 3. BỘ KIỂM THỬ BẢO MẬT & AN TOÀN DỮ LIỆU (SECURITY TEST SUITE)
 
-```mermaid
-journey
-    title Trải nghiệm người dùng trong kịch bản điểm danh & cộng điểm
-    section Điểm danh
-      Mở tab điểm danh: 5: GVCN
-      Bấm Tất cả Có mặt: 5: GVCN
-      Sĩ số cập nhật 100%: 5: GVCN
-    section Cộng điểm
-      Chọn Tổ 1 & Tiêu chí: 5: GVCN
-      Bấm Tích điểm: 5: GVCN
-      Âm thanh & Pháo hoa: 5: GVCN, HS
-    section Tra cứu
-      Phụ huynh mở app: 5: Phụ huynh
-      Xem thông báo con có mặt & điểm cộng: 5: Phụ huynh
+| Mã test | Loại tấn công / Kiểm tra | Kịch bản kiểm thử (Test Scenario) | Tiêu chí vượt qua (Pass Criteria) |
+|:---:|:---|:---|:---|
+| `SEC-01` | **Vượt quyền mức API (RLS Bypass)** | Sử dụng Token của Ban Cán Sự để gửi request `GET /rest/v1/companion_cases` trực tiếp lên Supabase PostgREST | PostgreSQL kích hoạt chính sách RLS, trả về mảng rỗng `[]` hoặc lỗi `403 Forbidden`. Không để lộ 1 byte dữ liệu nhạy cảm nào. |
+| `SEC-02` | **Chèn mã độc (XSS Injection)** | Nhập tên học sinh: `<script>alert('XSS')</script>` hoặc `<img src=x onerror=alert(1)>` qua form hoặc file Excel | React tự động escape ký tự; chuỗi hiển thị nguyên văn dưới dạng text thuần, không có popup alert nào xuất hiện. |
+| `SEC-03` | **Chèn mã độc SQL (SQL Injection)** | Nhập vào ô tìm kiếm: `' OR '1'='1` hoặc `'; DROP TABLE students; --` | Supabase SDK tham số hóa truy vấn an toàn; hệ thống coi chuỗi tìm kiếm là literal text, không có lỗi DB và không rò rỉ dữ liệu. |
+| `SEC-04` | **Dò quét mã PIN phụ huynh (Brute-Force)** | Dùng script gửi liên tục 20 mã PIN sai trong vòng 10 giây | Hệ thống khóa IP/phiên sau 5 lần thử sai liên tiếp, yêu cầu chờ 15 phút mới được thử lại. |
+| `SEC-05` | **Rò rỉ Service Role Key** | Quét toàn bộ mã nguồn frontend, git commit history và network tab trong trình duyệt | **0 phát hiện**: Không có bất kỳ dấu vết nào của `SUPABASE_SERVICE_ROLE_KEY` trong bundle phía client. |
+| `SEC-06` | **Truy cập tệp riêng tư (Storage Access)** | Copy URL ảnh trong bucket `companion_attachments` và mở bằng trình duyệt ẩn danh không đăng nhập | Trả về lỗi `403 Access Denied` do bucket được thiết lập Private và yêu cầu Presigned URL có chữ ký số. |
+
+---
+
+## 4. BỘ KIỂM THỬ TÍNH TOÀN VẸN DỮ LIỆU (DATA INTEGRITY SUITE)
+
+| Mã test | Hạng mục kiểm tra | Điều kiện ban đầu & Thao tác | Tiêu chí toàn vẹn (Integrity Assertion) |
+|:---:|:---|:---|:---|
+| `INT-01` | **Sổ cái điểm bất biến (Append-Only)** | Thực hiện cộng 10 điểm cho học sinh A, sau đó bấm hoàn tác giao dịch này | Bảng `point_transactions` có đúng 2 bản ghi: +10đ và -10đ (trỏ `reversal_of_id`). Tổng điểm học sinh trở về chính xác số điểm ban đầu. Không có bản ghi nào bị xóa (`DELETE`). |
+| `INT-02` | **Khử hoàn toàn số liệu giả (`Math.sin`)** | Kiểm tra biểu đồ tiến bộ tuần và bảng xếp hạng tổ thi đua tại trang chủ | 100% số liệu hiển thị phải khớp chính xác với kết quả câu lệnh SQL `SUM(points)` của các giao dịch trong tuần đó. Khi chưa có điểm, hiển thị trạng thái rỗng (0 điểm). |
+| `INT-03` | **Khóa sổ Điểm danh chống trùng lặp** | Thao tác điểm danh lớp 6A6 buổi Sáng ngày 15/09/2026 lần thứ 2 | Hệ thống nhận diện phiên điểm danh đã tồn tại; cho phép cập nhật trạng thái học sinh vắng trong phiên cũ, không tạo thêm phiên trùng lặp. |
+| `INT-04` | **Tính duy nhất của chỗ ngồi Sơ đồ lớp** | Kéo học sinh B vào ghế số 5 đã có học sinh C đang ngồi | Hệ thống thực hiện tráo đổi vị trí (Swap) giữa B và C, đảm bảo mỗi ghế có tối đa 1 học sinh và 1 học sinh không thể ngồi 2 ghế cùng lúc. |
+| `INT-05` | **Khôi phục xóa mềm (Soft Delete)** | Bấm xóa học sinh Lê Ngọc Anh, sau đó vào mục Lưu trữ bấm "Khôi phục" | Hồ sơ học sinh xuất hiện trở lại danh sách lớp; toàn bộ lịch sử điểm và chuyên cần cũ vẫn được bảo tồn nguyên vẹn 100%. |
+
+---
+
+## 5. BỘ KIỂM THỬ DI ĐỘNG, TRẢI NGHIỆM & HIỆU NĂNG (MOBILE & UX SUITE)
+
+| Mã test | Thiết bị / Môi trường kiểm thử | Thao tác kiểm thử | Tiêu chí đạt chuẩn |
+|:---:|:---|:---|:---|
+| `UX-01` | iPhone SE (Màn hình siêu nhỏ 375px) | Mở trang chủ, danh sách học sinh và giao diện điểm danh | Không bị tràn viền ngang (Không xuất hiện thanh cuộn ngang trang ngoài ý muốn); cỡ chữ dễ đọc (≥ 14px); không bị đè chữ. |
+| `UX-02` | Điện thoại cảm ứng (Touch Targets) | Bấm các nút: Điểm danh (P, KP, T), Cộng điểm (+5, +10), Quay số | Vùng bấm (Touch target area) đạt tối thiểu **44x44 pixel**, bấm chính xác không bị nhầm nút bên cạnh. |
+| `UX-03` | Chế độ mất mạng ngoại tuyến (Offline) | Tắt Wifi/4G khi đang mở ứng dụng và thao tác điểm danh | Hiển thị biểu tượng "Ngoại tuyến" màu vàng thân thiện; không bị crash màn hình trắng; thao tác được lưu vào hàng đợi chờ gửi. |
+| `UX-04` | Kiểm tra đồng hồ đếm ngược có chuông | Chỉnh 1 phút và bấm "Bắt đầu", sau đó bấm "Tạm dừng" rồi "Đặt lại" | Đồng hồ chạy chính xác từng giây, nút đặt lại hoạt động hoàn hảo (đã sửa lỗi `resetTimer`), chuông Tone.js reo vang khi hết giờ. |
+| `UX-05` | Kiểm tra nút "Thu hồi" trong Sơ đồ lớp | Bấm nút "Thu hồi" trên thanh công cụ sơ đồ lớp | Tất cả học sinh được đưa về danh sách chưa xếp chỗ, không phát sinh lỗi `clearAllSeats is not defined`. |
+| `UX-06` | Điểm hiệu năng Lighthouse | Chạy kiểm thử tự động trên Google Chrome DevTools (Mobile Profile) | Performance ≥ 90, Accessibility ≥ 95, Best Practices ≥ 95, SEO ≥ 90. |
+
+---
+
+## 6. KỊCH BẢN KIỂM THỬ HÀNH VI CHI TIẾT (GIVEN - WHEN - THEN SCENARIOS)
+
+### Kịch bản BDD 1: Điểm danh nhanh đầu giờ học của Ban Cán Sự
+```gherkin
+Feature: Điểm danh chuyên cần lớp học
+  As a Lớp trưởng hoặc Phó học tập (Ban cán sự lớp)
+  I want to điểm danh nhanh các bạn vắng đầu giờ
+  So that Giáo viên chủ nhiệm nắm bắt sĩ số ngay trên điện thoại
+
+  Scenario: Cán sự điểm danh một bạn vắng có phép và một bạn đi trễ
+    Given Cán sự lớp đăng nhập vào hệ thống Web-GVCN lúc 07:15 sáng
+    And Hôm nay là ngày học Thứ Hai, buổi Sáng
+    When Cán sự chọn học sinh "Trần Tuấn Kiệt" và chuyển trạng thái sang "Vắng có phép (P)"
+    And Cán sự chọn học sinh "Ngô Gia Bảo" và chuyển trạng thái sang "Đi học trễ (T)" kèm ghi chú "Trễ 10 phút"
+    And Cán sự bấm nút "Lưu điểm danh buổi sáng"
+    Then Hệ thống hiển thị thông báo thành công: "Đã lưu điểm danh (Sĩ số: 38/40)"
+    And Trên điện thoại của GVCN ngay lập tức hiển thị sĩ số 38/40 qua kết nối thời gian thực
+    And Bản ghi được lưu vết với người tạo là "Lớp trưởng"
 ```
 
-### Kịch bản 1: Đăng nhập và phân quyền truy cập
-- **GIVEN:** Người dùng là Giáo viên Chủ nhiệm Lớp 12A1 đã có tài khoản trên hệ thống.
-- **WHEN:** Giáo viên nhập đúng Email và Mật khẩu trên màn hình đăng nhập rồi bấm "Đăng nhập".
-- **THEN:**
-  - Hệ thống xác thực thành công qua Supabase Auth.
-  - Ứng dụng tải cấu hình Lớp 12A1 (Banner, Màu sắc, Slogan).
-  - Thanh Sidebar hiển thị đầy đủ các phân hệ quản trị.
+### Kịch bản BDD 2: Chấm điểm thi đua và bảo vệ tính bất biến của sổ cái
+```gherkin
+Feature: Tích điểm thi đua tổ
+  As a Giáo viên Chủ nhiệm
+  I want to cộng điểm cho học sinh đạt thành tích tốt
+  So that khuyến khích nỗ lực học tập của các em
 
-### Kịch bản 2: Nhập danh sách lớp từ file Excel
-- **GIVEN:** GVCN đang ở màn hình Quản lý Học sinh và có file `Danh_sach_12A1.xlsx` (45 học sinh, có đủ cột Họ tên, Giới tính, Ngày sinh, Tổ).
-- **WHEN:** GVCN kéo thả file vào khung nhập và bấm "Kiểm tra dữ liệu".
-- **THEN:**
-  - Bảng xem trước (Preview) hiển thị 45 dòng màu xanh (Hợp lệ).
-  - Khi bấm "Lưu vào hệ thống", 45 học sinh được tạo mới trong cơ sở dữ liệu.
-  - Danh sách học sinh và 4 tổ thi đua được cập nhật tức thì trên giao diện mà không cần tải lại trang.
+  Scenario: Cộng điểm phát biểu xây dựng bài cho học sinh
+    Given Học sinh "Huỳnh Huyền Nhiên" thuộc Tổ 1 đang có 85 điểm
+    When GVCN chọn tiêu chí "Phát biểu xây dựng bài (+3đ)" cho Huyền Nhiên
+    And GVCN bấm "Xác nhận cộng điểm"
+    Then Tổng điểm cá nhân của Huyền Nhiên tăng lên thành 88 điểm
+    And Tổng điểm của Tổ 1 tự động cộng thêm 3 điểm
+    And Bảng point_transactions ghi nhận 1 bản ghi mới với số điểm +3
+    And Không có trường tổng điểm nào bị cập nhật đè thủ công
+```
 
-### Kịch bản 3: Điểm danh chuyên cần nhanh
-- **GIVEN:** Lớp 12A1 có 45 học sinh, đầu giờ học sáng thứ Hai.
-- **WHEN:** GVCN mở Tab Điểm danh và bấm nút "Tất cả có mặt".
-- **THEN:**
-  - Toàn bộ 45 thẻ học sinh chuyển sang trạng thái "Có mặt" (Màu xanh).
-  - Thanh thống kê trên Header hiển thị: "Hiện diện: 45/45 (100%)".
-  - Một phiên điểm danh mới (`attendance_session`) được ghi vào Supabase với dấu thời gian thực.
+### Kịch bản BDD 3: Bảo vệ tuyệt đối thông tin Trạm Đồng Hành
+```gherkin
+Feature: Bảo mật thông tin học sinh cá biệt tại Trạm Đồng Hành
+  As an Hệ thống An toàn Dữ liệu Giáo dục
+  I want to ngăn chặn triệt để Ban cán sự và Phụ huynh khác xem thông tin vi phạm
+  So that bảo vệ quyền riêng tư và danh dự của học sinh
 
-### Kịch bản 4: Ghi nhận điểm thi đua và Đổi quà
-- **GIVEN:** Học sinh "Nguyễn Văn A" đang có 15 điểm và 15 sao.
-- **WHEN:** GVCN chọn Nguyễn Văn A, chọn tiêu chí "Đạt điểm 10 môn Toán (+5 sao)" và bấm "Cộng điểm".
-- **THEN:**
-  - Giao diện phát âm thanh vui tươi, bắn pháo hoa Confetti chúc mừng.
-  - Số dư của học sinh tự động tăng lên 20 điểm và 20 sao.
-  - Học sinh có thể vào Shop quà để đổi "Bút bi cao cấp (15 sao)", sau khi đổi số dư sao còn 5 sao.
-
-### Kịch bản 5: Bảo vệ thông tin nhạy cảm tại Trạm đồng hành
-- **GIVEN:** GVCN tạo hồ sơ đồng hành cho học sinh B với nội dung: "Thường xuyên ngủ gật và có dấu hiệu áp lực tâm lý gia đình".
-- **WHEN:** Một học sinh là Lớp trưởng (tài khoản BCS) hoặc Phụ huynh của học sinh khác đăng nhập vào ứng dụng.
-- **THEN:**
-  - Menu "Trạm đồng hành" hoàn toàn không hiển thị trên thanh điều hướng.
-  - Mọi yêu cầu truy vấn đến bảng `companion_cases` đều bị chặn ở tầng cơ sở dữ liệu bởi chính sách RLS.
-  - Thông tin của học sinh B được bảo vệ an toàn 100%.
+  Scenario: Tài khoản Ban cán sự lớp tìm cách truy xuất hồ sơ Trạm Đồng Hành
+    Given Tài khoản "Lớp trưởng" đã đăng nhập vào hệ thống
+    When Lớp trưởng mở công cụ lập trình F12 và gửi request trực tiếp:
+      """
+      fetch('/rest/v1/companion_cases', { headers: { Authorization: 'Bearer <BCS_TOKEN>' } })
+      """
+    Then Supabase PostgreSQL thực thi chính sách RLS "companion_gvcn_only"
+    And Máy chủ trả về mã trạng thái HTTP 200 kèm nội dung là mảng rỗng []
+    And Không có bất kỳ thông tin nào về lỗi vi phạm hay biện pháp can thiệp bị rò rỉ
+    And Hệ thống tự động ghi nhật ký cảnh báo vào bảng audit_logs
+```
 
 ---
-
-## 4. TIÊU CHUẨN HIỆU NĂNG, GIAO DIỆN & TRẢI NGHIỆM (NON-FUNCTIONAL CRITERIA)
-
-1. **Hiệu năng & Tối ưu hóa:**
-   - Thời gian tải trang ban đầu (First Contentful Paint) $< 1.2$ giây trên mạng 4G.
-   - Chuyển tab giữa các phân hệ (Routing transition) tức thì $< 100$ ms nhờ React Router và TanStack Query.
-2. **Khả năng hiển thị trên thiết bị di động (Mobile-First Responsiveness):**
-   - Hoạt động mượt mà trên các kích thước màn hình phổ biến: iPhone (375px, 390px, 428px), Android (360px, 412px), iPad/Tablet (768px, 1024px) và Desktop Full HD (1920x1080).
-   - Menu di động dạng Drawer trượt mượt mà, hỗ trợ thao tác chạm vuốt cảm ứng (Touch gestures).
-3. **Tiêu chuẩn Trợ năng & Phông chữ (Accessibility - WCAG 2.1 AA):**
-   - Tương phản màu chữ/nền đạt tỷ lệ tối thiểu $4.5:1$.
-   - Sử dụng phông chữ tiếng Việt chuẩn (`Quicksand` / `Inter`), hiển thị đầy đủ dấu không bị lỗi font (tofu).
+*Ma trận kiểm thử nghiệm thu này là bản cam kết chất lượng của đội ngũ kỹ sư. Hệ thống chỉ được bàn giao khi 100% các bài kiểm thử trên đều đạt kết quả "PASS".*

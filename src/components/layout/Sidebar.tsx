@@ -1,14 +1,15 @@
-﻿import React from 'react';
+import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { allNavItems } from './navItems';
 import { cn } from '../../utils/cn';
+import type { UserRole } from '../../types/auth';
 
 export const Sidebar: React.FC = () => {
   const { user } = useAuth();
-  const currentRole = user?.role || 'gvcn';
+  const currentRole = (user?.role === 'teacher' ? 'gvcn' : user?.role) || 'gvcn';
 
-  const visibleNavItems = allNavItems.filter((item) => item.roles.includes(currentRole));
+  const visibleNavItems = allNavItems.filter((item) => item.roles.includes(currentRole as UserRole));
 
   return (
     <aside className="hidden md:flex flex-col w-64 lg:w-72 h-screen sticky top-0 bg-primary text-slate-100 border-r border-indigo-950/60 select-none">

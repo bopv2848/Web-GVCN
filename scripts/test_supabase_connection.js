@@ -1,8 +1,8 @@
 ﻿import { createClient } from '@supabase/supabase-js';
 
-const url = 'https://invvygrwbhkwcwvoeabk.supabase.co';
-const anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImludnZ5Z3J3Ymhrd2N3dm9lYWJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc4MTA2NTQsImV4cCI6MjEwMzM4NjY1NH0.YQcZ1Ey-ILFY5cQy5A4b6gTyd5vERX1MVWcsbdNt_vo';
-const serviceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImludnZ5Z3J3Ymhrd2N3dm9lYWJrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NzgxMDY1NCwiZXhwIjoyMTAzMzg2NjU0fQ.zRzPBfOvXq3hvsv1ehADPS7RBrVzMTTHUjAA98YnxVU';
+const url = 'https://huatporucovamymegjnw.supabase.co';
+const anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh1YXRwb3J1Y292YW15bWVnam53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkwOTE2ODgsImV4cCI6MjEwNDY2NzY4OH0.GIlMZ0GOu-kriT90ztwW1hXDL_e5DssRO5Pjxf0J1aM';
+const serviceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh1YXRwb3J1Y292YW15bWVnam53Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4OTA5MTY4OCwiZXhwIjoyMTA0NjY3Njg4fQ.9ZoG20OJTKaN_98BRlCm3VgO4jYD0MSS_J4CVF4_9-A';
 
 console.log('🚀 ĐANG KIỂM TRA KẾT NỐI TỚI SUPABASE CLOUD...');
 

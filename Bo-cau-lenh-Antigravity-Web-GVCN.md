@@ -5,9 +5,9 @@
 **Trạng thái:** Đã phân tích nguyên mẫu – sẵn sàng thực hiện bước thiết kế kiến trúc  
 **Tệp đã đọc:** `CODE GVCN CẬP NHẬT MỚI NHẤT 23.8.md`, `Index.html` và 02 ảnh chụp màn hình dự án `Web-GVCN` trong Antigravity.
 
----
+\---
 
-## 1. Kết luận dành cho thầy
+## 1\. Kết luận dành cho thầy
 
 Dự án **có tính khả thi cao về ý tưởng và giao diện**, vì nguyên mẫu hiện tại đã có nhiều thao tác hoạt động thật trên một trình duyệt. Tuy nhiên, dự án **chưa đủ điều kiện để dùng như một hệ thống trực tuyến có dữ liệu thật của học sinh**.
 
@@ -21,23 +21,23 @@ Khuyến nghị chính:
 
 ### Mức độ khả thi
 
-| Mục tiêu | Mức khả thi | Nhận định |
-|---|---:|---|
-| Chạy thử trên một máy | Cao | Nguyên mẫu hiện tại đã làm được phần lớn |
-| Đưa bản tĩnh lên Vercel để trình diễn | Cao | Có thể làm nhanh, nhưng chưa bảo mật và chưa đồng bộ dữ liệu |
-| GVCN sử dụng thật trên nhiều thiết bị | Khá | Cần Supabase, xác thực thật, cơ sở dữ liệu và kiểm thử |
-| Nhiều vai trò cùng sử dụng | Khá | Cần thiết kế RBAC và RLS từ đầu; không thể chỉ ẩn/hiện menu |
-| Mở rộng cho nhiều lớp hoặc nhiều trường | Có thể | Phải thiết kế dữ liệu theo `school_id`, `class_id`, `academic_year_id` ngay từ đầu |
+|Mục tiêu|Mức khả thi|Nhận định|
+|-|-:|-|
+|Chạy thử trên một máy|Cao|Nguyên mẫu hiện tại đã làm được phần lớn|
+|Đưa bản tĩnh lên Vercel để trình diễn|Cao|Có thể làm nhanh, nhưng chưa bảo mật và chưa đồng bộ dữ liệu|
+|GVCN sử dụng thật trên nhiều thiết bị|Khá|Cần Supabase, xác thực thật, cơ sở dữ liệu và kiểm thử|
+|Nhiều vai trò cùng sử dụng|Khá|Cần thiết kế RBAC và RLS từ đầu; không thể chỉ ẩn/hiện menu|
+|Mở rộng cho nhiều lớp hoặc nhiều trường|Có thể|Phải thiết kế dữ liệu theo `school\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_id`, `class\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_id`, `academic\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_year\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_id` ngay từ đầu|
 
----
+\---
 
-## 2. Kết quả đọc và phân tích các tệp
+## 2\. Kết quả đọc và phân tích các tệp
 
 ### 2.1. Vai trò của từng tệp
 
-- `CODE GVCN CẬP NHẬT MỚI NHẤT 23.8.md` không phải là một PRD hay tài liệu đặc tả. Nội dung chủ yếu là mã HTML đã bị mã hóa thành các ký tự như `&lt;`, `&gt;`. Không nên coi đây là một nguồn yêu cầu độc lập.
-- `Index.html` là tệp nguyên mẫu chính, khoảng 440 KB, 5.788 dòng. Cú pháp JavaScript hiện tại biên dịch được.
-- Hai ảnh chụp cho thấy thư mục `Web-GVCN` đã được Antigravity nhận diện đúng và hộp nhập lệnh đã sẵn sàng. Trên giao diện có thông báo cập nhật Antigravity; nên cập nhật trước khi bắt đầu một đợt triển khai dài.
+* `CODE GVCN CẬP NHẬT MỚI NHẤT 23.8.md` không phải là một PRD hay tài liệu đặc tả. Nội dung chủ yếu là mã HTML đã bị mã hóa thành các ký tự như `\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\&lt;`, `\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\&gt;`. Không nên coi đây là một nguồn yêu cầu độc lập.
+* `Index.html` là tệp nguyên mẫu chính, khoảng 440 KB, 5.788 dòng. Cú pháp JavaScript hiện tại biên dịch được.
+* Hai ảnh chụp cho thấy thư mục `Web-GVCN` đã được Antigravity nhận diện đúng và hộp nhập lệnh đã sẵn sàng. Trên giao diện có thông báo cập nhật Antigravity; nên cập nhật trước khi bắt đầu một đợt triển khai dài.
 
 ### 2.2. Những phân hệ đã có trong nguyên mẫu
 
@@ -58,53 +58,53 @@ Khuyến nghị chính:
 
 ### 2.3. Điểm mạnh cần bảo tồn
 
-- Ý tưởng sản phẩm gần với công việc thực tế của GVCN.
-- Giao diện tiếng Việt, trực quan, có nhiều trạng thái rỗng và thông báo.
-- Có khả năng nhập Excel, xuất PDF, sao lưu JSON và xử lý ảnh phía trình duyệt.
-- Có lịch sử điểm thay vì chỉ giữ một con số tổng.
-- Có tư duy phân vai GVCN, ban cán sự, BGH và phụ huynh/học sinh.
-- Có nhiều tính năng hỗ trợ tiết học trực tiếp, tạo nét riêng so với sổ chủ nhiệm thông thường.
+* Ý tưởng sản phẩm gần với công việc thực tế của GVCN.
+* Giao diện tiếng Việt, trực quan, có nhiều trạng thái rỗng và thông báo.
+* Có khả năng nhập Excel, xuất PDF, sao lưu JSON và xử lý ảnh phía trình duyệt.
+* Có lịch sử điểm thay vì chỉ giữ một con số tổng.
+* Có tư duy phân vai GVCN, ban cán sự, BGH và phụ huynh/học sinh.
+* Có nhiều tính năng hỗ trợ tiết học trực tiếp, tạo nét riêng so với sổ chủ nhiệm thông thường.
 
 ### 2.4. Các vấn đề phải xử lý trước khi sử dụng dữ liệu thật
 
-| Mức độ | Vấn đề phát hiện | Tác động | Yêu cầu xử lý |
-|---|---|---|---|
-| Nghiêm trọng | `renderLoginScreen()` được định nghĩa nhưng không được gọi trong luồng khởi động; `renderLayout()` luôn dựng ứng dụng | Trang đăng nhập không thật sự bảo vệ hệ thống | Dùng Supabase Auth và route guard thật |
-| Nghiêm trọng | Trạng thái mặc định là `loggedIn: true`; mật khẩu được viết thẳng trong JavaScript | Ai xem mã nguồn cũng thấy mật khẩu; có thể tự sửa vai trò | Xóa toàn bộ mật khẩu hard-code; không lưu quyền đăng nhập trong state tùy ý |
-| Nghiêm trọng | Toàn bộ dữ liệu nằm trong `localStorage` | Mất dữ liệu khi xóa trình duyệt; không đồng bộ nhiều thiết bị; người dùng có thể sửa dữ liệu | Chuyển dữ liệu nghiệp vụ sang PostgreSQL/Supabase |
-| Nghiêm trọng | Phân quyền hiện chỉ lọc menu hoặc tab ở phía trình duyệt | Người dùng có thể gọi hàm trực tiếp hoặc sửa state để vượt quyền | Bắt buộc triển khai RLS trên mọi bảng và kiểm tra quyền ở từng thao tác |
-| Nghiêm trọng | “Trạm đồng hành” lưu vấn đề, lỗi và biện pháp giáo dục của học sinh trong localStorage | Nguy cơ lộ dữ liệu nhạy cảm của trẻ em | Giới hạn người xem; ghi nhật ký truy cập; không cho BCS/phụ huynh khác xem |
-| Cao | Có 03 định nghĩa `renderViewLichBaoGiang` và một số hàm bị định nghĩa lặp | Bản định nghĩa sau ghi đè bản trước; khó biết logic nào đang chạy | Hợp nhất thành một module duy nhất |
-| Cao | Hai nút gọi `resetTimer()` và `clearAllSeats()` nhưng không tìm thấy hàm tương ứng | Nút đặt lại đồng hồ và thu hồi sơ đồ có thể không hoạt động | Bổ sung kiểm thử và sửa hai luồng này |
-| Cao | Chỉ số “tiến bộ tuần” ở trang chủ được tạo bằng công thức `Math.sin(...)` | Hiển thị số liệu giả, có thể gây hiểu nhầm | Tính hoàn toàn từ giao dịch điểm theo thời gian |
-| Cao | Dữ liệu nhập được đưa vào HTML bằng template string; hàm escape chưa xử lý đầy đủ `&`, `<`, `>` | Có nguy cơ chèn mã độc từ file Excel/JSON hoặc dữ liệu nhập tay | Dùng React escaping mặc định, Zod validation và không dùng `innerHTML` với dữ liệu không tin cậy |
-| Cao | Một tệp HTML chứa khoảng 151 hàm, giao diện và dữ liệu trộn chung | Khó bảo trì, dễ phát sinh lỗi dây chuyền | Tách theo feature, component, service, hook và schema |
-| Trung bình | Mã phụ huynh chỉ gồm 05 chữ số, không có giới hạn số lần thử | Mã có thể bị đoán và làm lộ thông tin học sinh | Dùng tài khoản/magic link hoặc mã mời dài, có thời hạn, rate limit và thu hồi được |
-| Trung bình | Ảnh được nén rồi lưu base64 trong localStorage | Nhanh chạm giới hạn dung lượng trình duyệt; lưu có thể thất bại | Chuyển ảnh sang Supabase Storage bucket riêng tư |
-| Trung bình | Phục hồi JSON chỉ `JSON.parse` rồi trộn vào state | File sai cấu trúc có thể làm hỏng dữ liệu hoặc đưa nội dung nguy hiểm vào hệ thống | Xác thực phiên bản backup và schema trước khi nhập |
-| Trung bình | Tailwind, icon, SheetJS, Tone.js và html2pdf tải từ CDN | Mất mạng hoặc CDN lỗi có thể làm ứng dụng hỏng một phần | Cài dependency bằng npm, khóa phiên bản và build cùng ứng dụng |
-| Trung bình | Nút menu di động vẫn thông báo “đang phát triển” | Trải nghiệm trên điện thoại chưa hoàn chỉnh | Làm navigation/drawer hoạt động thật và kiểm thử trên màn hình nhỏ |
-| Trung bình | Chưa có trường dữ liệu đầy đủ cho tên trường, chi đội, sự kiện và phạm vi banner | Chưa đáp ứng quản trị nhận diện lớp/trường một cách nhất quán | Thiết kế `class_settings`/`class_theme`, quyền sửa, xem trước và khôi phục |
+|Mức độ|Vấn đề phát hiện|Tác động|Yêu cầu xử lý|
+|-|-|-|-|
+|Nghiêm trọng|`renderLoginScreen()` được định nghĩa nhưng không được gọi trong luồng khởi động; `renderLayout()` luôn dựng ứng dụng|Trang đăng nhập không thật sự bảo vệ hệ thống|Dùng Supabase Auth và route guard thật|
+|Nghiêm trọng|Trạng thái mặc định là `loggedIn: true`; mật khẩu được viết thẳng trong JavaScript|Ai xem mã nguồn cũng thấy mật khẩu; có thể tự sửa vai trò|Xóa toàn bộ mật khẩu hard-code; không lưu quyền đăng nhập trong state tùy ý|
+|Nghiêm trọng|Toàn bộ dữ liệu nằm trong `localStorage`|Mất dữ liệu khi xóa trình duyệt; không đồng bộ nhiều thiết bị; người dùng có thể sửa dữ liệu|Chuyển dữ liệu nghiệp vụ sang PostgreSQL/Supabase|
+|Nghiêm trọng|Phân quyền hiện chỉ lọc menu hoặc tab ở phía trình duyệt|Người dùng có thể gọi hàm trực tiếp hoặc sửa state để vượt quyền|Bắt buộc triển khai RLS trên mọi bảng và kiểm tra quyền ở từng thao tác|
+|Nghiêm trọng|“Trạm đồng hành” lưu vấn đề, lỗi và biện pháp giáo dục của học sinh trong localStorage|Nguy cơ lộ dữ liệu nhạy cảm của trẻ em|Giới hạn người xem; ghi nhật ký truy cập; không cho BCS/phụ huynh khác xem|
+|Cao|Có 03 định nghĩa `renderViewLichBaoGiang` và một số hàm bị định nghĩa lặp|Bản định nghĩa sau ghi đè bản trước; khó biết logic nào đang chạy|Hợp nhất thành một module duy nhất|
+|Cao|Hai nút gọi `resetTimer()` và `clearAllSeats()` nhưng không tìm thấy hàm tương ứng|Nút đặt lại đồng hồ và thu hồi sơ đồ có thể không hoạt động|Bổ sung kiểm thử và sửa hai luồng này|
+|Cao|Chỉ số “tiến bộ tuần” ở trang chủ được tạo bằng công thức `Math.sin(...)`|Hiển thị số liệu giả, có thể gây hiểu nhầm|Tính hoàn toàn từ giao dịch điểm theo thời gian|
+|Cao|Dữ liệu nhập được đưa vào HTML bằng template string; hàm escape chưa xử lý đầy đủ `\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\&`, `<`, `>`|Có nguy cơ chèn mã độc từ file Excel/JSON hoặc dữ liệu nhập tay|Dùng React escaping mặc định, Zod validation và không dùng `innerHTML` với dữ liệu không tin cậy|
+|Cao|Một tệp HTML chứa khoảng 151 hàm, giao diện và dữ liệu trộn chung|Khó bảo trì, dễ phát sinh lỗi dây chuyền|Tách theo feature, component, service, hook và schema|
+|Trung bình|Mã phụ huynh chỉ gồm 05 chữ số, không có giới hạn số lần thử|Mã có thể bị đoán và làm lộ thông tin học sinh|Dùng tài khoản/magic link hoặc mã mời dài, có thời hạn, rate limit và thu hồi được|
+|Trung bình|Ảnh được nén rồi lưu base64 trong localStorage|Nhanh chạm giới hạn dung lượng trình duyệt; lưu có thể thất bại|Chuyển ảnh sang Supabase Storage bucket riêng tư|
+|Trung bình|Phục hồi JSON chỉ `JSON.parse` rồi trộn vào state|File sai cấu trúc có thể làm hỏng dữ liệu hoặc đưa nội dung nguy hiểm vào hệ thống|Xác thực phiên bản backup và schema trước khi nhập|
+|Trung bình|Tailwind, icon, SheetJS, Tone.js và html2pdf tải từ CDN|Mất mạng hoặc CDN lỗi có thể làm ứng dụng hỏng một phần|Cài dependency bằng npm, khóa phiên bản và build cùng ứng dụng|
+|Trung bình|Nút menu di động vẫn thông báo “đang phát triển”|Trải nghiệm trên điện thoại chưa hoàn chỉnh|Làm navigation/drawer hoạt động thật và kiểm thử trên màn hình nhỏ|
+|Trung bình|Chưa có trường dữ liệu đầy đủ cho tên trường, chi đội, sự kiện và phạm vi banner|Chưa đáp ứng quản trị nhận diện lớp/trường một cách nhất quán|Thiết kế `class\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_settings`/`class\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_theme`, quyền sửa, xem trước và khôi phục|
 
----
+\---
 
-## 3. Kiến trúc đích khuyến nghị
+## 3\. Kiến trúc đích khuyến nghị
 
 ### 3.1. Công nghệ
 
-- Frontend: React, TypeScript, Vite.
-- Giao diện: Tailwind CSS cài qua npm; thiết kế responsive theo hướng mobile-first.
-- Điều hướng: React Router.
-- Form và xác thực: React Hook Form + Zod.
-- Dữ liệu bất đồng bộ: TanStack Query hoặc một lớp repository/service có cache rõ ràng.
-- Backend: Supabase Auth, PostgreSQL, Storage và Row Level Security.
-- Kiểm thử: Vitest + React Testing Library; Playwright cho các user flow quan trọng.
-- Mã nguồn và triển khai: GitHub + Vercel.
+* Frontend: React, TypeScript, Vite.
+* Giao diện: Tailwind CSS cài qua npm; thiết kế responsive theo hướng mobile-first.
+* Điều hướng: React Router.
+* Form và xác thực: React Hook Form + Zod.
+* Dữ liệu bất đồng bộ: TanStack Query hoặc một lớp repository/service có cache rõ ràng.
+* Backend: Supabase Auth, PostgreSQL, Storage và Row Level Security.
+* Kiểm thử: Vitest + React Testing Library; Playwright cho các user flow quan trọng.
+* Mã nguồn và triển khai: GitHub + Vercel.
 
 ### 3.2. Nguyên tắc bắt buộc
 
-1. Không đưa `service_role` key vào trình duyệt hoặc GitHub.
-2. `VITE_SUPABASE_ANON_KEY` chỉ được dùng cùng RLS đầy đủ.
+1. Không đưa `service\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_role` key vào trình duyệt hoặc GitHub.
+2. `VITE\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_SUPABASE\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_ANON\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_KEY` chỉ được dùng cùng RLS đầy đủ.
 3. Mọi bảng dữ liệu nghiệp vụ phải có chính sách RLS trước khi dùng thật.
 4. Mọi bản ghi phải gắn phạm vi trường, lớp và năm học khi phù hợp.
 5. Giao dịch điểm là sổ ghi nối tiếp; không xóa cứng để “sửa tổng điểm”. Hoàn tác bằng giao dịch đảo và lưu người thực hiện.
@@ -116,24 +116,24 @@ Khuyến nghị chính:
 
 ### 3.3. Vai trò đề xuất cho MVP
 
-| Vai trò | Quyền chính |
-|---|---|
-| GVCN | Quản trị lớp, học sinh, điểm danh, điểm thi đua, báo cáo, cấu hình lớp và dữ liệu đồng hành |
-| BCS | Chỉ thực hiện các nhiệm vụ được GVCN giao; mặc định không sửa hồ sơ, không xem dữ liệu nhạy cảm, không xóa dữ liệu |
-| BGH | Xem tổng hợp trong phạm vi được phân công; mặc định chỉ đọc |
-| Học sinh | Xem dữ liệu của chính mình và nội dung lớp được công khai; không xem dữ liệu riêng của bạn khác |
-| Phụ huynh | Chỉ xem dữ liệu của con đã được liên kết và nội dung GVCN cho phép công khai |
-| Quản trị hệ thống | Quản lý cấu hình kỹ thuật; không mặc nhiên được đọc hồ sơ nhạy cảm nếu không có lý do và nhật ký |
+|Vai trò|Quyền chính|
+|-|-|
+|GVCN|Quản trị lớp, học sinh, điểm danh, điểm thi đua, báo cáo, cấu hình lớp và dữ liệu đồng hành|
+|BCS|Chỉ thực hiện các nhiệm vụ được GVCN giao; mặc định không sửa hồ sơ, không xem dữ liệu nhạy cảm, không xóa dữ liệu|
+|BGH|Xem tổng hợp trong phạm vi được phân công; mặc định chỉ đọc|
+|Học sinh|Xem dữ liệu của chính mình và nội dung lớp được công khai; không xem dữ liệu riêng của bạn khác|
+|Phụ huynh|Chỉ xem dữ liệu của con đã được liên kết và nội dung GVCN cho phép công khai|
+|Quản trị hệ thống|Quản lý cấu hình kỹ thuật; không mặc nhiên được đọc hồ sơ nhạy cảm nếu không có lý do và nhật ký|
 
 ### 3.4. Các thực thể dữ liệu tối thiểu
 
-`schools`, `academic_years`, `profiles`, `school_memberships`, `classes`, `class_memberships`, `students`, `guardians`, `student_guardians`, `groups`, `group_members`, `point_categories`, `point_rules`, `point_transactions`, `attendance_sessions`, `attendance_records`, `rewards`, `reward_redemptions`, `timetable_entries`, `seat_layouts`, `seat_assignments`, `tasks`, `class_milestones`, `student_comments`, `companion_cases`, `companion_updates`, `class_settings`, `files`, `audit_logs`.
+`schools`, `academic\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_years`, `profiles`, `school\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_memberships`, `classes`, `class\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_memberships`, `students`, `guardians`, `student\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_guardians`, `groups`, `group\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_members`, `point\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_categories`, `point\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_rules`, `point\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_transactions`, `attendance\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_sessions`, `attendance\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_records`, `rewards`, `reward\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_redemptions`, `timetable\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_entries`, `seat\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_layouts`, `seat\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_assignments`, `tasks`, `class\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_milestones`, `student\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_comments`, `companion\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_cases`, `companion\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_updates`, `class\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_settings`, `files`, `audit\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_logs`.
 
 Không nhất thiết phải tạo toàn bộ trong một lần. Antigravity phải phân loại bảng nào thuộc MVP, bảng nào thuộc giai đoạn sau, nhưng thiết kế khóa và quan hệ phải tránh khóa cứng ứng dụng vào một lớp duy nhất.
 
----
+\---
 
-## 4. Cách sử dụng bộ câu lệnh
+## 4\. Cách sử dụng bộ câu lệnh
 
 1. Cập nhật Antigravity nếu nút `Restart to Update` vẫn còn hiển thị.
 2. Mở đúng dự án `Web-GVCN` như ảnh thầy đã gửi.
@@ -143,16 +143,16 @@ Không nhất thiết phải tạo toàn bộ trong một lần. Antigravity ph�
 6. Sau mỗi prompt, yêu cầu Antigravity chạy kiểm tra và báo rõ tệp đã sửa, lỗi còn lại và bước thủ công dành cho thầy.
 7. Nếu Antigravity hỏi khóa Supabase, chỉ cung cấp URL và anon/publishable key qua `.env.local`; tuyệt đối không dán service-role key vào hội thoại hoặc mã frontend.
 
----
+\---
 
-## 5. MASTER PROMPT – DÁN ĐẦU TIÊN VÀO ANTIGRAVITY
+## 5\. MASTER PROMPT – DÁN ĐẦU TIÊN VÀO ANTIGRAVITY
 
 ```text
 BẠN LÀ AI LEAD ENGINEER, PRODUCT ARCHITECT, CHUYÊN GIA AN TOÀN DỮ LIỆU GIÁO DỤC VÀ UI/UX.
 
 Bạn đang làm việc trực tiếp trong thư mục dự án Web-GVCN. Dự án đã có ít nhất các tệp:
 - Index.html: nguyên mẫu chính đang chạy trên trình duyệt.
-- CODE GVCN CẬP NHẬT MỚI NHẤT 23.8.md: bản mã HTML đã được escape, chỉ dùng tham khảo/đối chiếu, không coi là PRD độc lập.
+- CODE GVCN CẬP NHẬT MỚI NHẤT .md: bản mã HTML đã được escape, chỉ dùng tham khảo/đối chiếu, không coi là PRD độc lập.
 - thư mục .agent và có thể có các tệp khác.
 
 MỤC TIÊU SẢN PHẨM
@@ -192,7 +192,7 @@ KIẾN TRÚC MỤC TIÊU CẦN ĐỀ XUẤT
 - React Router; Zod cho validation; kiến trúc theo feature/module.
 - Vitest + React Testing Library; Playwright cho luồng trọng yếu.
 - GitHub + Vercel.
-- Không bao giờ đưa Supabase service_role key vào frontend.
+- Không bao giờ đưa Supabase service\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_role key vào frontend.
 
 VAI TRÒ TỐI THIỂU CẦN PHÂN TÍCH
 - GVCN.
@@ -258,9 +258,9 @@ CÁCH PHẢN HỒI SAU KHI HOÀN THÀNH TÀI LIỆU
 - DỪNG LẠI. Không tự chuyển sang lập trình.
 ```
 
----
+\---
 
-## 6. CÁC PROMPT TIẾP THEO – CHỈ DÁN SAU KHI ĐÃ DUYỆT KIẾN TRÚC
+## 6\. CÁC PROMPT TIẾP THEO – CHỈ DÁN SAU KHI ĐÃ DUYỆT KIẾN TRÚC
 
 ### Prompt 1 – Chốt kiến trúc và tạo điểm khôi phục
 
@@ -275,7 +275,7 @@ Yêu cầu:
 3. Tạo thư mục legacy và sao chép nguyên trạng Index.html cùng bản MD hiện có vào đó để làm bản tham chiếu; giữ lịch sử nguồn rõ ràng.
 4. Tạo ứng dụng React + TypeScript + Vite ở cấu trúc dự án chính, Tailwind cài qua npm.
 5. Thiết lập kiến trúc feature-based, React Router, error boundary, loading/empty/error states, ESLint, Prettier, Vitest và Playwright.
-6. Tạo .env.example; không ghi khóa thật; không đưa service_role vào bất kỳ tệp frontend nào.
+6. Tạo .env.example; không ghi khóa thật; không đưa service\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_role vào bất kỳ tệp frontend nào.
 7. Dựng app shell, layout responsive, navigation theo vai trò và trang “Chưa có dữ liệu”; chưa nối dữ liệu nghiệp vụ và chưa dùng mock data như dữ liệu thật.
 8. Thiết lập design tokens kế thừa màu navy, indigo, amber của nguyên mẫu; hỗ trợ tiếng Việt và font dễ đọc.
 9. Viết docs/06-legacy-feature-map.md ánh xạ từng tính năng cũ sang route/module mới và trạng thái triển khai.
@@ -293,7 +293,7 @@ Tiếp tục Giai đoạn 2: triển khai lớp dữ liệu Supabase theo docs/0
 
 Yêu cầu:
 1. Tạo các migration có thứ tự trong supabase/migrations; không sửa schema bằng thao tác thủ công không được ghi lại.
-2. Triển khai các bảng MVP đã duyệt, khóa ngoại, unique constraints, check constraints, index, created_at, updated_at, deleted_at khi phù hợp.
+2. Triển khai các bảng MVP đã duyệt, khóa ngoại, unique constraints, check constraints, index, created\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_at, updated\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_at, deleted\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_at khi phù hợp.
 3. Bật RLS trên mọi bảng có dữ liệu người dùng trước khi tạo luồng frontend.
 4. Viết policy theo school membership, class membership, vai trò và quan hệ phụ huynh–học sinh. Không dùng policy cho phép rộng kiểu USING (true) trên dữ liệu riêng tư.
 5. Tạo bucket riêng tư cho avatar và tài sản lớp; định nghĩa đường dẫn theo school/class/user; chỉ dùng signed URL khi cần.
@@ -303,7 +303,7 @@ Yêu cầu:
 9. Tạo test hoặc script kiểm tra RLS cho các vai trò GVCN, BCS, BGH, học sinh, phụ huynh và người ngoài lớp.
 10. Cập nhật docs/schema.md và docs/rls-test-results.md.
 
-Không yêu cầu hoặc sử dụng service_role key trong frontend. Nếu chưa có dự án Supabase thật, vẫn tạo migration và hướng dẫn chạy local/remote nhưng không giả vờ đã deploy thành công.
+Không yêu cầu hoặc sử dụng service\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_role key trong frontend. Nếu chưa có dự án Supabase thật, vẫn tạo migration và hướng dẫn chạy local/remote nhưng không giả vờ đã deploy thành công.
 
 Chạy các kiểm tra có thể thực hiện, báo rõ kiểm tra nào chưa chạy vì thiếu thông tin. Sau đó dừng chờ duyệt.
 ```
@@ -359,7 +359,7 @@ Tiếp tục Giai đoạn 5: điểm danh, điểm thi đua và báo cáo.
 
 Yêu cầu:
 1. Điểm danh theo session/ngày; các trạng thái có mặt, đi muộn, vắng có phép, vắng không phép; ngăn ghi trùng và lưu người thực hiện.
-2. Cộng/trừ điểm cho học sinh, tổ, cả lớp bằng transaction; mỗi bản ghi có category, reason, note, occurred_at, created_by và class_id.
+2. Cộng/trừ điểm cho học sinh, tổ, cả lớp bằng transaction; mỗi bản ghi có category, reason, note, occurred\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_at, created\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_by và class\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_id.
 3. Không chỉnh sửa âm thầm transaction. Hoàn tác phải tạo reversal và audit log.
 4. Tách rõ điểm thi đua và số dư sao đổi quà; định nghĩa quy tắc phát sinh/tiêu sao để tránh lệch dữ liệu.
 5. Báo cáo ngày/tuần/tháng/học kỳ chỉ tính từ dữ liệu thật theo múi giờ Việt Nam và năm học cấu hình; bỏ toàn bộ Math.sin hoặc dữ liệu tạo giả.
@@ -381,7 +381,7 @@ Yêu cầu:
 2. Thay mã tra cứu 5 số bằng đăng nhập hoặc invite/magic link an toàn, có thời hạn, rate limit, thu hồi và audit.
 3. Cho GVCN cấu hình trường dữ liệu nào được công khai: điểm thi đua, chuyên cần, nhận xét, thông báo. Mặc định tối thiểu hóa.
 4. “Trạm đồng hành” chỉ dành cho GVCN và người được ủy quyền rõ ràng; BCS không được truy cập; BGH chỉ truy cập khi chính sách dự án cho phép và phải có nhật ký.
-5. Tách companion_cases và companion_updates để giữ tiến trình; hoàn thành là đóng hồ sơ, không xóa sạch lịch sử nếu chính sách lưu giữ yêu cầu bảo toàn.
+5. Tách companion\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_cases và companion\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_updates để giữ tiến trình; hoàn thành là đóng hồ sơ, không xóa sạch lịch sử nếu chính sách lưu giữ yêu cầu bảo toàn.
 6. Không dùng ngôn từ gắn nhãn hoặc làm tổn thương học sinh trong UI. Đổi mô tả theo hướng hỗ trợ, tiến bộ và can thiệp giáo dục phù hợp.
 7. Có cảnh báo khi nhập dữ liệu nhạy cảm; không đưa nội dung này vào báo cáo công khai.
 8. Viết RLS tests chứng minh phụ huynh A không xem được con của phụ huynh B và BCS không xem được companion data.
@@ -460,7 +460,7 @@ Không sửa lỗi bằng cách tắt test hoặc nới lỏng RLS. Báo mọi m
 Thầy đã duyệt kết quả QA. Hãy chuẩn bị phát hành lên GitHub và Vercel, nhưng không tự công khai dữ liệu hoặc khóa bí mật.
 
 Yêu cầu:
-1. Kiểm tra .gitignore: loại .env*, khóa, file backup có dữ liệu thật, log và artifact cục bộ; giữ .env.example.
+1. Kiểm tra .gitignore: loại .env\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*, khóa, file backup có dữ liệu thật, log và artifact cục bộ; giữ .env.example.
 2. Chạy secret scan trong phạm vi dự án và báo kết quả.
 3. Tạo README tiếng Việt: cài đặt, biến môi trường, Supabase migration, seed dev, test, build, deploy, backup và rollback.
 4. Tạo cấu hình Vercel phù hợp với Vite SPA và fallback route.
@@ -468,35 +468,35 @@ Yêu cầu:
 6. Kiểm tra migration đã áp dụng đúng môi trường và RLS đang bật.
 7. Chạy production build cuối cùng.
 8. Đề xuất quy trình GitHub branch/commit/PR; không force push, không ghi đè lịch sử.
-9. Tạo RELEASE_CHECKLIST.md gồm smoke test sau deploy: đăng nhập, phân quyền, CRUD học sinh, điểm danh, điểm, báo cáo, phụ huynh, upload ảnh, logout và URL trực tiếp.
+9. Tạo RELEASE\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_CHECKLIST.md gồm smoke test sau deploy: đăng nhập, phân quyền, CRUD học sinh, điểm danh, điểm, báo cáo, phụ huynh, upload ảnh, logout và URL trực tiếp.
 10. Nếu có quyền triển khai thì chỉ thực hiện sau khi xác nhận đúng project/team/environment; nếu chưa đủ thông tin, dừng ở hướng dẫn và hỏi thầy.
 
 Kết thúc bằng URL dự kiến/URL thực tế nếu đã triển khai, commit/tag nếu có, kết quả smoke test, cách rollback và các rủi ro còn lại.
 ```
 
----
+\---
 
-## 7. Các tiêu chí không được thỏa hiệp
+## 7\. Các tiêu chí không được thỏa hiệp
 
 Trước khi xem là có thể dùng dữ liệu thật, dự án phải chứng minh được:
 
-- Người chưa đăng nhập không truy cập được màn hình nội bộ.
-- Không còn mật khẩu hard-code trong mã nguồn.
-- Người dùng không thể tự đổi vai trò bằng DevTools.
-- RLS ngăn truy cập chéo trường, chéo lớp và chéo học sinh.
-- Phụ huynh chỉ xem được con đã liên kết.
-- BCS không xem được Trạm đồng hành.
-- Dữ liệu vẫn còn sau khi đổi thiết bị hoặc xóa cache trình duyệt.
-- Dashboard tuần/tháng/học kỳ khớp với giao dịch thật.
-- Import JSON/Excel có preview, validation và rollback.
-- Không có hai nút hỏng `resetTimer` và `clearAllSeats`.
-- Không còn định nghĩa trùng của lịch báo giảng.
-- Production build không chứa secret, dữ liệu thật hoặc tài khoản mẫu.
-- Lint, typecheck, test và build đều đạt; mục chưa đạt phải được ghi rõ, không che giấu.
+* Người chưa đăng nhập không truy cập được màn hình nội bộ.
+* Không còn mật khẩu hard-code trong mã nguồn.
+* Người dùng không thể tự đổi vai trò bằng DevTools.
+* RLS ngăn truy cập chéo trường, chéo lớp và chéo học sinh.
+* Phụ huynh chỉ xem được con đã liên kết.
+* BCS không xem được Trạm đồng hành.
+* Dữ liệu vẫn còn sau khi đổi thiết bị hoặc xóa cache trình duyệt.
+* Dashboard tuần/tháng/học kỳ khớp với giao dịch thật.
+* Import JSON/Excel có preview, validation và rollback.
+* Không có hai nút hỏng `resetTimer` và `clearAllSeats`.
+* Không còn định nghĩa trùng của lịch báo giảng.
+* Production build không chứa secret, dữ liệu thật hoặc tài khoản mẫu.
+* Lint, typecheck, test và build đều đạt; mục chưa đạt phải được ghi rõ, không che giấu.
 
----
+\---
 
-## 8. Điểm cần thầy duyệt
+## 8\. Điểm cần thầy duyệt
 
 Khuyến nghị mặc định để bắt đầu:
 
@@ -509,3 +509,4 @@ Khuyến nghị mặc định để bắt đầu:
 7. **Cách triển khai:** dùng Master Prompt trước, duyệt kiến trúc, sau đó mới dán từng Prompt 1–10.
 
 Đây là phương án cân bằng tốt giữa việc bảo tồn công sức đã làm trong `Index.html` và yêu cầu xây dựng một hệ thống đủ an toàn, dễ mở rộng và có thể bảo trì lâu dài.
+

@@ -1,12 +1,15 @@
-﻿export * from './auth';
+import type { UserRole } from './auth';
+
+export * from './auth';
 export * from './student';
 export * from './points';
+export * from './attendance';
 
 export interface MenuItem {
   id: string;
   path: string;
   label: string;
   iconName: string;
-  roles: Array<'gvcn' | 'bancansu' | 'bgh' | 'student' | 'parent' | 'admin'>;
+  roles: UserRole[];
   badge?: string | number;
 }

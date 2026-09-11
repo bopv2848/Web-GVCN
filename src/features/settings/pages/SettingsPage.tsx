@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { classConfigService } from '../services/classConfigService';
 import { classConfigSchema, type ClassConfigFormData } from '../schemas/classConfigSchema';
@@ -8,7 +8,7 @@ import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
 
 export const SettingsPage: React.FC = () => {
   const { currentClass, user } = useAuth();
-  const classId = currentClass?.id || '33333333-3333-3333-3333-333333333333';
+  const classId = currentClass?.id || '66666666-6666-6666-6666-666666666666';
 
   const [formData, setFormData] = useState<ClassConfigFormData>({
     name: 'LỚP 12A1',

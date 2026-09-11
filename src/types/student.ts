@@ -1,4 +1,4 @@
-﻿export interface Group {
+export interface Group {
   id: string;
   classId: string;
   name: string;
@@ -32,9 +32,3 @@ export interface Student {
 }
 
 export type StudentProfile = Student;
-
-export interface AttendanceRecord {
-  studentId: string;
-  status: 'present' | 'late' | 'excused_absence' | 'unexcused_absence';
-  note?: string;
-}

@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import type { Student, Group } from '../../../types/student';
 import { studentService } from '../services/studentService';
 import type { StudentFormData } from '../schemas/studentSchema';
@@ -14,7 +14,7 @@ import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
 
 export const StudentsPage: React.FC = () => {
   const { currentClass } = useAuth();
-  const classId = currentClass?.id || '33333333-3333-3333-3333-333333333333';
+  const classId = currentClass?.id || '66666666-6666-6666-6666-666666666666';
 
   const [students, setStudents] = useState<Student[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);

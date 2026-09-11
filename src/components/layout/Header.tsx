@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import type { UserRole } from '../../types/auth';
 
@@ -12,14 +12,17 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileDrawer }) => {
 
   const roleLabels: Record<UserRole, { label: string; badgeClass: string }> = {
     gvcn: { label: 'GVCN', badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
+    teacher: { label: 'GVCN', badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
     bancansu: { label: 'Ban Cán Sự', badgeClass: 'bg-blue-100 text-blue-800 border-blue-300' },
     bgh: { label: 'BGH (Chỉ đọc)', badgeClass: 'bg-purple-100 text-purple-800 border-purple-300' },
+    bgh_viewer: { label: 'BGH (Chỉ đọc)', badgeClass: 'bg-purple-100 text-purple-800 border-purple-300' },
     student: { label: 'Học Sinh', badgeClass: 'bg-amber-100 text-amber-800 border-amber-300' },
     parent: { label: 'Phụ Huynh', badgeClass: 'bg-orange-100 text-orange-800 border-orange-300' },
     admin: { label: 'Quản Trị Viên', badgeClass: 'bg-slate-100 text-slate-800 border-slate-300' },
   };
 
   const currentRole = user?.role || 'gvcn';
+  const roleBadge = roleLabels[currentRole] || roleLabels.gvcn;
 
   return (
     <header className="sticky top-0 z-30 flex items-center justify-between h-16 md:h-20 px-4 md:px-8 bg-white/90 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
@@ -67,8 +70,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileDrawer }) => {
               <p className="text-xs font-bold text-slate-800 leading-tight truncate max-w-[140px]">
                 {user?.fullName || 'Giáo viên'}
               </p>
-              <span className={`inline-block text-[10px] font-bold px-1.5 py-0.2 rounded-md border ${roleLabels[currentRole].badgeClass}`}>
-                {roleLabels[currentRole].label}
+              <span className={`inline-block text-[10px] font-bold px-1.5 py-0.2 rounded-md border ${roleBadge.badgeClass}`}>
+                {roleBadge.label}
               </span>
             </div>
           </button>
