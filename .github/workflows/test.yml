@@ -1,0 +1,38 @@
+name: CI Kiểm Thử & Biên Dịch Tự Động (Web-GVCN CI)
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+  workflow_dispatch:
+
+jobs:
+  test-and-build:
+    name: Kiểm thử & Đóng gói (Test & Build)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Tải mã nguồn (Checkout)
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Cài đặt môi trường Node.js (Node 22)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: 📦 Cài đặt thư viện phụ thuộc (Dependencies)
+        run: npm ci
+
+      - name: 🔍 Kiểm tra cú pháp và quy chuẩn mã nguồn (Lint)
+        run: npm run lint
+
+      - name: 🧪 Chạy toàn bộ bài kiểm thử tự động (Unit Tests)
+        run: npm test
+
+      - name: 🏗️ Biên dịch mã nguồn và đóng gói dự án (Build)
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://placeholder.supabase.co' }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'placeholder-anon-key' }}
