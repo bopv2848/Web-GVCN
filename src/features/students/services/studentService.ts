@@ -1,6 +1,7 @@
-﻿import { supabase } from '../../../services/supabaseClient';
+import { supabase } from '../../../services/supabaseClient';
 import type { Student, Group } from '../../../types/student';
 import type { StudentFormData } from '../schemas/studentSchema';
+import { DEFAULT_CLASS_6A6_STUDENTS, DEFAULT_GROUPS_6A6 } from '../constants/defaultClass6A6Students';
 
 export interface BatchImportStudentItem {
   fullName: string;
@@ -61,84 +62,19 @@ export const studentService = {
         .order('full_name', { ascending: true });
 
       if (error || !data || data.length === 0) {
-        return [
-          {
-            id: '55555555-0001-0000-0000-000000000001',
-            classId,
-            groupId: '44444444-0001-0000-0000-000000000001',
-            fullName: 'Nguyễn Văn An',
-            gender: 'Nam',
-            birthDate: '2008-03-15',
-            classRole: 'Thành viên',
-            boardingType: 'Bán trú',
-            goals: 'Đỗ Đại học Bách Khoa',
-            talents: 'Bóng đá, Toán học',
-            points: 12,
-            stars: 8,
-            groupName: 'Tổ 1',
-            groupColorClass: 'text-red-500',
-            guardianToken: 'a1b2c3d4e5f67890123456789abcdef0',
-            guardianStatus: 'active',
-            createdAt: new Date().toISOString(),
-          },
-          {
-            id: '55555555-0002-0000-0000-000000000002',
-            classId,
-            groupId: '44444444-0001-0000-0000-000000000001',
-            fullName: 'Trần Thị Bình',
-            gender: 'Nữ',
-            birthDate: '2008-07-20',
-            classRole: 'Tổ trưởng',
-            boardingType: 'Bán trú',
-            goals: 'IELTS 7.5',
-            talents: 'Thuyết trình, Tiếng Anh',
-            points: 18,
-            stars: 15,
-            groupName: 'Tổ 1',
-            groupColorClass: 'text-red-500',
-            guardianToken: 'b2c3d4e5f67890123456789abcdef01a',
-            guardianStatus: 'pending',
-            createdAt: new Date().toISOString(),
-          },
-          {
-            id: '55555555-0003-0000-0000-000000000003',
-            classId,
-            groupId: '44444444-0002-0000-0000-000000000002',
-            fullName: 'Lê Hoàng Cường',
-            gender: 'Nam',
-            birthDate: '2008-11-05',
-            classRole: 'Lớp phó',
-            boardingType: 'Bán trú',
-            goals: 'Giải Ba HSG Cấp Tỉnh',
-            talents: 'Cầu lông, Lập trình',
-            points: 15,
-            stars: 10,
-            groupName: 'Tổ 2',
-            groupColorClass: 'text-green-500',
-            guardianToken: 'c3d4e5f67890123456789abcdef01a2b',
-            guardianStatus: 'pending',
-            createdAt: new Date().toISOString(),
-          },
-          {
-            id: '55555555-0004-0000-0000-000000000004',
-            classId,
-            groupId: '44444444-0002-0000-0000-000000000002',
-            fullName: 'Phạm Quỳnh Dung',
-            gender: 'Nữ',
-            birthDate: '2008-01-12',
-            classRole: 'Thành viên',
-            boardingType: 'Bán trú',
-            goals: 'Học sinh xuất sắc',
-            talents: 'Văn nghệ, Múa dân gian',
-            points: 20,
-            stars: 18,
-            groupName: 'Tổ 2',
-            groupColorClass: 'text-green-500',
-            guardianToken: 'd4e5f67890123456789abcdef01a2b3c',
-            guardianStatus: 'active',
-            createdAt: new Date().toISOString(),
-          },
-        ];
+        try {
+          const cacheKey = `gvcn_students_${classId}`;
+          const cached = localStorage.getItem(cacheKey);
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              return parsed;
+            }
+          }
+        } catch {
+          // Bỏ qua lỗi truy cập localStorage
+        }
+        return DEFAULT_CLASS_6A6_STUDENTS;
       }
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -184,12 +120,7 @@ export const studentService = {
         .order('order_index', { ascending: true });
 
       if (error || !data || data.length === 0) {
-        return [
-          { id: '44444444-0001-0000-0000-000000000001', classId, name: 'Tổ 1', colorClass: 'text-red-500', orderIndex: 1 },
-          { id: '44444444-0002-0000-0000-000000000002', classId, name: 'Tổ 2', colorClass: 'text-green-500', orderIndex: 2 },
-          { id: '44444444-0003-0000-0000-000000000003', classId, name: 'Tổ 3', colorClass: 'text-yellow-500', orderIndex: 3 },
-          { id: '44444444-0004-0000-0000-000000000004', classId, name: 'Tổ 4', colorClass: 'text-blueAccent', orderIndex: 4 },
-        ];
+        return DEFAULT_GROUPS_6A6;
       }
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

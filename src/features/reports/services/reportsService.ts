@@ -7,6 +7,7 @@ import type {
   GroupReportStat,
   StudentReportStat,
 } from '../types';
+import { DEFAULT_CLASS_6A6_STUDENTS, DEFAULT_GROUPS_6A6 } from '../../students/constants/defaultClass6A6Students';
 
 export const reportsService = {
   /**
@@ -119,9 +120,28 @@ export const reportsService = {
     const schoolData = classRes.data?.schools as unknown as { name?: string; logo_url?: string } | null;
     const schoolName = schoolData?.name || 'TRƯỜNG THCS TÂN HẢI';
     const logoUrl = schoolData?.logo_url || '/logo-truong-thcs-Tan-Hai.jpg';
-    const studentsData = studentsRes.data || [];
-    const groupsData = groupsRes.data || [];
     const transactions = pointTxRes.data || [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const studentsData: any[] =
+      studentsRes.data && studentsRes.data.length > 0
+        ? studentsRes.data
+        : DEFAULT_CLASS_6A6_STUDENTS.map((s) => ({
+            id: s.id,
+            class_id: s.classId,
+            group_id: s.groupId,
+            full_name: s.fullName,
+            code: s.code,
+            class_role: s.classRole,
+          }));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const groupsData: any[] =
+      groupsRes.data && groupsRes.data.length > 0
+        ? groupsRes.data
+        : DEFAULT_GROUPS_6A6.map((g) => ({
+            id: g.id,
+            name: g.name,
+            color_class: g.colorClass,
+          }));
     const sessions = sessionsRes.data || [];
     const sessionIds = sessions.map((s) => s.id);
 
