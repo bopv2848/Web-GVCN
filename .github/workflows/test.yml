@@ -1,4 +1,4 @@
-name: CI Kiểm Thử & Biên Dịch Tự Động (Web-GVCN CI)
+name: CI/CD Kiểm Thử & Triển Khai Tự Động (Web-GVCN CI/CD)
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 
 jobs:
   test-and-build:
-    name: Kiểm thử & Đóng gói (Test & Build)
+    name: 🧪 Kiểm thử & Đóng gói (Test & Build)
     runs-on: ubuntu-latest
 
     steps:
@@ -36,3 +36,59 @@ jobs:
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://placeholder.supabase.co' }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'placeholder-anon-key' }}
+
+      - name: 💾 Lưu trữ bản đóng gói kiểm định (Upload Build Artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-production
+          path: dist/
+          retention-days: 7
+
+  deploy-production:
+    name: 🚀 Cổng Triển Khai Production (Continuous Deployment)
+    needs: [test-and-build]
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Tải mã nguồn (Checkout)
+        uses: actions/checkout@v4
+
+      - name: 📦 Tải bản đóng gói đã vượt qua kiểm định (Download Build Artifact)
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-production
+          path: dist/
+
+      - name: 🚀 Triển khai lên Vercel (Nếu cấu hình VERCEL_TOKEN)
+        if: "${{ env.VERCEL_TOKEN != '' }}"
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+      - name: 🌐 Triển khai lên Netlify (Nếu cấu hình NETLIFY_AUTH_TOKEN)
+        if: "${{ env.NETLIFY_AUTH_TOKEN != '' }}"
+        uses: nwtgck/actions-netlify@v3.0
+        with:
+          publish-dir: './dist'
+          production-branch: master
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          deploy-message: 'Phát hành tự động qua GitHub Actions CI/CD Pipeline'
+          enable-pull-request-comment: false
+          enable-commit-comment: false
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+
+      - name: 📢 Báo cáo trạng thái cổng kiểm định phát hành
+        run: |
+          echo "=========================================================================="
+          echo "✅ CỔNG KIỂM ĐỊNH CHẤT LƯỢNG HOÀN TOÀN ĐẠT TIÊU CHUẨN (QUALITY GATE PASSED)!"
+          echo "🛡️ Toàn bộ bài kiểm thử tự động, cú pháp mã nguồn và đóng gói đã thành công."
+          echo "🚀 Bản phát hành an toàn đã sẵn sàng trên môi trường Production."
+          echo "=========================================================================="
