@@ -1,4 +1,4 @@
-﻿import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx';
 import type { BatchImportStudentItem } from '../services/studentService';
 import type { Student } from '../../../types/student';
 
@@ -100,7 +100,7 @@ export const excelParser = {
   /**
    * Xuất danh sách học sinh ra file Excel .xlsx chuẩn
    */
-  exportToExcel(students: Student[], className = '12A1') {
+  exportToExcel(students: Student[], className = '6A6') {
     const exportData = students.map((s, index) => ({
       STT: index + 1,
       'Họ và tên': s.fullName,

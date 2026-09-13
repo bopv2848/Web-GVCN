@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authService } from '../../../services/authService';
 import { Button } from '../../../components/common/Button';
@@ -70,7 +70,7 @@ export const ResetPasswordPage: React.FC = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm font-medium text-slate-800 bg-slate-50 focus:bg-white focus:border-primary outline-none transition-all shadow-xs"
-                placeholder="giaovien@thpt-thanhxuan.edu.vn"
+                placeholder="phanvanbo.6a6@thcs-tanhai.edu.vn"
               />
             </div>
 

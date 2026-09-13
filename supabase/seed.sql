@@ -1,4 +1,4 @@
-﻿-- ============================================================================
+-- ============================================================================
 -- SUPABASE SEED DATA (CHỈ DÀNH CHO MÔI TRƯỜNG PHÁT TRIỂN & TEST NỘI BỘ)
 -- TUYỆT ĐỐI KHÔNG CHẠY FILE NÀY TRÊN MÔI TRƯỜNG PRODUCTION CỦA TRƯỜNG HỌC
 -- ============================================================================
@@ -6,7 +6,7 @@
 -- 1. Trường học & Niên khóa
 INSERT INTO public.schools (id, name, code, address)
 VALUES 
-    ('11111111-1111-1111-1111-111111111111', 'THPT THANH XUÂN', 'THPT-TX', 'Hà Nội')
+    ('11111111-1111-1111-1111-111111111111', 'THCS TÂN HẢI', 'THCS-TH', 'Xã Tân Hải, Tỉnh Lâm Đồng')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO public.academic_years (id, school_id, name, start_date, end_date, is_active)
@@ -17,18 +17,18 @@ ON CONFLICT (id) DO NOTHING;
 -- 2. Hồ sơ người dùng mẫu
 INSERT INTO public.profiles (id, full_name, email, system_role)
 VALUES 
-    ('a0000000-0000-0000-0000-000000000001', 'Cô Nguyễn Mai Hương', 'giaovien.12a1@thpt-thanhxuan.edu.vn', 'teacher'),
-    ('a0000000-0000-0000-0000-000000000002', 'Em Trần Minh Trí (Lớp trưởng)', 'lop_truong.12a1@thpt-thanhxuan.edu.vn', 'student'),
-    ('a0000000-0000-0000-0000-000000000003', 'Thầy Hiệu Trưởng', 'hieutruong@thpt-thanhxuan.edu.vn', 'teacher'),
-    ('a0000000-0000-0000-0000-000000000004', 'Bác Nguyễn Văn Tuấn (Phụ huynh)', 'phuhuynh.a@gmail.com', 'parent')
+    ('a0000000-0000-0000-0000-000000000001', 'Thầy Phan Văn Bộ', 'phanvanbo.6a6@thcs-tanhai.edu.vn', 'teacher'),
+    ('a0000000-0000-0000-0000-000000000002', 'Em Lớp Trưởng 6A6', 'lop_truong.6a6@thcs-tanhai.edu.vn', 'student'),
+    ('a0000000-0000-0000-0000-000000000003', 'Thầy Hiệu Trưởng', 'hieutruong@thcs-tanhai.edu.vn', 'teacher'),
+    ('a0000000-0000-0000-0000-000000000004', 'Bác Phụ Huynh Học Sinh', 'phuhuynh.6a6@gmail.com', 'parent')
 ON CONFLICT (id) DO NOTHING;
 
--- 3. Lớp học 12A1 & Phân vai
+-- 3. Lớp học 6A6 & Phân vai
 INSERT INTO public.classes (id, school_id, academic_year_id, name, grade_level, theme_config)
 VALUES 
-    ('33333333-3333-3333-3333-333333333333', '11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222', 'LỚP 12A1', 12, '{
-        "month": "CHỦ ĐIỂM THÁNG 9: MÁI TRƯỜNG MẾN YÊU",
-        "title": "CHUYẾN TÀU THANH XUÂN 12A1",
+    ('33333333-3333-3333-3333-333333333333', '11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222', 'LỚP 6A6', 6, '{
+        "month": "CHỦ ĐIỂM THÁNG 9: TRUYỀN THỐNG NHÀ TRƯỜNG",
+        "title": "CHUYẾN TÀU THANH XUÂN 6A6 • GVCN THẦY PHAN VĂN BỘ",
         "bannerColorClass": "from-[#1e1b4b] to-[#312e81]"
     }'::jsonb)
 ON CONFLICT (id) DO NOTHING;

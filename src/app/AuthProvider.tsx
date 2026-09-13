@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const userProfile: UserProfile = profile || {
         id: userId,
         email: email,
-        fullName: email.split('@')[0] || 'Người dùng',
+        fullName: 'Thầy Phan Văn Bộ',
         role: 'gvcn', // mặc định GVCN khi vừa tạo
       };
 
@@ -74,7 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser({
         id: userId,
         email: email,
-        fullName: 'Giáo viên',
+        fullName: 'Thầy Phan Văn Bộ',
         role: 'gvcn',
       });
       setIsAuthenticated(true);
@@ -100,8 +100,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setIsAuthenticated(true);
             setUser({
               id: 'dev-gvcn-001',
-              email: 'giaovien.12a1@thpt-thanhxuan.edu.vn',
-              fullName: 'Cô Nguyễn Mai Hương',
+              email: 'phanvanbo.6a6@thcs-tanhai.edu.vn',
+              fullName: 'Thầy Phan Văn Bộ',
               role: 'gvcn',
             });
             setCurrentClass(fallbackClass);

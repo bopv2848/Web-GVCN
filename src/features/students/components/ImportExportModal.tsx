@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import type { Student } from '../../../types/student';
 import { excelParser, type ParsedExcelResult } from '../utils/excelParser';
 import { studentService, type ImportResult } from '../services/studentService';
@@ -67,7 +67,7 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
   };
 
   const handleExport = () => {
-    excelParser.exportToExcel(students, '12A1');
+    excelParser.exportToExcel(students, '6A6');
   };
 
   return (
