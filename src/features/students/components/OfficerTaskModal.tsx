@@ -247,12 +247,12 @@ export const OfficerTaskModal: React.FC<OfficerTaskModalProps> = ({ isOpen, onCl
           </div>
         )}
 
-        {/* Nút hành động cố định ở đáy */}
-        <div className="sticky bottom-0 bg-white/95 backdrop-blur-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-3 pb-0.5 border-t border-slate-100 z-10">
+        {/* Nút hành động cố định ở đáy, tối ưu ngón tay cái */}
+        <div className="sticky bottom-0 bg-white/95 backdrop-blur-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-2.5 pt-3 pb-1 border-t border-slate-100 z-10">
           <button
             type="button"
             onClick={handleToggleEdit}
-            className={`inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            className={`inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer min-h-[44px] sm:min-h-0 ${
               isEditing
                 ? 'bg-blue-100 text-blue-900 border border-blue-300 hover:bg-blue-200'
                 : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200'
@@ -261,11 +261,11 @@ export const OfficerTaskModal: React.FC<OfficerTaskModalProps> = ({ isOpen, onCl
             <span>{isEditing ? '👁️ Xem cẩm nang' : '✏️ Chỉnh sửa nội dung'}</span>
           </button>
 
-          <div className="flex items-center gap-2 justify-end">
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={handleCopyZaloMessage}
-              className={`inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer ${
+              className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer min-h-[44px] sm:min-h-0 ${
                 copied
                   ? 'bg-emerald-600 text-white'
                   : 'bg-slate-900 hover:bg-slate-800 text-white'
@@ -276,7 +276,7 @@ export const OfficerTaskModal: React.FC<OfficerTaskModalProps> = ({ isOpen, onCl
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition cursor-pointer"
+              className="px-4 py-2.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition cursor-pointer min-h-[44px] sm:min-h-0"
             >
               Đóng
             </button>
