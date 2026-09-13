@@ -2,6 +2,7 @@ import React from 'react';
 import { AttendanceStatusButtons } from './AttendanceStatusButtons';
 import { Button } from '../../../components/common/Button';
 import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
+import { parseVietnameseName } from '../../../utils/vietnameseNameSort';
 import type {
   AttendanceSession,
   AttendanceRecord,
@@ -238,7 +239,7 @@ export const DailyAttendanceTab: React.FC<DailyAttendanceTabProps> = ({
                       <td className="p-3.5">
                         <div className="flex items-center gap-2.5">
                           <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center font-black text-xs">
-                            {record.studentName.charAt(0)}
+                            {parseVietnameseName(record.studentName).firstName.charAt(0).toUpperCase() || record.studentName.charAt(0)}
                           </div>
                           <div>
                             <span className="font-bold text-slate-850 block">{record.studentName}</span>

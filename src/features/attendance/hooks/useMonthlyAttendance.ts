@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { attendanceService } from '../services/attendanceService';
+import { sortVietnameseList } from '../../../utils/vietnameseNameSort';
 import type { MonthlyAttendanceReport } from '../../../types/attendance';
 
 export const useMonthlyAttendance = (
@@ -36,11 +37,12 @@ export const useMonthlyAttendance = (
 
   const filteredStudentsMonthly = useMemo(() => {
     if (!monthlyReport) return [];
-    return monthlyReport.studentSummaries.filter((s) => {
+    const list = monthlyReport.studentSummaries.filter((s) => {
       const matchSearch = s.fullName.toLowerCase().includes(searchQueryMonthly.toLowerCase().trim());
       const matchGroup = selectedGroupMonthly === 'all' || s.groupName === selectedGroupMonthly;
       return matchSearch && matchGroup;
     });
+    return sortVietnameseList(list, (s) => s.fullName);
   }, [monthlyReport, searchQueryMonthly, selectedGroupMonthly]);
 
   return {

@@ -2,6 +2,7 @@ import { supabase } from '../../../services/supabaseClient';
 import type { Student, Group } from '../../../types/student';
 import type { StudentFormData } from '../schemas/studentSchema';
 import { DEFAULT_CLASS_6A6_STUDENTS, DEFAULT_GROUPS_6A6 } from '../constants/defaultClass6A6Students';
+import { sortVietnameseList } from '../../../utils/vietnameseNameSort';
 
 export interface BatchImportStudentItem {
   fullName: string;
@@ -68,17 +69,17 @@ export const studentService = {
           if (cached) {
             const parsed = JSON.parse(cached);
             if (Array.isArray(parsed) && parsed.length > 0) {
-              return parsed;
+              return sortVietnameseList(parsed, (s) => s.fullName);
             }
           }
         } catch {
           // Bỏ qua lỗi truy cập localStorage
         }
-        return DEFAULT_CLASS_6A6_STUDENTS;
+        return sortVietnameseList(DEFAULT_CLASS_6A6_STUDENTS, (s) => s.fullName);
       }
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return data.map((item: any) => {
+      const studentsMapped: Student[] = data.map((item: any) => {
         const guardian = item.student_guardians?.[0];
         return {
           id: item.id,
@@ -102,6 +103,8 @@ export const studentService = {
           createdAt: item.created_at,
         };
       });
+
+      return sortVietnameseList(studentsMapped, (s) => s.fullName);
     } catch (err) {
       console.warn('Lỗi khi lấy danh sách học sinh:', err);
       return [];

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { attendanceService } from '../services/attendanceService';
+import { sortVietnameseList } from '../../../utils/vietnameseNameSort';
 import type {
   AttendanceSession,
   AttendanceRecord,
@@ -149,11 +150,12 @@ export const useDailyAttendance = (classId: string, todayStr: string) => {
   }, [records]);
 
   const filteredRecordsDaily = useMemo(() => {
-    return records.filter((r) => {
+    const list = records.filter((r) => {
       const matchSearch = r.studentName.toLowerCase().includes(searchQueryDaily.toLowerCase().trim());
       const matchGroup = selectedGroupDaily === 'all' || r.groupName === selectedGroupDaily;
       return matchSearch && matchGroup;
     });
+    return sortVietnameseList(list, (r) => r.studentName);
   }, [records, searchQueryDaily, selectedGroupDaily]);
 
   const statsDaily = useMemo(() => {

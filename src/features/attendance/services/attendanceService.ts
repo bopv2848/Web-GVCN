@@ -1,6 +1,7 @@
 import { supabase } from '../../../services/supabaseClient';
 import { studentService } from '../../students/services/studentService';
 import { CLASS_6A6_ID, DEFAULT_CLASS_6A6_STUDENTS, DEFAULT_GROUPS_6A6 } from '../../students/constants/defaultClass6A6Students';
+import { sortVietnameseList } from '../../../utils/vietnameseNameSort';
 import type {
   AttendanceSession,
   AttendanceRecord,
@@ -208,7 +209,7 @@ export const attendanceService = {
     }
 
     if (dbRecords.length > 0) {
-      return dbRecords;
+      return sortVietnameseList(dbRecords, (r) => r.studentName);
     }
 
     // 2. Kiểm tra bộ nhớ tạm localStorage
@@ -218,7 +219,7 @@ export const attendanceService = {
       if (cached) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
+          return sortVietnameseList(parsed, (r) => r.studentName);
         }
       }
     } catch {
@@ -240,13 +241,15 @@ export const attendanceService = {
       updatedAt: new Date().toISOString(),
     }));
 
+    const sortedInitial = sortVietnameseList(initialRecords, (r) => r.studentName);
+
     try {
-      localStorage.setItem(cacheKey, JSON.stringify(initialRecords));
+      localStorage.setItem(cacheKey, JSON.stringify(sortedInitial));
     } catch {
       // Bỏ qua lỗi lưu
     }
 
-    return initialRecords;
+    return sortedInitial;
   },
 
   /**
@@ -597,8 +600,9 @@ export const attendanceService = {
     });
 
     // 8. Lọc học sinh cần lưu ý (Nghỉ không phép >= 1 hoặc tổng nghỉ/muộn >= 2)
-    const atRiskStudents = studentSummaries.filter(
-      (s) => s.unexcusedCount >= 1 || s.excusedCount + s.lateCount >= 2
+    const atRiskStudents = sortVietnameseList(
+      studentSummaries.filter((s) => s.unexcusedCount >= 1 || s.excusedCount + s.lateCount >= 2),
+      (s) => s.fullName
     );
 
     // 9. Tổng hợp cơ cấu lý do vắng mặt
@@ -651,7 +655,7 @@ export const attendanceService = {
       totalUnexcused,
       groupStats,
       dailyTrends,
-      studentSummaries,
+      studentSummaries: sortVietnameseList(studentSummaries, (s) => s.fullName),
       atRiskStudents,
       topAbsenceReasons,
     };

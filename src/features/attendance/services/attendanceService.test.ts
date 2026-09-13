@@ -18,16 +18,24 @@ describe('attendanceService Unit Tests', () => {
     const records = await attendanceService.getSessionRecords(session.id, CLASS_6A6_ID);
     expect(records.length).toBe(47);
 
-    // Học sinh đầu tiên là Lê Ngọc Anh (Lớp trưởng)
+    // Học sinh là Lê Ngọc Anh (Lớp trưởng) thuộc Tổ 1
     const lopTruong = records.find((r) => r.classRole?.includes('Lớp trưởng'));
     expect(lopTruong).toBeDefined();
     expect(lopTruong?.studentName).toBe('Lê Ngọc Anh');
-    expect(lopTruong?.groupName).toBe('Tổ 4');
+    expect(lopTruong?.groupName).toBe('Tổ 1');
     expect(lopTruong?.status).toBe('present');
 
     // 4 tổ trưởng
     const toTruongs = records.filter((r) => r.classRole?.includes('Tổ trưởng'));
     expect(toTruongs.length).toBe(4);
+
+    // Kiểm tra danh sách được sắp xếp chuẩn bảng chữ cái tiếng Việt (A - Z)
+    expect(records[0].studentName).toBe('Đỗ Bảo An');
+    expect(records[1].studentName).toBe('Hà Minh Thảo An');
+    expect(records[2].studentName).toBe('Lạc Cao Quế Anh');
+    expect(records[3].studentName).toBe('Lê Ngọc Anh');
+    expect(records[4].studentName).toBe('Cao Minh Ân');
+    expect(records[records.length - 1].studentName).toBe('Nguyễn Thị Thu Vân');
   });
 
   it('cho phép cập nhật trạng thái điểm danh và lưu trữ bền vững', async () => {
