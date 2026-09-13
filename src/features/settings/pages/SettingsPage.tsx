@@ -5,6 +5,7 @@ import { classConfigSchema, type ClassConfigFormData } from '../schemas/classCon
 import { storageService } from '../../../services/storageService';
 import { Button } from '../../../components/common/Button';
 import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
+import { BackupRestoreSection } from '../components/BackupRestoreSection';
 
 export const SettingsPage: React.FC = () => {
   const { currentClass, user, updateCurrentClass } = useAuth();
@@ -479,6 +480,13 @@ export const SettingsPage: React.FC = () => {
           </Button>
         </div>
       </form>
+
+      {/* PHẦN 4: SAO LƯU & XUẤT TOÀN BỘ DỮ LIỆU LỚP HỌC */}
+      <BackupRestoreSection
+        classId={classId}
+        className={formData.name}
+        schoolName={formData.schoolName}
+      />
     </div>
   );
 };

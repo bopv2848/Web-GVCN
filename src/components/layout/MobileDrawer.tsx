@@ -10,7 +10,7 @@ interface MobileDrawerProps {
 }
 
 export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) => {
-  const { user } = useAuth();
+  const { user, currentClass } = useAuth();
   const location = useLocation();
   const currentRole = (user?.role === 'teacher' ? 'gvcn' : user?.role) || 'gvcn';
 
@@ -55,7 +55,7 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) =
             <div>
               <h2 className="text-sm font-black text-white">WEB GVCN</h2>
               <span className="text-[9px] font-bold uppercase tracking-wider text-amber-400">
-                Lớp 12A1
+                {currentClass?.name || 'LỚP 6A6'}
               </span>
             </div>
           </div>
