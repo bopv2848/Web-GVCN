@@ -1,4 +1,5 @@
 import React from 'react';
+import { useAuth } from '../../../hooks/useAuth';
 import type { ComprehensiveClassReport } from '../types';
 
 interface ReportPrintA4ViewProps {
@@ -6,6 +7,7 @@ interface ReportPrintA4ViewProps {
 }
 
 export const ReportPrintA4View: React.FC<ReportPrintA4ViewProps> = ({ report }) => {
+  const { user } = useAuth();
   const today = new Date();
   const dateStr = today.getDate();
   const monthStr = today.getMonth() + 1;
@@ -160,12 +162,22 @@ export const ReportPrintA4View: React.FC<ReportPrintA4ViewProps> = ({ report }) 
 
         <div>
           <p className="italic font-normal text-[11px]">
-            Hà Nội, ngày {dateStr} tháng {monthStr} năm {yearStr}
+            Tân Hải, ngày {dateStr} tháng {monthStr} năm {yearStr}
           </p>
           <p className="uppercase mt-0.5">GIÁO VIÊN CHỦ NHIỆM</p>
           <p className="italic font-normal text-[10.5px]">(Ký và ghi rõ họ tên)</p>
-          <div className="h-20"></div>
-          <p className="uppercase font-extrabold">{report.teacherName}</p>
+          <div className="h-20 flex items-center justify-center overflow-hidden">
+            {user?.signatureUrl && user?.showSignatureInReports !== false ? (
+              <img
+                src={user.signatureUrl}
+                alt="Chữ ký Thầy Phan Văn Bộ"
+                className="max-h-16 max-w-[160px] object-contain drop-shadow-xs"
+              />
+            ) : (
+              <div className="h-16"></div>
+            )}
+          </div>
+          <p className="uppercase font-extrabold">{user?.fullName || report.teacherName || 'THẦY PHAN VĂN BỘ'}</p>
         </div>
       </div>
     </div>

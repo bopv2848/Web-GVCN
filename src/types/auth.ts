@@ -5,6 +5,8 @@ export interface UserProfile {
   email: string;
   fullName: string;
   avatarUrl?: string;
+  signatureUrl?: string;
+  showSignatureInReports?: boolean;
   phone?: string;
   role: UserRole;
 }

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { Button } from '../../../components/common/Button';
 import { getUserInitial } from '../../../utils/userUtils';
+import { SignaturePadModal } from './SignaturePadModal';
 
 export const TeacherProfileSection: React.FC = () => {
   const { user, updateUserProfile } = useAuth();
@@ -9,11 +10,18 @@ export const TeacherProfileSection: React.FC = () => {
   const [fullName, setFullName] = useState<string>(user?.fullName || 'Thầy Phan Văn Bộ');
   const [phone, setPhone] = useState<string>(user?.phone || '');
   const [avatarUrl, setAvatarUrl] = useState<string>(user?.avatarUrl || '');
+  const [signatureUrl, setSignatureUrl] = useState<string>(user?.signatureUrl || '');
+  const [showSignatureInReports, setShowSignatureInReports] = useState<boolean>(
+    user?.showSignatureInReports !== false
+  );
+
   const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [isSignaturePadOpen, setIsSignaturePadOpen] = useState<boolean>(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const avatarFileInputRef = useRef<HTMLInputElement | null>(null);
+  const signatureFileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Đồng bộ lại khi user thay đổi
   useEffect(() => {
@@ -21,17 +29,18 @@ export const TeacherProfileSection: React.FC = () => {
       setFullName(user.fullName || 'Thầy Phan Văn Bộ');
       setPhone(user.phone || '');
       setAvatarUrl(user.avatarUrl || '');
+      setSignatureUrl(user.signatureUrl || '');
+      setShowSignatureInReports(user.showSignatureInReports !== false);
     }
   }, [user]);
 
   // Xử lý chọn tệp ảnh chân dung
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Giới hạn dung lượng 5MB
     if (file.size > 5 * 1024 * 1024) {
-      setErrorMessage('Kích thước tệp ảnh không được vượt quá 5MB.');
+      setErrorMessage('Kích thước tệp ảnh chân dung không được vượt quá 5MB.');
       return;
     }
 
@@ -49,11 +58,42 @@ export const TeacherProfileSection: React.FC = () => {
     reader.readAsDataURL(file);
   };
 
-  // Xóa ảnh chân dung, quay về chữ cái "B"
+  // Xử lý tải ảnh chữ ký từ tệp
+  const handleSignatureFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setErrorMessage('Kích thước tệp chữ ký không được vượt quá 5MB.');
+      return;
+    }
+
+    setErrorMessage(null);
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setSignatureUrl(reader.result);
+        setSuccessMessage('Đã nạp tệp ảnh chữ ký. Thầy vui lòng bấm "Lưu Hồ Sơ GVCN" để hoàn tất.');
+      }
+    };
+    reader.onerror = () => {
+      setErrorMessage('Lỗi khi đọc tệp ảnh chữ ký.');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Xóa ảnh chân dung
   const handleRemoveAvatar = () => {
     setAvatarUrl('');
-    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (avatarFileInputRef.current) avatarFileInputRef.current.value = '';
     setSuccessMessage('Đã gỡ ảnh chân dung. Avatar sẽ hiển thị chữ cái "B" mặc định.');
+  };
+
+  // Xóa chữ ký điện tử
+  const handleRemoveSignature = () => {
+    setSignatureUrl('');
+    if (signatureFileInputRef.current) signatureFileInputRef.current.value = '';
+    setSuccessMessage('Đã xóa chữ ký điện tử. Văn bản in ra sẽ để trống phần ký tay.');
   };
 
   // Lưu hồ sơ
@@ -73,9 +113,11 @@ export const TeacherProfileSection: React.FC = () => {
         fullName: fullName.trim(),
         phone: phone.trim(),
         avatarUrl: avatarUrl.trim() || undefined,
+        signatureUrl: signatureUrl.trim() || undefined,
+        showSignatureInReports,
       });
 
-      setSuccessMessage('✓ Đã cập nhật ảnh chân dung và hồ sơ GVCN thành công! Thanh Header đã được làm mới.');
+      setSuccessMessage('✓ Đã cập nhật ảnh chân dung và chữ ký điện tử của Thầy thành công! Tất cả báo cáo in ấn đã được áp dụng.');
     } catch (err: unknown) {
       const error = err as { message?: string };
       setErrorMessage(error.message || 'Lỗi khi cập nhật hồ sơ giáo viên.');
@@ -86,12 +128,22 @@ export const TeacherProfileSection: React.FC = () => {
 
   return (
     <div className="p-6 bg-white rounded-3xl border border-slate-200/80 shadow-xs space-y-6">
+      {/* File input ẩn cho avatar */}
       <input
-        ref={fileInputRef}
+        ref={avatarFileInputRef}
         type="file"
         accept="image/png, image/jpeg, image/jpg, image/webp"
         className="hidden"
-        onChange={handleFileChange}
+        onChange={handleAvatarFileChange}
+      />
+
+      {/* File input ẩn cho chữ ký */}
+      <input
+        ref={signatureFileInputRef}
+        type="file"
+        accept="image/png, image/jpeg, image/jpg, image/webp"
+        className="hidden"
+        onChange={handleSignatureFileChange}
       />
 
       {/* Tiêu đề mục */}
@@ -102,10 +154,10 @@ export const TeacherProfileSection: React.FC = () => {
           </div>
           <div>
             <h3 className="text-sm md:text-base font-black uppercase tracking-wider text-slate-850">
-              Hồ Sơ & Ảnh Chân Dung Giáo Viên Chủ Nhiệm
+              Hồ Sơ, Ảnh Chân Dung & Chữ Ký Điện Tử GVCN
             </h3>
             <p className="text-xs text-slate-500 font-medium mt-0.5">
-              Tùy chỉnh thông tin GVCN và tải ảnh chân dung thật để hiển thị tại vòng tròn Avatar góc phải Header
+              Cá nhân hóa danh tính Thầy Phan Văn Bộ và tự động chèn chữ ký thật vào các biểu mẫu in ấn
             </p>
           </div>
         </div>
@@ -131,17 +183,14 @@ export const TeacherProfileSection: React.FC = () => {
       )}
 
       <form onSubmit={handleSaveProfile} className="space-y-6">
+        {/* PHẦN 1: ẢNH CHÂN DUNG & THÔNG TIN CÁ NHÂN */}
         <div className="flex flex-col md:flex-row items-center md:items-start gap-6 p-5 bg-slate-50/70 rounded-2xl border border-slate-200/80">
-          {/* Khu vực xem trước & tải ảnh */}
+          {/* Avatar Preview */}
           <div className="flex flex-col items-center gap-3 flex-shrink-0">
             <div className="relative group">
               <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-primary text-white flex items-center justify-center font-black text-4xl shadow-md overflow-hidden border-3 border-white ring-2 ring-primary/20 bg-gradient-to-br from-primary to-indigo-900">
                 {avatarUrl ? (
-                  <img
-                    src={avatarUrl}
-                    alt={fullName || 'GVCN'}
-                    className="w-full h-full object-cover"
-                  />
+                  <img src={avatarUrl} alt={fullName || 'GVCN'} className="w-full h-full object-cover" />
                 ) : (
                   <span>{getUserInitial(fullName)}</span>
                 )}
@@ -149,7 +198,7 @@ export const TeacherProfileSection: React.FC = () => {
 
               <button
                 type="button"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => avatarFileInputRef.current?.click()}
                 title="Tải ảnh chân dung"
                 className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-primary hover:bg-primary-hover active:scale-95 text-white flex items-center justify-center shadow-md border-2 border-white cursor-pointer transition-all"
               >
@@ -160,7 +209,7 @@ export const TeacherProfileSection: React.FC = () => {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => avatarFileInputRef.current?.click()}
                 className="px-3 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-xl text-[11px] font-bold shadow-2xs cursor-pointer"
               >
                 Đổi ảnh chân dung
@@ -178,11 +227,11 @@ export const TeacherProfileSection: React.FC = () => {
             </div>
 
             <span className="text-[10px] text-slate-400 text-center max-w-[170px]">
-              Ký tự mặc định: <strong>&quot;B&quot;</strong> (viết tắt Thầy Phan Văn Bộ). Tải ảnh chân dung để thay thế.
+              Ký tự mặc định: <strong>&quot;B&quot;</strong>. Tải ảnh chân dung để thay thế.
             </span>
           </div>
 
-          {/* Các trường nhập thông tin */}
+          {/* Form Fields */}
           <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
             <div>
               <label className="block text-slate-700 font-bold mb-1.5 uppercase tracking-wider text-[11px]">
@@ -235,6 +284,87 @@ export const TeacherProfileSection: React.FC = () => {
           </div>
         </div>
 
+        {/* PHẦN 2: CHỮ KÝ ĐIỆN TỬ CỦA THẦY VÀO VĂN BẢN */}
+        <div className="p-5 bg-slate-50/70 rounded-2xl border border-slate-200/80 space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-base">🖋️</span>
+              <span className="font-bold text-slate-800 text-xs uppercase tracking-wider">
+                Chữ Ký Điện Tử Giáo Viên Chủ Nhiệm (Dành cho Biểu Mẫu In Ấn)
+              </span>
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700">
+              <input
+                type="checkbox"
+                checked={showSignatureInReports}
+                onChange={(e) => setShowSignatureInReports(e.target.checked)}
+                className="w-4 h-4 rounded text-primary focus:ring-primary cursor-pointer"
+              />
+              <span>Tự động chèn chữ ký vào văn bản khi in A4</span>
+            </label>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center gap-5 p-4 bg-white rounded-2xl border border-slate-200">
+            {/* Khung mô phỏng con dấu & chữ ký A4 */}
+            <div className="w-52 h-28 border border-dashed border-slate-300 rounded-xl bg-slate-50/50 flex flex-col items-center justify-center p-2 text-center relative flex-shrink-0">
+              <span className="text-[10px] text-slate-400 uppercase font-bold block mb-1">
+                GIÁO VIÊN CHỦ NHIỆM
+              </span>
+              <div className="flex-1 w-full flex items-center justify-center overflow-hidden">
+                {signatureUrl ? (
+                  <img
+                    src={signatureUrl}
+                    alt="Chữ ký Thầy Phan Văn Bộ"
+                    className="max-h-16 max-w-[150px] object-contain drop-shadow-xs"
+                  />
+                ) : (
+                  <span className="text-[11px] text-slate-300 italic">Chưa nạp chữ ký</span>
+                )}
+              </div>
+              <span className="text-[11px] font-bold text-slate-800 uppercase block mt-1">
+                {fullName || 'Thầy Phan Văn Bộ'}
+              </span>
+            </div>
+
+            {/* Các nút thao tác chữ ký */}
+            <div className="space-y-2.5 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsSignaturePadOpen(true)}
+                  className="px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 rounded-xl text-xs font-bold shadow-2xs cursor-pointer flex items-center gap-1.5"
+                >
+                  <span>✍️</span>
+                  <span>Ký tay trực tiếp (Cảm ứng / Chuột)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => signatureFileInputRef.current?.click()}
+                  className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-xl text-xs font-bold shadow-2xs cursor-pointer flex items-center gap-1.5"
+                >
+                  <span>📁</span>
+                  <span>Tải ảnh chữ ký (PNG/JPG)</span>
+                </button>
+
+                {signatureUrl && (
+                  <button
+                    type="button"
+                    onClick={handleRemoveSignature}
+                    className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-xl text-xs font-semibold cursor-pointer"
+                  >
+                    ✕ Gỡ chữ ký
+                  </button>
+                )}
+              </div>
+
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                💡 <strong>Mẹo chuyên gia:</strong> Thầy có thể dùng ngón tay ký trực tiếp trên điện thoại, hoặc chụp ảnh chữ ký trên giấy trắng rồi tải lên. Hệ thống sẽ tự động chèn chữ ký sắc nét vào cuối <strong>Báo cáo thi đua & hạnh kiểm A4</strong> và <strong>Phiếu tổng hợp điểm danh</strong> khi Thầy bấm &quot;In Báo Cáo&quot;.
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Nút lưu hồ sơ */}
         <div className="flex justify-end gap-3 pt-2">
           <Button
@@ -249,6 +379,16 @@ export const TeacherProfileSection: React.FC = () => {
           </Button>
         </div>
       </form>
+
+      {/* Modal ký tay trực tiếp bằng ngón tay / chuột */}
+      <SignaturePadModal
+        isOpen={isSignaturePadOpen}
+        onClose={() => setIsSignaturePadOpen(false)}
+        onSave={(dataUrl) => {
+          setSignatureUrl(dataUrl);
+          setSuccessMessage('Đã tạo chữ ký tay mới! Thầy vui lòng bấm "Lưu Hồ Sơ GVCN" để hoàn tất.');
+        }}
+      />
     </div>
   );
 };

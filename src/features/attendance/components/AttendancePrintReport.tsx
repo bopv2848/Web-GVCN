@@ -1,4 +1,5 @@
 import React from 'react';
+import { useAuth } from '../../../hooks/useAuth';
 import type { MonthlyAttendanceReport } from '../../../types/attendance';
 
 interface AttendancePrintReportProps {
@@ -16,6 +17,7 @@ export const AttendancePrintReport: React.FC<AttendancePrintReportProps> = ({
   teacherName = 'Thầy Phan Văn Bộ',
   logoUrl = '/logo-truong-thcs-Tan-Hai.jpg',
 }) => {
+  const { user } = useAuth();
   return (
     <div className="hidden print:block font-serif text-slate-900 bg-white p-8 max-w-[210mm] mx-auto text-xs leading-relaxed">
       {/* 1. Header Báo cáo Hành chính Giáo dục */}
@@ -221,12 +223,22 @@ export const AttendancePrintReport: React.FC<AttendancePrintReportProps> = ({
 
         <div className="w-56 font-bold">
           <p className="italic text-[10px] text-slate-600 font-normal">
-            Hà Nội, ngày ... tháng ... năm {report.year}
+            Tân Hải, ngày ... tháng ... năm {report.year}
           </p>
           <p className="uppercase text-[11px] mt-0.5">GIÁO VIÊN CHỦ NHIỆM</p>
           <p className="italic text-[10px] text-slate-500 font-normal mt-0.5">(Ký và ghi rõ họ tên)</p>
-          <div className="h-20"></div>
-          <p className="text-xs font-black">{teacherName}</p>
+          <div className="h-20 flex items-center justify-center overflow-hidden">
+            {user?.signatureUrl && user?.showSignatureInReports !== false ? (
+              <img
+                src={user.signatureUrl}
+                alt="Chữ ký Thầy Phan Văn Bộ"
+                className="max-h-16 max-w-[160px] object-contain drop-shadow-xs"
+              />
+            ) : (
+              <div className="h-16"></div>
+            )}
+          </div>
+          <p className="text-xs font-black">{user?.fullName || teacherName || 'Thầy Phan Văn Bộ'}</p>
         </div>
       </div>
     </div>
