@@ -28,7 +28,7 @@ export const useDailyAttendance = (classId: string, todayStr: string) => {
       const sess = await attendanceService.getOrCreateSession(classId, selectedDate, selectedType);
       setSession(sess);
 
-      const recs = await attendanceService.getSessionRecords(sess.id);
+      const recs = await attendanceService.getSessionRecords(sess.id, classId);
       setRecords(recs);
     } catch (err) {
       console.error('Lỗi nạp phiên điểm danh ngày:', err);
@@ -70,7 +70,7 @@ export const useDailyAttendance = (classId: string, todayStr: string) => {
           setRecentlyUpdatedId(null);
         }, 2500);
       } else if (payload.eventType === 'INSERT') {
-        attendanceService.getSessionRecords(session.id).then(setRecords);
+        attendanceService.getSessionRecords(session.id, classId).then(setRecords);
       }
     });
 
@@ -79,7 +79,7 @@ export const useDailyAttendance = (classId: string, todayStr: string) => {
       unsubscribe();
       if (highlightTimeoutRef.current) clearTimeout(highlightTimeoutRef.current);
     };
-  }, [session?.id]);
+  }, [session?.id, classId]);
 
   // 3. Handlers điểm danh hàng ngày
   const handleStatusChange = async (recordId: string, newStatus: AttendanceStatus) => {
@@ -92,7 +92,7 @@ export const useDailyAttendance = (classId: string, todayStr: string) => {
     } catch (err) {
       console.error('Lỗi cập nhật điểm danh:', err);
       if (session) {
-        const fresh = await attendanceService.getSessionRecords(session.id);
+        const fresh = await attendanceService.getSessionRecords(session.id, classId);
         setRecords(fresh);
       }
     }
@@ -111,7 +111,7 @@ export const useDailyAttendance = (classId: string, todayStr: string) => {
     } catch (err) {
       console.error('Lỗi lưu ghi chú chuyên cần:', err);
       if (session) {
-        const fresh = await attendanceService.getSessionRecords(session.id);
+        const fresh = await attendanceService.getSessionRecords(session.id, classId);
         setRecords(fresh);
       }
     }

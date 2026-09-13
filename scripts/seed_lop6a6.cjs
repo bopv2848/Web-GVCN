@@ -77,6 +77,7 @@ async function runSeed() {
         'Huỳnh Huyền Nhiên': 'Tổ trưởng tổ 1',
         'Lạc Cao Quế Anh': 'Tổ trưởng tổ 2',
         'Phan Hiết My': 'Tổ trưởng tổ 3',
+        'Phan Hiểu My': 'Tổ trưởng tổ 3',
         'Trương Khả Hân': 'Tổ trưởng tổ 4',
         'Trương Thị Kim Hằng': 'Tổ phó tổ 1',
         'Huỳnh Na': 'Tổ phó tổ 2',
