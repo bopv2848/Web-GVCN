@@ -6,6 +6,7 @@ import { storageService } from '../../../services/storageService';
 import { Button } from '../../../components/common/Button';
 import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
 import { BackupRestoreSection } from '../components/BackupRestoreSection';
+import { TeacherProfileSection } from '../components/TeacherProfileSection';
 
 export const SettingsPage: React.FC = () => {
   const { currentClass, user, updateCurrentClass } = useAuth();
@@ -481,7 +482,10 @@ export const SettingsPage: React.FC = () => {
         </div>
       </form>
 
-      {/* PHẦN 4: SAO LƯU & XUẤT TOÀN BỘ DỮ LIỆU LỚP HỌC */}
+      {/* PHẦN 4: HỒ SƠ & ẢNH CHÂN DUNG GIÁO VIÊN CHỦ NHIỆM */}
+      <TeacherProfileSection />
+
+      {/* PHẦN 5: SAO LƯU & XUẤT TOÀN BỘ DỮ LIỆU LỚP HỌC */}
       <BackupRestoreSection
         classId={classId}
         className={formData.name}

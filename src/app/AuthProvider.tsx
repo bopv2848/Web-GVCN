@@ -97,13 +97,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else {
           if (isMounted) {
             // Môi trường demo/dev ban đầu nếu chưa có user login
-            setIsAuthenticated(true);
-            setUser({
+            let initialUser: UserProfile = {
               id: 'dev-gvcn-001',
               email: 'phanvanbo.6a6@thcs-tanhai.edu.vn',
               fullName: 'Thầy Phan Văn Bộ',
               role: 'gvcn',
-            });
+            };
+            try {
+              const saved = localStorage.getItem('gvcn_user_profile');
+              if (saved) {
+                const parsed = JSON.parse(saved);
+                if (parsed && parsed.fullName) {
+                  initialUser = { ...initialUser, ...parsed };
+                }
+              }
+            } catch {
+              // Bỏ qua lỗi cú pháp
+            }
+            setIsAuthenticated(true);
+            setUser(initialUser);
             setCurrentClass(fallbackClass);
             setIsLoading(false);
           }
@@ -187,6 +199,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setCurrentClass((prev) => (prev ? { ...prev, ...updated } : prev));
   }, []);
 
+  const updateUserProfile = useCallback(async (updated: Partial<UserProfile>) => {
+    setUser((prev) => {
+      const next = prev
+        ? { ...prev, ...updated }
+        : ({
+            id: 'dev-gvcn-001',
+            email: 'phanvanbo.6a6@thcs-tanhai.edu.vn',
+            fullName: 'Thầy Phan Văn Bộ',
+            role: 'gvcn',
+            ...updated,
+          } as UserProfile);
+
+      try {
+        localStorage.setItem('gvcn_user_profile', JSON.stringify(next));
+      } catch (err) {
+        console.warn('Lỗi lưu profile vào LocalStorage:', err);
+      }
+      return next;
+    });
+
+    if (user?.id && !user.id.startsWith('dev-')) {
+      try {
+        await supabase
+          .from('profiles')
+          .update({
+            full_name: updated.fullName,
+            avatar_url: updated.avatarUrl,
+            phone: updated.phone,
+          })
+          .eq('id', user.id);
+      } catch (err) {
+        console.warn('Lỗi cập nhật profile lên Supabase:', err);
+      }
+    }
+  }, [user]);
+
   return (
     <AuthContext.Provider
       value={{
@@ -202,6 +250,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         logout,
         refreshSession,
         updateCurrentClass,
+        updateUserProfile,
       }}
     >
       {children}

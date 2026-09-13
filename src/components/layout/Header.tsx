@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { getUserInitial } from '../../utils/userUtils';
 import type { UserRole } from '../../types/auth';
 
 interface HeaderProps {
@@ -75,12 +77,20 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileDrawer }) => {
             className="flex items-center gap-2.5 p-1.5 rounded-2xl hover:bg-slate-100 transition-all border border-transparent hover:border-slate-200"
             aria-label="Menu tài khoản"
           >
-            <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-primary text-white flex items-center justify-center font-black text-xs md:text-sm shadow-sm">
-              {user?.fullName?.charAt(0) || 'G'}
+            <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-primary text-white flex items-center justify-center font-black text-xs md:text-sm shadow-sm overflow-hidden border border-slate-200">
+              {user?.avatarUrl ? (
+                <img
+                  src={user.avatarUrl}
+                  alt={user.fullName || 'GVCN'}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                getUserInitial(user?.fullName)
+              )}
             </div>
             <div className="hidden sm:block text-left">
               <p className="text-xs font-bold text-slate-800 leading-tight truncate max-w-[140px]">
-                {user?.fullName || 'Giáo viên'}
+                {user?.fullName || 'Thầy Phan Văn Bộ'}
               </p>
               <span className={`inline-block text-[10px] font-bold px-1.5 py-0.2 rounded-md border ${roleBadge.badgeClass}`}>
                 {roleBadge.label}
@@ -92,10 +102,18 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileDrawer }) => {
           {showProfileMenu && (
             <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-200 py-2 z-50 animate-fade-in">
               <div className="px-4 py-2 border-b border-slate-100">
-                <p className="text-xs font-bold text-slate-800 truncate">{user?.fullName}</p>
-                <p className="text-[10px] text-slate-400 truncate">{user?.email}</p>
+                <p className="text-xs font-bold text-slate-800 truncate">{user?.fullName || 'Thầy Phan Văn Bộ'}</p>
+                <p className="text-[10px] text-slate-400 truncate">{user?.email || 'phanvanbo.6a6@thcs-tanhai.edu.vn'}</p>
               </div>
-              <div className="p-1">
+              <div className="p-1 space-y-0.5">
+                <Link
+                  to="/settings"
+                  onClick={() => setShowProfileMenu(false)}
+                  className="w-full text-left px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 rounded-xl transition-colors flex items-center gap-2"
+                >
+                  <span>📷</span>
+                  <span>Hồ sơ & Ảnh chân dung</span>
+                </Link>
                 <button
                   onClick={() => { setShowProfileMenu(false); logout(); }}
                   className="w-full text-left px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-xl transition-colors flex items-center gap-2"

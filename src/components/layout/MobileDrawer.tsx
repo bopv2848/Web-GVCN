@@ -3,6 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { allNavItems } from './navItems';
 import { cn } from '../../utils/cn';
+import { getUserInitial } from '../../utils/userUtils';
 
 interface MobileDrawerProps {
   isOpen: boolean;
@@ -106,9 +107,22 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) =
         </nav>
 
         {/* User Info on Mobile */}
-        <div className="p-4 border-t border-indigo-900/50 bg-indigo-950/40">
-          <p className="text-xs font-bold text-white truncate">{user?.fullName}</p>
-          <p className="text-[10px] text-slate-400 capitalize">Vai trò: {user?.role}</p>
+        <div className="p-4 border-t border-indigo-900/50 bg-indigo-950/40 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-black text-xs shadow-sm overflow-hidden border border-indigo-700/60 flex-shrink-0">
+            {user?.avatarUrl ? (
+              <img
+                src={user.avatarUrl}
+                alt={user.fullName || 'GVCN'}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              getUserInitial(user?.fullName)
+            )}
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-bold text-white truncate">{user?.fullName || 'Thầy Phan Văn Bộ'}</p>
+            <p className="text-[10px] text-slate-400 capitalize">Vai trò: {user?.role || 'gvcn'}</p>
+          </div>
         </div>
       </div>
     </div>

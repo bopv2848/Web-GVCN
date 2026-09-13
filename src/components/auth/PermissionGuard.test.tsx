@@ -41,6 +41,7 @@ describe('PermissionGuard Security Access Control', () => {
             logout: async () => {},
             refreshSession: async () => {},
             updateCurrentClass: () => {},
+            updateUserProfile: async () => {},
           }}
         >
           <PermissionGuard allowedRoles={['gvcn']}>
@@ -77,6 +78,7 @@ describe('PermissionGuard Security Access Control', () => {
             logout: async () => {},
             refreshSession: async () => {},
             updateCurrentClass: () => {},
+            updateUserProfile: async () => {},
           }}
         >
           <PermissionGuard allowedRoles={['gvcn']}>
