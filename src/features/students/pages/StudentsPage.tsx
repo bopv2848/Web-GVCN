@@ -5,6 +5,7 @@ import type { StudentFormData } from '../schemas/studentSchema';
 import { useAuth } from '../../../hooks/useAuth';
 
 import { StudentCard } from '../components/StudentCard';
+import { RoleBadge } from '../components/RoleBadge';
 import { StudentFormModal } from '../components/StudentFormModal';
 import { DeleteStudentModal } from '../components/DeleteStudentModal';
 import { ImportExportModal } from '../components/ImportExportModal';
@@ -54,13 +55,23 @@ export const StudentsPage: React.FC = () => {
     loadData();
   }, [loadData]);
 
+  const officerCount = useMemo(() => {
+    return students.filter((s) => s.classRole && s.classRole !== 'Thành viên').length;
+  }, [students]);
+
   // Filtered Students
   const filteredStudents = useMemo(() => {
     return students.filter((s) => {
       const matchSearch =
         s.fullName.toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
         s.code?.toLowerCase().includes(searchQuery.toLowerCase().trim());
-      const matchGroup = selectedGroup === 'all' || s.groupName === selectedGroup;
+      const isOfficer = s.classRole && s.classRole !== 'Thành viên';
+      const matchGroup =
+        selectedGroup === 'all'
+          ? true
+          : selectedGroup === 'officers'
+            ? isOfficer
+            : s.groupName === selectedGroup;
       const matchGender = selectedGender === 'all' || s.gender === selectedGender;
       return matchSearch && matchGroup && matchGender;
     });
@@ -182,6 +193,17 @@ export const StudentsPage: React.FC = () => {
           >
             Tất cả ({students.length})
           </button>
+          <button
+            onClick={() => setSelectedGroup('officers')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${
+              selectedGroup === 'officers'
+                ? 'bg-amber-600 text-white shadow-xs'
+                : 'bg-amber-50 text-amber-900 hover:bg-amber-100 border border-amber-200'
+            }`}
+          >
+            <span>👑</span>
+            <span>Cán sự ({officerCount})</span>
+          </button>
           {groups.map((g) => (
             <button
               key={g.id}
@@ -286,7 +308,9 @@ export const StudentsPage: React.FC = () => {
                       <span className="text-[10px] text-slate-400">{student.gender} {student.birthDate ? `• ${student.birthDate}` : ''}</span>
                     </td>
                     <td className="p-3.5 font-bold text-slate-700">{student.groupName}</td>
-                    <td className="p-3.5 font-semibold text-primary">{student.classRole}</td>
+                    <td className="p-3.5">
+                      <RoleBadge role={student.classRole} />
+                    </td>
                     <td className="p-3.5 text-slate-600">{student.boardingType || 'Bán trú'}</td>
                     <td className="p-3.5">
                       <span className="font-bold text-emerald-600">+{student.points}đ</span>

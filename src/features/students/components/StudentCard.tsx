@@ -1,5 +1,6 @@
-﻿import React from 'react';
+import React from 'react';
 import type { Student } from '../../../types/student';
+import { RoleBadge } from './RoleBadge';
 
 interface StudentCardProps {
   student: Student;
@@ -52,6 +53,14 @@ export const StudentCard: React.FC<StudentCardProps> = ({
                   {student.fullName.charAt(0)}
                 </div>
               )}
+              {student.classRole?.includes('Lớp trưởng') && (
+                <span
+                  className="absolute -top-1.5 -right-1 text-xs bg-amber-400 text-white rounded-full w-5 h-5 flex items-center justify-center border border-white shadow-xs"
+                  title="Lớp trưởng"
+                >
+                  👑
+                </span>
+              )}
               <span
                 className={`absolute -bottom-1 -right-1 text-xs px-1 rounded-full ${
                   isFemale ? 'bg-rose-50 text-rose-600' : 'bg-blue-50 text-blue-600'
@@ -79,10 +88,8 @@ export const StudentCard: React.FC<StudentCardProps> = ({
         </div>
 
         {/* Roles & Attributes */}
-        <div className="flex flex-wrap gap-1.5 mb-4">
-          <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-100">
-            {student.classRole}
-          </span>
+        <div className="flex flex-wrap items-center gap-1.5 mb-4">
+          <RoleBadge role={student.classRole} />
           <span className="text-[10px] font-semibold px-2 py-0.5 rounded-lg bg-slate-50 text-slate-600 border border-slate-200/50">
             {student.boardingType || 'Bán trú'}
           </span>
