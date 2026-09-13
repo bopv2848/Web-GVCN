@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import type { ComprehensiveClassReport } from '../types';
+import { reportVerificationService } from '../services/reportVerificationService';
 
 interface ReportPrintA4ViewProps {
   report: ComprehensiveClassReport;
@@ -8,13 +9,40 @@ interface ReportPrintA4ViewProps {
 
 export const ReportPrintA4View: React.FC<ReportPrintA4ViewProps> = ({ report }) => {
   const { user } = useAuth();
-  const today = new Date();
+  const today = useMemo(() => new Date(), []);
   const dateStr = today.getDate();
   const monthStr = today.getMonth() + 1;
   const yearStr = today.getFullYear();
+  const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
+
+  const docId = useMemo(
+    () => `DOC-${yearStr}${String(monthStr).padStart(2, '0')}${String(dateStr).padStart(2, '0')}-${report.className}`,
+    [yearStr, monthStr, dateStr, report.className]
+  );
+
+  useEffect(() => {
+    const verificationUrl = reportVerificationService.generateVerificationUrl({
+      docId,
+      className: report.className,
+      schoolName: report.schoolName,
+      teacherName: user?.fullName || report.teacherName,
+      periodTitle: report.periodTitle,
+      totalStudents: report.kpi.totalStudents,
+      attendanceRate: report.kpi.overallAttendanceRate,
+      totalPoints: report.kpi.totalPoints,
+      signedAt: today.toISOString(),
+    });
+
+    reportVerificationService.generateQrCodeDataUrl(verificationUrl).then((dataUrl) => {
+      if (dataUrl) setQrCodeUrl(dataUrl);
+    });
+  }, [docId, report, user?.fullName, today]);
 
   return (
-    <div className="hidden print:block font-serif text-slate-900 bg-white p-8 max-w-[210mm] mx-auto text-xs leading-relaxed">
+    <div
+      id="report-print-a4-view"
+      className="hidden print:block font-serif text-slate-900 bg-white p-8 max-w-[210mm] mx-auto text-xs leading-relaxed"
+    >
       {/* 1. Quốc hiệu & Tiêu ngữ */}
       <div className="flex justify-between items-start pb-4 border-b border-slate-900 mb-6">
         <div className="flex items-center gap-3">
@@ -178,6 +206,36 @@ export const ReportPrintA4View: React.FC<ReportPrintA4ViewProps> = ({ report }) 
             )}
           </div>
           <p className="uppercase font-extrabold">{user?.fullName || report.teacherName || 'THẦY PHAN VĂN BỘ'}</p>
+        </div>
+      </div>
+
+      {/* 8. Tem bảo mật & Mã QR xác thực điện tử chống giả mạo */}
+      <div className="mt-8 pt-3 border-t border-dashed border-slate-400 flex items-center justify-between text-[10px] text-slate-600">
+        <div className="flex items-center gap-3">
+          {qrCodeUrl && (
+            <img
+              src={qrCodeUrl}
+              alt="Mã QR Xác thực báo cáo"
+              className="w-14 h-14 border border-slate-300 p-0.5 rounded-xs bg-white shrink-0 shadow-xs"
+            />
+          )}
+          <div>
+            <p className="font-bold text-slate-800 flex items-center gap-1.5 uppercase">
+              <span>🛡️ VĂN BẢN XÁC THỰC ĐIỆN TỬ CHÍNH THỨC</span>
+              <span className="text-[9px] bg-emerald-100 text-emerald-800 px-1 py-0.5 rounded font-bold">TÍCH XANH</span>
+            </p>
+            <p className="text-slate-600 mt-0.5">
+              Mã tra cứu: <span className="font-mono font-bold text-slate-900">{docId}</span>
+            </p>
+            <p className="italic text-slate-500 text-[9.5px] mt-0.5">
+              Quét mã QR bằng máy ảnh hoặc Zalo để đối soát dữ liệu điểm thi đua và chuyên cần gốc từ Web-GVCN.
+            </p>
+          </div>
+        </div>
+        <div className="text-right text-[9.5px] text-slate-400 leading-tight">
+          <p className="font-semibold text-slate-600">Hệ thống Sổ GVCN 4.0</p>
+          <p>THCS Tân Hải • 2025 - 2026</p>
+          <p className="italic text-[9px] text-emerald-700 font-semibold mt-0.5">✓ Đã xác thực số hóa</p>
         </div>
       </div>
     </div>

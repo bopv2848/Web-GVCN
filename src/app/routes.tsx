@@ -58,6 +58,9 @@ const SettingsPage = lazy(() =>
 const ParentPortalPage = lazy(() =>
   import('../features/parent-portal/pages/ParentPortalPage').then((m) => ({ default: m.ParentPortalPage }))
 );
+const VerifyReportPage = lazy(() =>
+  import('../features/reports/pages/VerifyReportPage').then((m) => ({ default: m.VerifyReportPage }))
+);
 
 export const AppRoutes: React.FC = () => {
   return (
@@ -73,6 +76,9 @@ export const AppRoutes: React.FC = () => {
         <Route path="/tra-cuu" element={<ParentPortalPage />} />
         <Route path="/tra-cuu/:token" element={<ParentPortalPage />} />
         <Route path="/parent-portal/:token" element={<ParentPortalPage />} />
+
+        {/* Public Report Verification Route (Xác thực báo cáo điện tử qua quét mã QR) */}
+        <Route path="/verify-report" element={<VerifyReportPage />} />
 
         {/* Protected Routes (Yêu cầu đăng nhập hợp lệ qua Supabase Auth) */}
         <Route element={<ProtectedRoute />}>

@@ -7,6 +7,7 @@ import { GroupRankReportTable } from '../components/GroupRankReportTable';
 import { HonoredAndNeedsCareStudents } from '../components/HonoredAndNeedsCareStudents';
 import { StudentLedgerReportTable } from '../components/StudentLedgerReportTable';
 import { ReportPrintA4View } from '../components/ReportPrintA4View';
+import { pdfExportService } from '../services/pdfExportService';
 import { Button } from '../../../components/common/Button';
 import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
 
@@ -27,6 +28,8 @@ export const ReportsPage: React.FC = () => {
 
   const [report, setReport] = useState<ComprehensiveClassReport | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
+  const [exportStatus, setExportStatus] = useState<string>('');
 
   // Tải dữ liệu báo cáo
   const loadReport = useCallback(async () => {
@@ -47,6 +50,31 @@ export const ReportsPage: React.FC = () => {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleExportPdf = async () => {
+    if (!report) return;
+    const printElement = document.getElementById('report-print-a4-view');
+    if (!printElement) {
+      alert('Không tìm thấy nội dung báo cáo A4');
+      return;
+    }
+
+    setIsExportingPdf(true);
+    try {
+      const cleanTitle = report.periodTitle.replace(/[\\/:*?"<>|]/g, '_').trim();
+      const fileName = `Bao_Cao_${report.className}_${cleanTitle}.pdf`;
+      await pdfExportService.exportToPdf(printElement, {
+        fileName,
+        onProgress: (_prog, stage) => setExportStatus(stage),
+      });
+    } catch (err) {
+      console.error('Lỗi khi xuất PDF trực tiếp:', err);
+      alert('Không thể tạo file PDF. Thầy có thể sử dụng nút "In Báo Cáo A4 / Lưu PDF" để xuất qua trình duyệt.');
+    } finally {
+      setIsExportingPdf(false);
+      setExportStatus('');
+    }
   };
 
   const handleExportExcel = () => {
@@ -77,11 +105,26 @@ export const ReportsPage: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            onClick={handleExportPdf}
+            disabled={isExportingPdf || !report}
+            size="sm"
+            className="text-xs font-bold shadow-xs bg-emerald-600 hover:bg-emerald-700 text-white border-0"
+          >
+            {isExportingPdf ? (
+              <span className="flex items-center gap-1.5">
+                <span className="animate-spin inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full" />
+                {exportStatus || 'Đang tạo PDF...'}
+              </span>
+            ) : (
+              '📥 Tải File PDF (A4)'
+            )}
+          </Button>
           <Button onClick={handlePrint} variant="outline" size="sm" className="text-xs font-bold shadow-xs">
             🖨️ In Báo Cáo A4 / Lưu PDF
           </Button>
           <Button onClick={handleExportExcel} variant="secondary" size="sm" className="text-xs font-bold">
-            📥 Xuất Excel
+            📊 Xuất Excel
           </Button>
           <Button onClick={loadReport} variant="ghost" size="sm" className="text-xs font-bold">
             🔄 Làm mới
