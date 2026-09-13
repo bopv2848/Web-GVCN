@@ -247,8 +247,8 @@ export const OfficerTaskModal: React.FC<OfficerTaskModalProps> = ({ isOpen, onCl
           </div>
         )}
 
-        {/* Nút hành động */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-3 border-t border-slate-100">
+        {/* Nút hành động cố định ở đáy */}
+        <div className="sticky bottom-0 bg-white/95 backdrop-blur-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-3 pb-0.5 border-t border-slate-100 z-10">
           <button
             type="button"
             onClick={handleToggleEdit}

@@ -36,22 +36,31 @@ export const Modal: React.FC<ModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs overflow-y-auto animate-fade-in">
+    <div
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-950/70 backdrop-blur-xs animate-fade-in overflow-y-auto"
+    >
       <div
-        className={`bg-white rounded-3xl w-full ${sizeClasses[size]} p-6 md:p-8 shadow-2xl border border-slate-200 my-8 animate-slide-up`}
+        className={`bg-white rounded-3xl w-full ${sizeClasses[size]} max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 my-auto animate-slide-up overflow-hidden`}
       >
-        <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
-          <h2 className="text-lg font-black text-slate-850 tracking-tight">{title}</h2>
+        {/* Modal Header cố định ở đầu */}
+        <div className="flex items-center justify-between px-5 py-4 md:px-6 md:py-4.5 border-b border-slate-100 shrink-0 bg-white">
+          <h2 className="text-base md:text-lg font-black text-slate-850 tracking-tight">{title}</h2>
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center font-bold transition-all cursor-pointer"
+            className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center font-bold transition-all cursor-pointer shrink-0"
             aria-label="Đóng"
           >
             ✕
           </button>
         </div>
-        {children}
+
+        {/* Modal Body cuộn mượt mà */}
+        <div className="p-5 md:p-6 overflow-y-auto flex-1 overscroll-contain">
+          {children}
+        </div>
       </div>
     </div>
   );
