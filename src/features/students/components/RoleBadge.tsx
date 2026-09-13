@@ -3,28 +3,30 @@ import React from 'react';
 export interface RoleBadgeProps {
   role?: string;
   className?: string;
+  onClick?: () => void;
 }
 
 /**
  * Huy hiệu cán sự lớp 6A6 với màu sắc và biểu tượng đặc trưng
- * - Lớp trưởng: Màu vàng đồng hoàng kim (Crown 👑)
- * - Lớp phó học tập: Màu xanh dương tri thức (Book 📘)
- * - Lớp phó lao động / Lớp phó: Màu xanh biển năng động (Tools/Shield 🧹/🛡️)
- * - Tổ trưởng: Màu xanh lục tươi sáng (Flag 🚩)
- * - Tổ phó: Màu xanh ngọc dịu mát (Sprout 🌱)
- * - Thành viên: Màu trung tính tinh gọn
+ * Hỗ trợ nhấp 1 chạm để mở pop-up xem cẩm nang nhiệm vụ tự quản
  */
-export const RoleBadge: React.FC<RoleBadgeProps> = ({ role, className = '' }) => {
+export const RoleBadge: React.FC<RoleBadgeProps> = ({ role, className = '', onClick }) => {
   const rawRole = role || 'Thành viên';
   const normalized = rawRole.trim().toLowerCase();
+
+  const interactiveClasses = onClick
+    ? 'cursor-pointer hover:scale-105 active:scale-95 hover:shadow-xs transition-all select-none'
+    : '';
 
   // 1. Lớp trưởng: Màu vàng đồng đặc trưng
   if (normalized.includes('lớp trưởng') || normalized === 'lt') {
     return (
       <span
         data-testid="role-badge-lop-truong"
-        className={`inline-flex items-center gap-1 text-[10.5px] font-black uppercase px-2.5 py-0.5 rounded-lg bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs ${className}`}
-        title="Ban cán sự: Lớp trưởng điều hành chung toàn lớp"
+        onClick={onClick}
+        role={onClick ? 'button' : undefined}
+        className={`inline-flex items-center gap-1 text-[10.5px] font-black uppercase px-2.5 py-0.5 rounded-lg bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs ${interactiveClasses} ${className}`}
+        title={onClick ? 'Bấm để xem cẩm nang nhiệm vụ Lớp Trưởng' : 'Ban cán sự: Lớp trưởng điều hành chung toàn lớp'}
       >
         <span className="text-xs">👑</span>
         <span>Lớp Trưởng</span>
@@ -37,8 +39,10 @@ export const RoleBadge: React.FC<RoleBadgeProps> = ({ role, className = '' }) =>
     return (
       <span
         data-testid="role-badge-pho-hoc-tap"
-        className={`inline-flex items-center gap-1 text-[10.5px] font-black uppercase px-2.5 py-0.5 rounded-lg bg-blue-100 text-blue-900 border border-blue-300 shadow-2xs ${className}`}
-        title="Ban cán sự: Lớp phó phụ trách học tập & nề nếp"
+        onClick={onClick}
+        role={onClick ? 'button' : undefined}
+        className={`inline-flex items-center gap-1 text-[10.5px] font-black uppercase px-2.5 py-0.5 rounded-lg bg-blue-100 text-blue-900 border border-blue-300 shadow-2xs ${interactiveClasses} ${className}`}
+        title={onClick ? 'Bấm để xem cẩm nang nhiệm vụ Phó Học Tập' : 'Ban cán sự: Lớp phó phụ trách học tập & nề nếp'}
       >
         <span className="text-xs">📘</span>
         <span>Phó Học Tập</span>
@@ -52,8 +56,10 @@ export const RoleBadge: React.FC<RoleBadgeProps> = ({ role, className = '' }) =>
     return (
       <span
         data-testid="role-badge-lop-pho"
-        className={`inline-flex items-center gap-1 text-[10.5px] font-black uppercase px-2.5 py-0.5 rounded-lg bg-sky-100 text-sky-900 border border-sky-300 shadow-2xs ${className}`}
-        title={`Ban cán sự: ${rawRole}`}
+        onClick={onClick}
+        role={onClick ? 'button' : undefined}
+        className={`inline-flex items-center gap-1 text-[10.5px] font-black uppercase px-2.5 py-0.5 rounded-lg bg-sky-100 text-sky-900 border border-sky-300 shadow-2xs ${interactiveClasses} ${className}`}
+        title={onClick ? `Bấm để xem cẩm nang nhiệm vụ ${rawRole}` : `Ban cán sự: ${rawRole}`}
       >
         <span className="text-xs">{isLaoDong ? '🧹' : '🛡️'}</span>
         <span>{rawRole}</span>
@@ -66,8 +72,10 @@ export const RoleBadge: React.FC<RoleBadgeProps> = ({ role, className = '' }) =>
     return (
       <span
         data-testid="role-badge-to-truong"
-        className={`inline-flex items-center gap-1 text-[10.5px] font-black uppercase px-2.5 py-0.5 rounded-lg bg-emerald-100 text-emerald-900 border border-emerald-300 shadow-2xs ${className}`}
-        title="Ban cán sự: Tổ trưởng tự quản tổ"
+        onClick={onClick}
+        role={onClick ? 'button' : undefined}
+        className={`inline-flex items-center gap-1 text-[10.5px] font-black uppercase px-2.5 py-0.5 rounded-lg bg-emerald-100 text-emerald-900 border border-emerald-300 shadow-2xs ${interactiveClasses} ${className}`}
+        title={onClick ? 'Bấm để xem cẩm nang nhiệm vụ Tổ Trưởng' : 'Ban cán sự: Tổ trưởng tự quản tổ'}
       >
         <span className="text-xs">🚩</span>
         <span>{rawRole.includes('Tổ') ? rawRole : 'Tổ Trưởng'}</span>
@@ -80,8 +88,10 @@ export const RoleBadge: React.FC<RoleBadgeProps> = ({ role, className = '' }) =>
     return (
       <span
         data-testid="role-badge-to-pho"
-        className={`inline-flex items-center gap-1 text-[10.5px] font-bold uppercase px-2 py-0.5 rounded-lg bg-teal-100 text-teal-900 border border-teal-300 shadow-2xs ${className}`}
-        title="Ban cán sự: Tổ phó hỗ trợ tổ trưởng"
+        onClick={onClick}
+        role={onClick ? 'button' : undefined}
+        className={`inline-flex items-center gap-1 text-[10.5px] font-bold uppercase px-2 py-0.5 rounded-lg bg-teal-100 text-teal-900 border border-teal-300 shadow-2xs ${interactiveClasses} ${className}`}
+        title={onClick ? 'Bấm để xem cẩm nang nhiệm vụ Tổ Phó' : 'Ban cán sự: Tổ phó hỗ trợ tổ trưởng'}
       >
         <span className="text-xs">🌱</span>
         <span>{rawRole.includes('Tổ') ? rawRole : 'Tổ Phó'}</span>
@@ -93,7 +103,10 @@ export const RoleBadge: React.FC<RoleBadgeProps> = ({ role, className = '' }) =>
   return (
     <span
       data-testid="role-badge-thanh-vien"
-      className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-lg bg-slate-100 text-slate-600 border border-slate-200/70 ${className}`}
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-lg bg-slate-100 text-slate-600 border border-slate-200/70 ${interactiveClasses} ${className}`}
+      title={onClick ? 'Bấm để xem trách nhiệm thành viên' : 'Học sinh thành viên lớp 6A6'}
     >
       {rawRole}
     </span>

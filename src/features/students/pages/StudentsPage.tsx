@@ -6,6 +6,7 @@ import { useAuth } from '../../../hooks/useAuth';
 
 import { StudentCard } from '../components/StudentCard';
 import { RoleBadge } from '../components/RoleBadge';
+import { OfficerTaskModal } from '../components/OfficerTaskModal';
 import { StudentFormModal } from '../components/StudentFormModal';
 import { DeleteStudentModal } from '../components/DeleteStudentModal';
 import { ImportExportModal } from '../components/ImportExportModal';
@@ -33,6 +34,7 @@ export const StudentsPage: React.FC = () => {
   const [deletingStudent, setDeletingStudent] = useState<Student | null>(null);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [inviteStudent, setInviteStudent] = useState<Student | null>(null);
+  const [taskStudent, setTaskStudent] = useState<Student | null>(null);
 
   // Load Data
   const loadData = useCallback(async () => {
@@ -279,6 +281,7 @@ export const StudentsPage: React.FC = () => {
               }}
               onDelete={(s) => setDeletingStudent(s)}
               onShowInvite={(s) => setInviteStudent(s)}
+              onShowTasks={(s) => setTaskStudent(s)}
             />
           ))}
         </div>
@@ -309,7 +312,10 @@ export const StudentsPage: React.FC = () => {
                     </td>
                     <td className="p-3.5 font-bold text-slate-700">{student.groupName}</td>
                     <td className="p-3.5">
-                      <RoleBadge role={student.classRole} />
+                      <RoleBadge
+                        role={student.classRole}
+                        onClick={() => setTaskStudent(student)}
+                      />
                     </td>
                     <td className="p-3.5 text-slate-600">{student.boardingType || 'Bán trú'}</td>
                     <td className="p-3.5">
@@ -336,7 +342,7 @@ export const StudentsPage: React.FC = () => {
                           setEditingStudent(student);
                           setIsFormOpen(true);
                         }}
-                        className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg"
+                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"
                         title="Sửa"
                       >
                         ✏️
@@ -386,6 +392,12 @@ export const StudentsPage: React.FC = () => {
         isOpen={Boolean(inviteStudent)}
         onClose={() => setInviteStudent(null)}
         student={inviteStudent}
+      />
+
+      <OfficerTaskModal
+        isOpen={Boolean(taskStudent)}
+        onClose={() => setTaskStudent(null)}
+        student={taskStudent}
       />
     </div>
   );

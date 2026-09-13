@@ -7,6 +7,7 @@ interface StudentCardProps {
   onEdit: (student: Student) => void;
   onDelete: (student: Student) => void;
   onShowInvite: (student: Student) => void;
+  onShowTasks?: (student: Student) => void;
 }
 
 export const StudentCard: React.FC<StudentCardProps> = ({
@@ -14,6 +15,7 @@ export const StudentCard: React.FC<StudentCardProps> = ({
   onEdit,
   onDelete,
   onShowInvite,
+  onShowTasks,
 }) => {
   const isFemale = student.gender === 'Nữ';
 
@@ -89,7 +91,10 @@ export const StudentCard: React.FC<StudentCardProps> = ({
 
         {/* Roles & Attributes */}
         <div className="flex flex-wrap items-center gap-1.5 mb-4">
-          <RoleBadge role={student.classRole} />
+          <RoleBadge
+            role={student.classRole}
+            onClick={onShowTasks ? () => onShowTasks(student) : undefined}
+          />
           <span className="text-[10px] font-semibold px-2 py-0.5 rounded-lg bg-slate-50 text-slate-600 border border-slate-200/50">
             {student.boardingType || 'Bán trú'}
           </span>
@@ -140,7 +145,7 @@ export const StudentCard: React.FC<StudentCardProps> = ({
         <div className="flex items-center gap-1">
           <button
             onClick={() => onShowInvite(student)}
-            className="p-2 rounded-xl text-slate-500 hover:text-primary hover:bg-indigo-50 transition-colors"
+            className="p-2 rounded-xl text-slate-500 hover:text-blueAccent hover:bg-blue-50 transition-colors"
             title="Lấy mã liên kết phụ huynh"
             aria-label="Liên kết phụ huynh"
           >
@@ -148,7 +153,7 @@ export const StudentCard: React.FC<StudentCardProps> = ({
           </button>
           <button
             onClick={() => onEdit(student)}
-            className="p-2 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+            className="p-2 rounded-xl text-slate-500 hover:text-blue-700 hover:bg-blue-50 transition-colors"
             title="Sửa thông tin học sinh"
             aria-label="Sửa thông tin"
           >

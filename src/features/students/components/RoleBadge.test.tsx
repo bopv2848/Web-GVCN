@@ -46,4 +46,12 @@ describe('RoleBadge Component Tests', () => {
     expect(badge).toHaveTextContent('Thành viên');
     expect(badge.className).toContain('bg-slate-100');
   });
+
+  it('gọi hàm onClick khi người dùng nhấp vào huy hiệu', () => {
+    let clicked = false;
+    render(<RoleBadge role="Lớp trưởng" onClick={() => { clicked = true; }} />);
+    const badge = screen.getByTestId('role-badge-lop-truong');
+    badge.click();
+    expect(clicked).toBe(true);
+  });
 });
