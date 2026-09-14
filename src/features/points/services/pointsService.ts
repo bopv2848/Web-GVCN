@@ -13,8 +13,9 @@ export interface GroupPointsSummary {
 export interface CreateTransactionParams {
   classId: string;
   studentId?: string;
+  studentIds?: string[];
   groupId?: string;
-  targetType: 'student' | 'group' | 'class';
+  targetType: 'student' | 'students' | 'group' | 'class';
   categoryId?: string;
   points: number;
   stars: number;
@@ -240,9 +241,14 @@ export const pointsService = {
 
     let targetStudentIds: string[] = [];
 
-    if (params.targetType === 'student') {
-      if (!params.studentId) throw new Error('Chưa chọn học sinh');
-      targetStudentIds = [params.studentId];
+    if (params.targetType === 'student' || params.targetType === 'students') {
+      if (params.studentIds && params.studentIds.length > 0) {
+        targetStudentIds = params.studentIds;
+      } else if (params.studentId) {
+        targetStudentIds = [params.studentId];
+      } else {
+        throw new Error('Chưa chọn học sinh nào');
+      }
     } else if (params.targetType === 'group') {
       if (!params.groupId) throw new Error('Chưa chọn tổ');
       const { data: stds } = await supabase

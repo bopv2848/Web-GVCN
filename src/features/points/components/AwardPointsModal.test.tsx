@@ -307,4 +307,136 @@ describe('AwardPointsModal Component', () => {
     expect(pointsService.deleteCategory).toHaveBeenCalledWith('cat-add-2');
     expect(screen.queryByText('Đi học đầy đủ cả tuần')).not.toBeInTheDocument();
   });
+
+  it('cho phép chọn Nhiều học sinh (Batch Multi-Select) và ghi nhận điểm hàng loạt qua pointsService', async () => {
+    (pointsService.createTransaction as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([{ id: 'tx-1' }, { id: 'tx-2' }]);
+    const mockMultiStudents: Student[] = [
+      {
+        id: 'std-1',
+        classId: 'class-1',
+        fullName: 'Đỗ Bảo An',
+        gender: 'Nam',
+        code: '6A601',
+        groupName: 'Tổ 1',
+        groupColorClass: 'text-blue-500',
+        classRole: 'Thành viên',
+        points: 10,
+        stars: 5,
+        createdAt: '2026-09-01',
+      },
+      {
+        id: 'std-2',
+        classId: 'class-1',
+        fullName: 'Nguyễn Cát Tiên',
+        gender: 'Nữ',
+        code: '6A602',
+        groupName: 'Tổ 1',
+        groupColorClass: 'text-blue-500',
+        classRole: 'Lớp phó',
+        points: 15,
+        stars: 8,
+        createdAt: '2026-09-01',
+      },
+      {
+        id: 'std-3',
+        classId: 'class-1',
+        fullName: 'Trần Minh Quân',
+        gender: 'Nam',
+        code: '6A603',
+        groupName: 'Tổ 2',
+        groupColorClass: 'text-emerald-500',
+        classRole: 'Thành viên',
+        points: 8,
+        stars: 2,
+        createdAt: '2026-09-01',
+      },
+    ];
+
+    render(
+      <AwardPointsModal
+        isOpen={true}
+        onClose={vi.fn()}
+        classId="class-1"
+        onSuccess={vi.fn()}
+        students={mockMultiStudents}
+        groups={mockGroups}
+        categories={mockCategories}
+      />
+    );
+
+    // Bấm nút "👥 Nhiều học sinh"
+    const multiBtn = screen.getByRole('button', { name: /👥 Nhiều học sinh/i });
+    fireEvent.click(multiBtn);
+
+    // Kiểm tra giao diện tìm kiếm và danh sách học sinh xuất hiện
+    expect(screen.getByPlaceholderText(/Tìm nhanh học sinh theo tên/i)).toBeInTheDocument();
+    expect(screen.getByText('Đỗ Bảo An')).toBeInTheDocument();
+    expect(screen.getByText('Nguyễn Cát Tiên')).toBeInTheDocument();
+    expect(screen.getByText('Trần Minh Quân')).toBeInTheDocument();
+
+    // Tick chọn 2 học sinh: Đỗ Bảo An & Nguyễn Cát Tiên
+    const checkboxes = screen.getAllByRole('checkbox');
+    fireEvent.click(checkboxes[0]); // Đỗ Bảo An
+    fireEvent.click(checkboxes[1]); // Nguyễn Cát Tiên
+
+    // Thẻ chip hiển thị và số lượng đã chọn
+    expect(screen.getByTestId('selected-students-count')).toHaveTextContent('Đã chọn: 2 / 3 em');
+
+    // Khung xem trước trực tiếp hiển thị tên nhóm 2 học sinh
+    expect(screen.getByText(/Nhóm 2 học sinh: Đỗ Bảo An, Nguyễn Cát Tiên/i)).toBeInTheDocument();
+
+    // Chọn tiêu chí "Phát biểu xây dựng bài tích cực" (+3đ, +3⭐)
+    const criteriaCard = screen.getByText('Phát biểu xây dựng bài tích cực');
+    fireEvent.click(criteriaCard);
+
+    // Bấm nút ghi nhận vào sổ cái
+    const submitBtn = screen.getByRole('button', { name: /GHI NHẬN VÀO SỔ CÁI/i });
+    await act(async () => {
+      fireEvent.click(submitBtn);
+    });
+
+    // Xác minh pointsService.createTransaction được gọi với studentIds: ['std-1', 'std-2']
+    expect(pointsService.createTransaction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        classId: 'class-1',
+        targetType: 'students',
+        studentIds: ['std-1', 'std-2'],
+        points: 3,
+        stars: 3,
+        reason: 'Phát biểu xây dựng bài tích cực',
+      })
+    );
+  });
+
+  it('báo lỗi yêu cầu chọn ít nhất 1 học sinh khi ở chế độ Nhiều học sinh mà chưa chọn em nào', async () => {
+    render(
+      <AwardPointsModal
+        isOpen={true}
+        onClose={vi.fn()}
+        classId="class-1"
+        onSuccess={vi.fn()}
+        students={mockStudents}
+        groups={mockGroups}
+        categories={mockCategories}
+      />
+    );
+
+    // Chuyển sang Nhiều học sinh
+    const multiBtn = screen.getByRole('button', { name: /👥 Nhiều học sinh/i });
+    fireEvent.click(multiBtn);
+
+    // Chọn tiêu chí
+    const criteriaCard = screen.getByText('Phát biểu xây dựng bài tích cực');
+    fireEvent.click(criteriaCard);
+
+    // Chưa tick chọn học sinh nào mà bấm Ghi nhận
+    const submitBtn = screen.getByRole('button', { name: /GHI NHẬN VÀO SỔ CÁI/i });
+    await act(async () => {
+      fireEvent.click(submitBtn);
+    });
+
+    // Hiển thị thông báo lỗi
+    expect(screen.getByText(/Vui lòng chọn ít nhất 1 học sinh trong danh sách/i)).toBeInTheDocument();
+    expect(pointsService.createTransaction).not.toHaveBeenCalled();
+  });
 });

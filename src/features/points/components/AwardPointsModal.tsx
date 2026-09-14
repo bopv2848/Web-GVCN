@@ -29,8 +29,11 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
   groupSummaries,
   onCategoryAdded,
 }) => {
-  const [targetType, setTargetType] = useState<'student' | 'group' | 'class'>('student');
+  const [targetType, setTargetType] = useState<'student' | 'students' | 'group' | 'class'>('student');
   const [selectedStudentId, setSelectedStudentId] = useState<string>('');
+  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
+  const [studentSearchKeyword, setStudentSearchKeyword] = useState<string>('');
+  const [studentGroupFilter, setStudentGroupFilter] = useState<string>('all');
   const [selectedGroupId, setSelectedGroupId] = useState<string>('');
 
   // Quản lý danh mục tiêu chí nội bộ (hỗ trợ bổ sung tiêu chí mới tại chỗ)
@@ -237,12 +240,52 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
     [localCategories, selectedAddCategoryIds, selectedSubCategoryIds, isCustomAdd, isCustomSub]
   );
 
+  // Lọc danh sách học sinh theo từ khóa tìm kiếm và theo Tổ
+  const filteredStudents = useMemo(() => {
+    return students.filter((s) => {
+      const matchSearch =
+        !studentSearchKeyword.trim() ||
+        s.fullName.toLowerCase().includes(studentSearchKeyword.trim().toLowerCase());
+
+      const matchGroup =
+        studentGroupFilter === 'all' ||
+        s.groupId === studentGroupFilter ||
+        s.groupName === groups.find((g) => g.id === studentGroupFilter)?.name;
+
+      return matchSearch && matchGroup;
+    });
+  }, [students, studentSearchKeyword, studentGroupFilter, groups]);
+
+  // Bật/tắt chọn 1 học sinh
+  const handleToggleStudent = useCallback((studentId: string) => {
+    setSelectedStudentIds((prev) =>
+      prev.includes(studentId) ? prev.filter((id) => id !== studentId) : [...prev, studentId]
+    );
+  }, []);
+
+  // Chọn tất cả học sinh hiển thị theo bộ lọc
+  const handleSelectAllFiltered = useCallback(() => {
+    const visibleIds = filteredStudents.map((s) => s.id);
+    setSelectedStudentIds((prev) => {
+      const merged = new Set([...prev, ...visibleIds]);
+      return Array.from(merged);
+    });
+  }, [filteredStudents]);
+
+  // Bỏ chọn tất cả học sinh
+  const handleClearSelectedStudents = useCallback(() => {
+    setSelectedStudentIds([]);
+  }, []);
+
   // Reset khi mở modal
   useEffect(() => {
     if (isOpen) {
       setErrorMessage('');
       setSelectedAddCategoryIds([]);
       setSelectedSubCategoryIds([]);
+      setSelectedStudentIds([]);
+      setStudentSearchKeyword('');
+      setStudentGroupFilter('all');
       setIsCustomAdd(false);
       setIsCustomSub(false);
       setPointType('add');
@@ -310,6 +353,47 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
       };
     }
 
+    if (targetType === 'students') {
+      const selectedStudents = students.filter((s) => selectedStudentIds.includes(s.id));
+      const count = selectedStudents.length;
+      if (count === 0) {
+        return {
+          targetName: 'Chưa chọn học sinh nào',
+          targetDesc: 'Vui lòng chọn ít nhất 1 học sinh bên dưới',
+          currentPoints: 0,
+          newPoints: 0,
+          deltaPoints: 0,
+          currentStars: 0,
+          newStars: 0,
+          deltaStars: 0,
+        };
+      }
+
+      const names = selectedStudents.map((s) => s.fullName);
+      const displayName =
+        count <= 3
+          ? names.join(', ')
+          : `${names.slice(0, 3).join(', ')} và ${count - 3} bạn khác`;
+
+      const curPts = selectedStudents.reduce((acc, s) => acc + (s.points || 0), 0);
+      const curStars = selectedStudents.reduce((acc, s) => acc + (s.stars || 0), 0);
+      const totalDeltaPts = deltaPts * count;
+      const totalDeltaStars = deltaStrs * count;
+      const nextPts = curPts + totalDeltaPts;
+      const nextStars = Math.max(0, curStars + totalDeltaStars);
+
+      return {
+        targetName: `Nhóm ${count} học sinh: ${displayName}`,
+        targetDesc: `${desc} (Tổng: ${totalDeltaPts > 0 ? `+${totalDeltaPts}` : totalDeltaPts}đ cho cả nhóm)`,
+        currentPoints: curPts,
+        newPoints: nextPts,
+        deltaPoints: totalDeltaPts,
+        currentStars: curStars,
+        newStars: nextStars,
+        deltaStars: totalDeltaStars,
+      };
+    }
+
     if (targetType === 'group') {
       const targetGroup = groups.find((g) => g.id === selectedGroupId);
       const groupStudents = students.filter(
@@ -364,6 +448,7 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
   }, [
     targetType,
     selectedStudentId,
+    selectedStudentIds,
     selectedGroupId,
     students,
     groups,
@@ -378,6 +463,10 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (targetType === 'students' && selectedStudentIds.length === 0) {
+      setErrorMessage('Vui lòng chọn ít nhất 1 học sinh trong danh sách.');
+      return;
+    }
     if (!reason.trim()) {
       setErrorMessage('Vui lòng nhập hoặc chọn lý do chấm điểm.');
       return;
@@ -401,6 +490,7 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
             classId,
             targetType,
             studentId: targetType === 'student' ? selectedStudentId : undefined,
+            studentIds: targetType === 'students' ? selectedStudentIds : undefined,
             groupId: targetType === 'group' ? selectedGroupId : undefined,
             categoryId: selectedAddCats[0].id,
             points: addPts,
@@ -412,6 +502,7 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
             classId,
             targetType,
             studentId: targetType === 'student' ? selectedStudentId : undefined,
+            studentIds: targetType === 'students' ? selectedStudentIds : undefined,
             groupId: targetType === 'group' ? selectedGroupId : undefined,
             categoryId: selectedSubCats[0].id,
             points: -subPts,
@@ -430,6 +521,7 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
           classId,
           targetType,
           studentId: targetType === 'student' ? selectedStudentId : undefined,
+          studentIds: targetType === 'students' ? selectedStudentIds : undefined,
           groupId: targetType === 'group' ? selectedGroupId : undefined,
           categoryId: primaryCatId,
           points: finalPoints,
@@ -463,11 +555,11 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
           <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1.5 uppercase tracking-wide">
             1. Áp dụng cho:
           </label>
-          <div className="grid grid-cols-3 gap-2.5">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5">
             <button
               type="button"
               onClick={() => setTargetType('student')}
-              className={`py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+              className={`py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                 targetType === 'student'
                   ? 'bg-primary text-white shadow-xs'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -477,30 +569,41 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
             </button>
             <button
               type="button"
+              onClick={() => setTargetType('students')}
+              className={`py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                targetType === 'students'
+                  ? 'bg-primary text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              👥 Nhiều học sinh
+            </button>
+            <button
+              type="button"
               onClick={() => setTargetType('group')}
-              className={`py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+              className={`py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                 targetType === 'group'
                   ? 'bg-primary text-white shadow-xs'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
-              👥 Cả Tổ
+              🏘️ Cả Tổ
             </button>
             <button
               type="button"
               onClick={() => setTargetType('class')}
-              className={`py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+              className={`py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                 targetType === 'class'
                   ? 'bg-primary text-white shadow-xs'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
-              🏫 Cả Lớp (47 em)
+              🏫 Cả Lớp ({students.length || 47} em)
             </button>
           </div>
         </div>
 
-        {/* Chọn Học sinh cụ thể hoặc Tổ cụ thể */}
+        {/* Chọn Học sinh cụ thể */}
         {targetType === 'student' && (
           <div>
             <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1">
@@ -517,6 +620,170 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
                 </option>
               ))}
             </select>
+          </div>
+        )}
+
+        {/* Chọn nhiều học sinh */}
+        {targetType === 'students' && (
+          <div className="space-y-3 p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200/90">
+            {/* Thanh tìm kiếm & Lọc theo tổ */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="relative flex-1">
+                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 text-sm">
+                  🔍
+                </span>
+                <input
+                  type="text"
+                  placeholder="Tìm nhanh học sinh theo tên..."
+                  value={studentSearchKeyword}
+                  onChange={(e) => setStudentSearchKeyword(e.target.value)}
+                  className="w-full pl-9 pr-8 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 bg-white text-slate-800 placeholder-slate-400 outline-none focus:border-primary font-medium"
+                />
+                {studentSearchKeyword && (
+                  <button
+                    type="button"
+                    onClick={() => setStudentSearchKeyword('')}
+                    className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-600 text-xs font-bold cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              {/* Nhóm nút lọc theo tổ */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+                <button
+                  type="button"
+                  onClick={() => setStudentGroupFilter('all')}
+                  className={`px-2.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                    studentGroupFilter === 'all'
+                      ? 'bg-slate-800 text-white'
+                      : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                  }`}
+                >
+                  Tất cả ({students.length})
+                </button>
+                {groups.map((g) => {
+                  const countInGroup = students.filter(
+                    (s) => s.groupId === g.id || s.groupName === g.name
+                  ).length;
+                  const isSelected = studentGroupFilter === g.id;
+                  return (
+                    <button
+                      key={g.id}
+                      type="button"
+                      onClick={() => setStudentGroupFilter(g.id)}
+                      className={`px-2.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-primary text-white'
+                          : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      {g.name} ({countInGroup})
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Thanh thao tác nhanh */}
+            <div className="flex items-center justify-between flex-wrap gap-2 pt-1 border-t border-slate-200/60 text-xs">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleSelectAllFiltered}
+                  className="text-xs font-bold text-primary hover:underline cursor-pointer"
+                >
+                  ✓ Chọn tất cả ({filteredStudents.length} em)
+                </button>
+                {selectedStudentIds.length > 0 && (
+                  <>
+                    <span className="text-slate-300">|</span>
+                    <button
+                      type="button"
+                      onClick={handleClearSelectedStudents}
+                      className="text-xs font-bold text-rose-600 hover:underline cursor-pointer"
+                    >
+                      ✕ Bỏ chọn tất cả
+                    </button>
+                  </>
+                )}
+              </div>
+
+              <span data-testid="selected-students-count" className="font-bold text-slate-700">
+                Đã chọn: <span className="text-primary font-black text-sm">{selectedStudentIds.length}</span> / {students.length} em
+              </span>
+            </div>
+
+            {/* Danh sách các chip học sinh đã chọn */}
+            {selectedStudentIds.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-2 bg-white rounded-xl border border-slate-200">
+                {selectedStudentIds.map((sid) => {
+                  const std = students.find((s) => s.id === sid);
+                  if (!std) return null;
+                  return (
+                    <span
+                      key={sid}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-primary/10 text-primary border border-primary/20"
+                    >
+                      <span>{std.fullName}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleStudent(sid)}
+                        className="hover:text-rose-600 transition-colors font-black ml-0.5 cursor-pointer"
+                        title="Bỏ chọn học sinh này"
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Danh sách học sinh dạng lưới Checkbox */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-56 overflow-y-auto p-0.5">
+              {filteredStudents.length === 0 ? (
+                <div className="col-span-full py-6 text-center text-xs font-semibold text-slate-400">
+                  Không tìm thấy học sinh nào phù hợp
+                </div>
+              ) : (
+                filteredStudents.map((s) => {
+                  const isChecked = selectedStudentIds.includes(s.id);
+                  return (
+                    <label
+                      key={s.id}
+                      className={`flex items-center gap-2.5 p-2.5 rounded-xl border transition-all cursor-pointer select-none ${
+                        isChecked
+                          ? 'bg-primary/5 border-primary shadow-2xs'
+                          : 'bg-white border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => handleToggleStudent(s.id)}
+                        className="w-4 h-4 rounded text-primary focus:ring-primary cursor-pointer accent-primary shrink-0"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-xs sm:text-sm font-bold text-slate-850 truncate">
+                            {s.fullName}
+                          </span>
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 shrink-0">
+                            {s.groupName || 'Tổ ?'}
+                          </span>
+                        </div>
+                        <div className="text-[11px] font-semibold text-slate-500">
+                          Điểm: <span className="font-bold text-slate-700">{s.points ?? 0}đ</span>
+                          {s.stars ? <span className="text-amber-500 ml-1">⭐ {s.stars}</span> : null}
+                        </div>
+                      </div>
+                    </label>
+                  );
+                })
+              )}
+            </div>
           </div>
         )}
 
