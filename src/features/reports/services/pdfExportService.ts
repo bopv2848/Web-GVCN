@@ -1,6 +1,3 @@
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
-
 export interface PdfExportOptions {
   fileName?: string;
   reportElementId?: string;
@@ -9,6 +6,7 @@ export interface PdfExportOptions {
 
 /**
  * Dịch vụ xuất báo cáo A4 trực tiếp thành file PDF chất lượng cao
+ * Tối ưu: Chỉ tải động thư viện jsPDF và html2canvas khi thực sự bấm xuất PDF (Code-Splitting)
  * Hỗ trợ tạo file PDF chuẩn A4, xử lý phần tử in ấn ngoài màn hình (off-screen)
  * và giữ nguyên độ sắc nét của văn bản, chữ ký cùng mã QR chống giả mạo.
  */
@@ -24,6 +22,12 @@ export const pdfExportService = {
 
     try {
       options?.onProgress?.(15, 'Đang chuẩn bị trang in chuẩn A4...');
+
+      // Tải động (Dynamic Import) các thư viện nặng chỉ khi bắt đầu xuất PDF
+      const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
+        import('jspdf'),
+        import('html2canvas'),
+      ]);
 
       // Tạo container tạm thời ngoài màn hình để render đầy đủ các thành phần (kể cả print-only)
       cloneContainer = document.createElement('div');

@@ -1,4 +1,3 @@
-import * as XLSX from 'xlsx';
 import type { BatchImportStudentItem } from '../services/studentService';
 import type { Student } from '../../../types/student';
 
@@ -11,8 +10,10 @@ export interface ParsedExcelResult {
 export const excelParser = {
   /**
    * Đọc tệp Excel hoặc CSV và tự động ánh xạ cột tiếng Việt
+   * Tối ưu: Chỉ tải động thư viện xlsx khi người dùng chọn tải tệp lên (Code-Splitting)
    */
   async parseFile(file: File): Promise<ParsedExcelResult> {
+    const XLSX = await import('xlsx');
     const arrayBuffer = await file.arrayBuffer();
     const workbook = XLSX.read(arrayBuffer, { type: 'array' });
     const firstSheetName = workbook.SheetNames[0];
@@ -99,8 +100,10 @@ export const excelParser = {
 
   /**
    * Xuất danh sách học sinh ra file Excel .xlsx chuẩn
+   * Tối ưu: Chỉ tải động thư viện xlsx khi người dùng bấm nút xuất Excel (Code-Splitting)
    */
-  exportToExcel(students: Student[], className = '6A6') {
+  async exportToExcel(students: Student[], className = '6A6'): Promise<void> {
+    const XLSX = await import('xlsx');
     const exportData = students.map((s, index) => ({
       STT: index + 1,
       'Họ và tên': s.fullName,

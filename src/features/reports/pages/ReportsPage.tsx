@@ -29,6 +29,7 @@ export const ReportsPage: React.FC = () => {
   const [report, setReport] = useState<ComprehensiveClassReport | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
+  const [isExportingExcel, setIsExportingExcel] = useState<boolean>(false);
   const [exportStatus, setExportStatus] = useState<string>('');
 
   // Tải dữ liệu báo cáo
@@ -77,9 +78,17 @@ export const ReportsPage: React.FC = () => {
     }
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     if (!report) return;
-    reportsService.exportReportToExcel(report);
+    try {
+      setIsExportingExcel(true);
+      await reportsService.exportReportToExcel(report);
+    } catch (err) {
+      console.error('Lỗi xuất Excel:', err);
+      alert('Không thể tạo file Excel. Vui lòng thử lại sau!');
+    } finally {
+      setIsExportingExcel(false);
+    }
   };
 
   const setPeriodType = (type: PeriodFilterType) => {
@@ -123,8 +132,21 @@ export const ReportsPage: React.FC = () => {
           <Button onClick={handlePrint} variant="outline" size="sm" className="text-xs font-bold shadow-xs">
             🖨️ In Báo Cáo A4 / Lưu PDF
           </Button>
-          <Button onClick={handleExportExcel} variant="secondary" size="sm" className="text-xs font-bold">
-            📊 Xuất Excel
+          <Button
+            onClick={handleExportExcel}
+            disabled={isExportingExcel || !report}
+            variant="secondary"
+            size="sm"
+            className="text-xs font-bold"
+          >
+            {isExportingExcel ? (
+              <span className="flex items-center gap-1.5">
+                <span className="animate-spin inline-block w-3 h-3 border-2 border-slate-700 border-t-transparent rounded-full" />
+                Đang tạo Excel...
+              </span>
+            ) : (
+              '📊 Xuất Excel'
+            )}
           </Button>
           <Button onClick={loadReport} variant="ghost" size="sm" className="text-xs font-bold">
             🔄 Làm mới

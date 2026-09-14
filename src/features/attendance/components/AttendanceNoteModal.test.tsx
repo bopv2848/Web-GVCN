@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { AttendanceNoteModal } from './AttendanceNoteModal';
 
 describe('AttendanceNoteModal Component', () => {
@@ -53,7 +53,9 @@ describe('AttendanceNoteModal Component', () => {
     );
 
     const submitBtn = screen.getByRole('button', { name: /LƯU GHI CHÚ/i });
-    fireEvent.click(submitBtn);
+    await act(async () => {
+      fireEvent.click(submitBtn);
+    });
 
     expect(handleSave).toHaveBeenCalledWith('Đi khám răng');
   });

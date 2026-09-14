@@ -1,6 +1,5 @@
 import { supabase } from '../../../services/supabaseClient';
 import type { TimetableEntry, SubjectColor } from '../../../types/timetable';
-import * as XLSX from 'xlsx';
 
 export const timetableService = {
   /**
@@ -73,8 +72,10 @@ export const timetableService = {
 
   /**
    * Bóc tách và nhập dữ liệu từ file Excel TKB được tải lên
+   * Tối ưu: Chỉ tải động thư viện xlsx khi người dùng chọn tải tệp TKB lên (Code-Splitting)
    */
   async importFromExcel(file: File, classId: string): Promise<number> {
+    const XLSX = await import('xlsx');
     const buffer = await file.arrayBuffer();
     const wb = XLSX.read(buffer, { type: 'array' });
     const ws = wb.Sheets[wb.SheetNames[0]];

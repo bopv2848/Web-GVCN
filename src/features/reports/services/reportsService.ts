@@ -1,5 +1,4 @@
 import { supabase } from '../../../services/supabaseClient';
-import * as XLSX from 'xlsx';
 import type {
   ReportFilterState,
   ComprehensiveClassReport,
@@ -338,8 +337,10 @@ export const reportsService = {
 
   /**
    * Xuất báo cáo tổng kết ra file Excel .xlsx
+   * Tối ưu: Chỉ tải động thư viện xlsx khi thực sự bấm xuất Excel (Code-Splitting)
    */
-  exportReportToExcel(report: ComprehensiveClassReport): void {
+  async exportReportToExcel(report: ComprehensiveClassReport): Promise<void> {
+    const XLSX = await import('xlsx');
     const wb = XLSX.utils.book_new();
 
     // Sheet 1: Xếp hạng 4 Tổ

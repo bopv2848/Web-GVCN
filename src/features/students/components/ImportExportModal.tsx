@@ -23,8 +23,21 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
   const [parsedResult, setParsedResult] = useState<ParsedExcelResult | null>(null);
   const [strategy, setStrategy] = useState<'skip' | 'update'>('skip');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
-  const [errorMessage, setErrorMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      await excelParser.exportToExcel(students, '6A6');
+    } catch (err) {
+      console.error('Lỗi xuất Excel:', err);
+      alert('Không thể xuất file Excel. Vui lòng thử lại sau!');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -66,10 +79,6 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
     }
   };
 
-  const handleExport = () => {
-    excelParser.exportToExcel(students, '6A6');
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs overflow-y-auto">
       <div className="bg-white rounded-3xl max-w-2xl w-full p-6 md:p-8 shadow-2xl border border-slate-200 my-8">
@@ -95,8 +104,21 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
               Tải tệp Excel .xlsx có định dạng chuẩn, điểm số và trạng thái phụ huynh.
             </p>
           </div>
-          <Button onClick={handleExport} variant="outline" size="sm" className="whitespace-nowrap font-bold">
-            📥 Xuất Excel
+          <Button
+            onClick={handleExport}
+            disabled={isExporting}
+            variant="outline"
+            size="sm"
+            className="whitespace-nowrap font-bold"
+          >
+            {isExporting ? (
+              <span className="flex items-center gap-1.5">
+                <span className="animate-spin inline-block w-3 h-3 border-2 border-slate-700 border-t-transparent rounded-full" />
+                Đang xuất...
+              </span>
+            ) : (
+              '📥 Xuất Excel'
+            )}
           </Button>
         </div>
 

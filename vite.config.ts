@@ -23,6 +23,7 @@ export default defineConfig({
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
           'vendor-supabase': ['@supabase/supabase-js'],
           'vendor-excel': ['xlsx'],
+          'vendor-pdf': ['jspdf', 'html2canvas'],
           'vendor-icons': ['lucide-react', '@phosphor-icons/react'],
         },
       },
