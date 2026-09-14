@@ -77,7 +77,7 @@ describe('AwardPointsModal Component', () => {
     vi.clearAllMocks();
   });
 
-  it('hiển thị 2 tab phân chia rõ rệt: Phần Điểm Cộng và Phần Điểm Trừ', () => {
+  it('hiển thị 2 tab phân chia rõ rệt: Phần Điểm Cộng và Phần Điểm Trừ kèm nút Tiêu chí khác', () => {
     render(
       <AwardPointsModal
         isOpen={true}
@@ -93,13 +93,14 @@ describe('AwardPointsModal Component', () => {
     expect(screen.getByRole('button', { name: /PHẦN ĐIỂM CỘNG/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /PHẦN ĐIỂM TRỪ/i })).toBeInTheDocument();
 
-    // Mặc định tab Phần Điểm Cộng đang mở -> Dropdown chỉ có tiêu chí cộng
+    // Mặc định tab Phần Điểm Cộng đang mở -> Lưới chỉ có tiêu chí cộng + Tiêu chí khác
     expect(screen.getByText(/Phát biểu xây dựng bài tích cực/i)).toBeInTheDocument();
     expect(screen.getByText(/Đi học đầy đủ cả tuần/i)).toBeInTheDocument();
+    expect(screen.getByText(/Tiêu chí thưởng khác/i)).toBeInTheDocument();
     expect(screen.queryByText(/Đi học trễ/i)).not.toBeInTheDocument();
   });
 
-  it('chuyển đổi sang Phần Điểm Trừ sẽ lọc danh sách tiêu chí chỉ còn điểm vi phạm', () => {
+  it('chuyển đổi sang Phần Điểm Trừ sẽ lọc danh sách tiêu chí chỉ còn điểm vi phạm kèm nút Tiêu chí khác', () => {
     render(
       <AwardPointsModal
         isOpen={true}
@@ -116,10 +117,70 @@ describe('AwardPointsModal Component', () => {
     const subTabBtn = screen.getByRole('button', { name: /PHẦN ĐIỂM TRỪ/i });
     fireEvent.click(subTabBtn);
 
-    // Dropdown bây giờ chỉ chứa các tiêu chí vi phạm
+    // Lưới bây giờ chỉ chứa các tiêu chí vi phạm + Vi phạm khác
     expect(screen.getByText(/Đi học trễ/i)).toBeInTheDocument();
     expect(screen.getByText(/Nói chuyện riêng trong giờ/i)).toBeInTheDocument();
+    expect(screen.getByText(/Vi phạm \/ Nhắc nhở khác/i)).toBeInTheDocument();
     expect(screen.queryByText(/Phát biểu xây dựng bài tích cực/i)).not.toBeInTheDocument();
+  });
+
+  it('cho phép chọn nhiều tiêu chí cùng lúc và tự động tính tổng dồn điểm, sao và lý do', () => {
+    render(
+      <AwardPointsModal
+        isOpen={true}
+        onClose={vi.fn()}
+        classId="class-1"
+        onSuccess={vi.fn()}
+        students={mockStudents}
+        groups={mockGroups}
+        categories={mockCategories}
+      />
+    );
+
+    // Chọn tiêu chí 1 (+3đ, ⭐+3)
+    const cat1Btn = screen.getByRole('button', { name: /Phát biểu xây dựng bài tích cực/i });
+    fireEvent.click(cat1Btn);
+
+    // Chọn thêm tiêu chí 2 (+5đ, ⭐+5)
+    const cat2Btn = screen.getByRole('button', { name: /Đi học đầy đủ cả tuần/i });
+    fireEvent.click(cat2Btn);
+
+    // Kiểm tra đếm số tiêu chí đã chọn
+    expect(screen.getByText(/Đã chọn: 2 tiêu chí/i)).toBeInTheDocument();
+
+    // Khung xem trước Live Preview tính tổng cộng dồn (+8đ / ⭐+8)
+    const previewBadge = screen.getByTestId('live-preview-badge');
+    expect(previewBadge).toHaveTextContent('10đ'); // điểm ban đầu
+    expect(previewBadge).toHaveTextContent('18đ'); // 10 + 8
+    expect(previewBadge).toHaveTextContent('(+8đ)');
+    expect(previewBadge).toHaveTextContent('5⭐');  // sao ban đầu
+    expect(previewBadge).toHaveTextContent('13⭐'); // 5 + 8
+    expect(previewBadge).toHaveTextContent('(+8⭐)');
+  });
+
+  it('cho phép chọn Tiêu chí khác hoặc không chọn tiêu chí nào để tự do nhập lý do', () => {
+    render(
+      <AwardPointsModal
+        isOpen={true}
+        onClose={vi.fn()}
+        classId="class-1"
+        onSuccess={vi.fn()}
+        students={mockStudents}
+        groups={mockGroups}
+        categories={mockCategories}
+      />
+    );
+
+    // Bấm chọn nút Tiêu chí khác
+    const customBtn = screen.getByRole('button', { name: /Tiêu chí thưởng khác/i });
+    fireEvent.click(customBtn);
+
+    expect(screen.getByText(/Chế độ nhập tự do/i)).toBeInTheDocument();
+
+    // Nhập lý do tự do
+    const reasonInput = screen.getByPlaceholderText(/VD: Giúp đỡ bạn học tiến bộ/i) as HTMLInputElement;
+    fireEvent.change(reasonInput, { target: { value: 'Nhặt được ví tiền trả lại bạn' } });
+    expect(reasonInput.value).toBe('Nhặt được ví tiền trả lại bạn');
   });
 
   it('cho phép submit ghi nhận điểm thi đua vào sổ cái thành công', async () => {
@@ -139,6 +200,10 @@ describe('AwardPointsModal Component', () => {
       />
     );
 
+    // Chọn 1 tiêu chí
+    const catBtn = screen.getByRole('button', { name: /Phát biểu xây dựng bài tích cực/i });
+    fireEvent.click(catBtn);
+
     const submitBtn = screen.getByRole('button', { name: /GHI NHẬN VÀO SỔ CÁI/i });
     await act(async () => {
       fireEvent.click(submitBtn);
@@ -155,40 +220,5 @@ describe('AwardPointsModal Component', () => {
         reason: 'Phát biểu xây dựng bài tích cực',
       })
     );
-  });
-
-  it('hiển thị trực tiếp khung xem trước biến động điểm (Live Preview Badge)', () => {
-    render(
-      <AwardPointsModal
-        isOpen={true}
-        onClose={vi.fn()}
-        classId="class-1"
-        onSuccess={vi.fn()}
-        students={mockStudents}
-        groups={mockGroups}
-        categories={mockCategories}
-      />
-    );
-
-    // Kiểm tra có khung xem trước
-    const previewBadge = screen.getByTestId('live-preview-badge');
-    expect(previewBadge).toBeInTheDocument();
-    expect(screen.getByText(/Xem trước biến động điểm/i)).toBeInTheDocument();
-
-    // Mặc định chọn tiêu chí cộng 3đ: 10đ ➔ 13đ (+3đ) và 5⭐ ➔ 8⭐ (+3⭐)
-    expect(previewBadge).toHaveTextContent('10đ');
-    expect(previewBadge).toHaveTextContent('13đ');
-    expect(previewBadge).toHaveTextContent('(+3đ)');
-    expect(previewBadge).toHaveTextContent('5⭐');
-    expect(previewBadge).toHaveTextContent('8⭐');
-    expect(previewBadge).toHaveTextContent('(+3⭐)');
-
-    // Chuyển sang phần điểm trừ 5đ: 10đ ➔ 5đ (-5đ)
-    const subTabBtn = screen.getByRole('button', { name: /PHẦN ĐIỂM TRỪ/i });
-    fireEvent.click(subTabBtn);
-
-    expect(previewBadge).toHaveTextContent('10đ');
-    expect(previewBadge).toHaveTextContent('5đ');
-    expect(previewBadge).toHaveTextContent('(-5đ)');
   });
 });
