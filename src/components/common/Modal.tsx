@@ -4,7 +4,7 @@ interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
   children: React.ReactNode;
 }
 
@@ -35,6 +35,8 @@ export const Modal: React.FC<ModalProps> = ({
     md: 'sm:max-w-md',
     lg: 'sm:max-w-lg',
     xl: 'sm:max-w-2xl',
+    '2xl': 'sm:max-w-3xl',
+    '3xl': 'sm:max-w-4xl',
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {

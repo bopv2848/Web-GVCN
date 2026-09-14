@@ -237,7 +237,7 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Chấm Điểm Nề Nếp & Thi Đua" size="md">
+    <Modal isOpen={isOpen} onClose={onClose} title="Chấm Điểm Nề Nếp & Thi Đua" size="xl">
       <form onSubmit={handleSubmit} className="space-y-4">
         {errorMessage && (
           <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold rounded-xl">
@@ -489,7 +489,7 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
 
           {/* Chi tiết biến động */}
           <div className="bg-white/90 backdrop-blur-xs rounded-xl p-2.5 border border-slate-200/60 flex flex-wrap items-center justify-between gap-2 text-xs">
-            <div className="font-bold text-slate-800 truncate max-w-[210px]" title={previewData.targetName}>
+            <div className="font-bold text-slate-800 truncate max-w-xs sm:max-w-md" title={previewData.targetName}>
               {previewData.targetName}
             </div>
 
