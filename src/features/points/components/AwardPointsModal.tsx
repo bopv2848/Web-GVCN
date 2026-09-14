@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Modal } from '../../../components/common/Modal';
 import { Button } from '../../../components/common/Button';
 import type { PointCategory } from '../../../types/points';
@@ -36,18 +36,44 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
 
+  // Tách 2 danh mục tiêu chí riêng biệt: Điểm cộng và Điểm trừ
+  const addCategories = useMemo(() => categories.filter((c) => c.type === 'add'), [categories]);
+  const subtractCategories = useMemo(() => categories.filter((c) => c.type === 'subtract'), [categories]);
+  const activeCategories = pointType === 'add' ? addCategories : subtractCategories;
+
   const handleSelectCategory = useCallback(
     (catId: string) => {
       setSelectedCategoryId(catId);
       const cat = categories.find((c) => c.id === catId);
       if (cat) {
         setPointType(cat.type);
-        setPoints(cat.defaultPoints);
-        setStars(cat.defaultStars);
+        setPoints(Math.abs(cat.defaultPoints));
+        setStars(Math.abs(cat.defaultStars));
         setReason(cat.title);
       }
     },
     [categories]
+  );
+
+  // Chuyển đổi mượt mà giữa Phần Điểm Cộng và Phần Điểm Trừ
+  const handleSwitchPointType = useCallback(
+    (newType: 'add' | 'subtract') => {
+      setPointType(newType);
+      const targetList = newType === 'add' ? addCategories : subtractCategories;
+      if (targetList.length > 0) {
+        const firstCat = targetList[0];
+        setSelectedCategoryId(firstCat.id);
+        setPoints(Math.abs(firstCat.defaultPoints));
+        setStars(Math.abs(firstCat.defaultStars));
+        setReason(firstCat.title);
+      } else {
+        setSelectedCategoryId('');
+        setPoints(5);
+        setStars(newType === 'add' ? 5 : 0);
+        setReason('');
+      }
+    },
+    [addCategories, subtractCategories]
   );
 
   // Reset khi mở modal
@@ -61,7 +87,8 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
         setSelectedGroupId(groups[0].id);
       }
       if (categories.length > 0 && !selectedCategoryId) {
-        handleSelectCategory(categories[0].id);
+        const defaultAdd = categories.find((c) => c.type === 'add') || categories[0];
+        handleSelectCategory(defaultAdd.id);
       }
     }
   }, [
@@ -201,20 +228,65 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
           </div>
         )}
 
-        {/* 2. Chọn Tiêu chí mẫu từ 16 tiêu chí */}
+        {/* 2. Chọn Tiêu chí mẫu - Phân chia 2 phần riêng biệt: Điểm cộng & Điểm trừ */}
         <div>
-          <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase">
-            2. Tiêu chí nề nếp thi đua:
-          </label>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="text-xs font-bold text-slate-600 uppercase">
+              2. Tiêu chí nề nếp thi đua:
+            </label>
+            <span className="text-[11px] font-semibold text-slate-400">
+              {pointType === 'add'
+                ? `${addCategories.length} tiêu chí thưởng`
+                : `${subtractCategories.length} tiêu chí vi phạm`}
+            </span>
+          </div>
+
+          {/* 2 Tab chuyển đổi: Phần Điểm Cộng & Phần Điểm Trừ */}
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <button
+              type="button"
+              onClick={() => handleSwitchPointType('add')}
+              className={`py-2 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 border ${
+                pointType === 'add'
+                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                  : 'bg-emerald-50/70 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
+              }`}
+            >
+              <span>🌟</span>
+              <span>➕ PHẦN ĐIỂM CỘNG</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSwitchPointType('subtract')}
+              className={`py-2 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 border ${
+                pointType === 'subtract'
+                  ? 'bg-rose-600 text-white border-rose-600 shadow-xs'
+                  : 'bg-rose-50/70 text-rose-800 border-rose-200 hover:bg-rose-100'
+              }`}
+            >
+              <span>⚠️</span>
+              <span>➖ PHẦN ĐIỂM TRỪ</span>
+            </button>
+          </div>
+
+          {/* Ô chọn Dropdown đã lọc theo phần được chọn */}
           <select
             value={selectedCategoryId}
             onChange={(e) => handleSelectCategory(e.target.value)}
-            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 bg-slate-50 focus:bg-white focus:border-primary outline-none"
+            className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-bold text-slate-800 bg-slate-50 focus:bg-white outline-none transition-colors ${
+              pointType === 'add'
+                ? 'border-emerald-300 focus:border-emerald-500'
+                : 'border-rose-300 focus:border-rose-500'
+            }`}
           >
-            <option value="">-- Chọn tiêu chí chấm điểm chuẩn --</option>
-            {categories.map((cat) => (
+            <option value="">
+              {pointType === 'add'
+                ? '-- Chọn tiêu chí khen thưởng (+Điểm / +Sao) --'
+                : '-- Chọn tiêu chí vi phạm (-Điểm) --'}
+            </option>
+            {activeCategories.map((cat) => (
               <option key={cat.id} value={cat.id}>
-                [{cat.categoryGroup}] {cat.type === 'add' ? '➕' : '➖'} {cat.title} ({cat.type === 'add' ? '+' : '-'}{cat.defaultPoints}đ / ⭐{cat.defaultStars})
+                [{cat.categoryGroup}] {cat.type === 'add' ? '➕' : '➖'} {cat.title} ({cat.type === 'add' ? `+${cat.defaultPoints}đ / ⭐+${cat.defaultStars}` : `${cat.defaultPoints}đ`})
               </option>
             ))}
           </select>
@@ -226,8 +298,8 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
             <label className="block text-xs font-bold text-slate-600 mb-1">Hình thức:</label>
             <select
               value={pointType}
-              onChange={(e) => setPointType(e.target.value as 'add' | 'subtract')}
-              className={`w-full px-3 py-2 rounded-xl border text-xs font-black outline-none ${
+              onChange={(e) => handleSwitchPointType(e.target.value as 'add' | 'subtract')}
+              className={`w-full px-3 py-2 rounded-xl border text-xs font-black outline-none transition-colors ${
                 pointType === 'add'
                   ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
                   : 'border-rose-300 bg-rose-50 text-rose-800'
@@ -246,7 +318,7 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
               max={100}
               value={points}
               onChange={(e) => setPoints(Number(e.target.value))}
-              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 outline-none"
+              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 outline-none focus:border-primary"
             />
           </div>
 
@@ -258,7 +330,7 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
               max={50}
               value={stars}
               onChange={(e) => setStars(Number(e.target.value))}
-              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 outline-none"
+              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 outline-none focus:border-primary"
             />
           </div>
         </div>
