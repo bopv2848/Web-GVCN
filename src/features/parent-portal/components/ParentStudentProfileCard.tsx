@@ -84,10 +84,10 @@ export const ParentStudentProfileCard: React.FC<ParentStudentProfileCardProps> =
       </div>
 
       {/* Message from Homeroom Teacher */}
-      <div className="p-4 rounded-2xl bg-gradient-to-r from-indigo-50/80 to-purple-50/50 border border-indigo-100 flex items-start gap-3">
+      <div className="p-4 rounded-2xl bg-gradient-to-r from-sky-50/80 to-slate-50/70 border border-sky-100 flex items-start gap-3">
         <span className="text-xl">📢</span>
         <div className="text-xs text-slate-700 space-y-1">
-          <p className="font-black text-indigo-950">
+          <p className="font-black text-sky-950">
             Lời nhắn từ GVCN: {student.teacherName}
           </p>
           <p className="text-[11.5px] leading-relaxed text-slate-600">

@@ -1,5 +1,6 @@
 import React from 'react';
 import type { ParentStudentPortalData } from '../types';
+import { ParentWeeklyBadgesCard } from './ParentWeeklyBadgesCard';
 import { ParentTopStarsLeaderboard } from './ParentTopStarsLeaderboard';
 
 interface ParentOverviewTabProps {
@@ -41,6 +42,11 @@ export const ParentOverviewTab: React.FC<ParentOverviewTabProps> = ({ data, onSe
           )}
         </div>
       )}
+
+      {/* 3 Huy hiệu Vinh danh Tuần: Ngôi sao chăm chỉ, Dũng sĩ nề nếp, Chuyên gia phát biểu */}
+      <ParentWeeklyBadgesCard
+        currentStudentCode={student.code}
+      />
 
       {/* Bảng vinh danh Top 5 Sao Thưởng của Lớp 6A6 */}
       <ParentTopStarsLeaderboard

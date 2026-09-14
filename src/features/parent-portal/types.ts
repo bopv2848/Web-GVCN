@@ -75,3 +75,24 @@ export interface TopStarStudent {
 }
 
 export type LeaderboardTimeframe = 'week' | 'month' | 'semester';
+
+export interface WeeklyBadgeWinner {
+  id: string;
+  studentCode: string;
+  fullName: string;
+  maskedName: string;
+  groupName: string;
+  metricValue: number;
+  metricLabel: string;
+  isCurrentStudent: boolean;
+}
+
+export interface WeeklyBadge {
+  id: 'hardworking' | 'discipline' | 'speaking';
+  title: string;
+  icon: string;
+  tagline: string;
+  description: string;
+  colorTheme: 'amber' | 'emerald' | 'sky';
+  winner: WeeklyBadgeWinner;
+}

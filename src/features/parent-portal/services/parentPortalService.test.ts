@@ -121,4 +121,49 @@ describe('parentPortalService Unit Tests', () => {
       expect(leaderboardSemester.length).toBeGreaterThanOrEqual(1);
     });
   });
+
+  describe('Huy Hiệu Vinh Danh Tuần (Weekly Badges)', () => {
+    it('trả về đủ 3 huy hiệu tiêu biểu tuần: Ngôi sao chăm chỉ, Dũng sĩ nề nếp, Chuyên gia phát biểu', async () => {
+      const badges = await parentPortalService.getWeeklyBadges(undefined, '6A601', 0);
+      expect(badges).toHaveLength(3);
+
+      const ids = badges.map((b) => b.id);
+      expect(ids).toContain('hardworking');
+      expect(ids).toContain('discipline');
+      expect(ids).toContain('speaking');
+
+      badges.forEach((b) => {
+        expect(b.title).toBeDefined();
+        expect(b.icon).toBeDefined();
+        expect(b.winner).toBeDefined();
+        expect(b.winner.studentCode).toBeDefined();
+        expect(b.winner.metricLabel).toBeDefined();
+      });
+    });
+
+    it('nhận diện chính xác isCurrentStudent khi mã học sinh trùng khớp', async () => {
+      const badges = await parentPortalService.getWeeklyBadges(undefined, '6A601', 0);
+      const student6A601Badge = badges.find((b) => b.winner.studentCode === '6A601');
+      if (student6A601Badge) {
+        expect(student6A601Badge.winner.isCurrentStudent).toBe(true);
+      }
+    });
+
+    it('hỗ trợ chuyển đổi giữa Tuần này (offset = 0) và Tuần trước (offset = 1)', async () => {
+      const thisWeekBadges = await parentPortalService.getWeeklyBadges(undefined, undefined, 0);
+      const lastWeekBadges = await parentPortalService.getWeeklyBadges(undefined, undefined, 1);
+
+      expect(thisWeekBadges).toHaveLength(3);
+      expect(lastWeekBadges).toHaveLength(3);
+    });
+
+    it('trả về danh sách fallback đầy đủ khi chưa có dữ liệu giao dịch', () => {
+      const fallback = parentPortalService.getFallbackWeeklyBadges('6A601', 0);
+      expect(fallback).toHaveLength(3);
+      expect(fallback[0].id).toBe('hardworking');
+      expect(fallback[1].id).toBe('discipline');
+      expect(fallback[2].id).toBe('speaking');
+      expect(fallback[0].winner.isCurrentStudent).toBe(true);
+    });
+  });
 });
