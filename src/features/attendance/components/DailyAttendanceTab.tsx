@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { AttendanceStatusButtons } from './AttendanceStatusButtons';
 import { GroupAttendanceModal } from './GroupAttendanceModal';
+import { AttendanceUndoToast } from './AttendanceUndoToast';
 import { Button } from '../../../components/common/Button';
 import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
 import { parseVietnameseName } from '../../../utils/vietnameseNameSort';
@@ -10,6 +11,7 @@ import type {
   AttendanceStatus,
   SessionType,
 } from '../../../types/attendance';
+import type { UndoGroupAction } from '../hooks/useDailyAttendance';
 
 interface DailyAttendanceTabProps {
   selectedDate: string;
@@ -39,6 +41,9 @@ interface DailyAttendanceTabProps {
   onEditNote: (record: AttendanceRecord) => void;
   onMarkAllPresent: () => void;
   onMarkGroupStatus: (groupName: string, status: AttendanceStatus, note?: string | null) => void;
+  undoAction?: UndoGroupAction | null;
+  onUndoGroupAction?: () => void;
+  onDismissUndo?: () => void;
   onToggleLock: () => void;
   onPrint: () => void;
 }
@@ -64,6 +69,9 @@ export const DailyAttendanceTab: React.FC<DailyAttendanceTabProps> = ({
   onEditNote,
   onMarkAllPresent,
   onMarkGroupStatus,
+  undoAction,
+  onUndoGroupAction,
+  onDismissUndo,
   onToggleLock,
   onPrint,
 }) => {
@@ -380,6 +388,15 @@ export const DailyAttendanceTab: React.FC<DailyAttendanceTabProps> = ({
         initialStatus={groupModalInitialStatus}
         groupCounts={groupCounts}
         onApply={onMarkGroupStatus}
+      />
+
+      {/* 6. Thanh thông báo Hoàn tác 1 chạm (5 giây) sau khi thao tác */}
+      <AttendanceUndoToast
+        isVisible={!!undoAction}
+        message={undoAction?.actionDescription || ''}
+        durationSeconds={5}
+        onUndo={onUndoGroupAction || (() => {})}
+        onDismiss={onDismissUndo || (() => {})}
       />
     </div>
   );

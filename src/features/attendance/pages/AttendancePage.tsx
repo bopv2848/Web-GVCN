@@ -46,6 +46,9 @@ export const AttendancePage: React.FC = () => {
     handleSaveNote,
     handleMarkAllPresent,
     handleMarkGroupStatus,
+    undoAction,
+    handleUndoGroupAction,
+    handleDismissUndo,
     handleToggleLock,
     uniqueGroupsDaily,
     filteredRecordsDaily,
@@ -160,6 +163,9 @@ export const AttendancePage: React.FC = () => {
           onEditNote={setEditingNoteRecord}
           onMarkAllPresent={handleMarkAllPresent}
           onMarkGroupStatus={handleMarkGroupStatus}
+          undoAction={undoAction}
+          onUndoGroupAction={handleUndoGroupAction}
+          onDismissUndo={handleDismissUndo}
           onToggleLock={handleToggleLock}
           onPrint={() => window.print()}
         />

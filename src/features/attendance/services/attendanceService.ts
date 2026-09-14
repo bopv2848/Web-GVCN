@@ -401,6 +401,61 @@ export const attendanceService = {
   },
 
   /**
+   * Hoàn tác (Undo) trạng thái cũ của danh sách học sinh (dùng khi bấm nhầm điểm danh theo tổ)
+   */
+  async restoreGroupRecords(
+    sessionId: string,
+    recordsToRestore: Array<{ id: string; status: AttendanceStatus; note?: string | null }>
+  ) {
+    // 1. Cập nhật Supabase đồng thời song song
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      await Promise.all(
+        recordsToRestore.map((r) =>
+          supabase
+            .from('attendance_records')
+            .update({
+              status: r.status,
+              note: r.note !== undefined ? r.note : null,
+              updated_by: user?.id || null,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', r.id)
+        )
+      );
+    } catch {
+      // Supabase offline
+    }
+
+    // 2. Cập nhật localStorage
+    try {
+      const cacheKey = `gvcn_attendance_records_${sessionId}`;
+      const raw = localStorage.getItem(cacheKey);
+      if (raw) {
+        const list = JSON.parse(raw);
+        if (Array.isArray(list)) {
+          const map = new Map(recordsToRestore.map((r) => [r.id, r]));
+          const updated = list.map((item: AttendanceRecord) => {
+            const prevRec = map.get(item.id);
+            if (prevRec) {
+              return {
+                ...item,
+                status: prevRec.status,
+                note: prevRec.note !== undefined ? prevRec.note : item.note,
+                updatedAt: new Date().toISOString(),
+              };
+            }
+            return item;
+          });
+          localStorage.setItem(cacheKey, JSON.stringify(updated));
+        }
+      }
+    } catch {
+      // Bỏ qua lỗi lưu
+    }
+  },
+
+  /**
    * Khóa hoặc mở khóa phiên điểm danh
    */
   async toggleLockSession(sessionId: string, isLocked: boolean) {

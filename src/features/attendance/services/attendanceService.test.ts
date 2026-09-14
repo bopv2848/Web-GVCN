@@ -89,6 +89,38 @@ describe('attendanceService Unit Tests', () => {
     expect(restoredTo1.every((r) => r.status === 'present')).toBe(true);
   });
 
+  it('cho phép hoàn tác (Undo) phục hồi chính xác trạng thái và ghi chú trước đó của học sinh', async () => {
+    const session = await attendanceService.getOrCreateSession(CLASS_6A6_ID, '2026-09-13', 'morning');
+    const records = await attendanceService.getSessionRecords(session.id, CLASS_6A6_ID);
+    
+    // Giả sử Tổ 2 có 1 bạn bị ốm trước đó
+    const to2Records = records.filter((r) => r.groupName === 'Tổ 2');
+    expect(to2Records.length).toBeGreaterThan(1);
+    
+    await attendanceService.updateRecordStatus(to2Records[0].id, 'excused_absence', 'Sốt xuất huyết');
+    
+    // Lưu lại snapshot ban đầu của Tổ 2
+    const currentSessionRecords = await attendanceService.getSessionRecords(session.id, CLASS_6A6_ID);
+    const snapshotTo2 = currentSessionRecords
+      .filter((r) => r.groupName === 'Tổ 2')
+      .map((r) => ({ id: r.id, status: r.status, note: r.note }));
+
+    // Lỡ tay bấm "Có mặt tất cả" cho Tổ 2
+    await attendanceService.markGroupStatus(session.id, 'Tổ 2', 'present');
+    const afterMistake = await attendanceService.getSessionRecords(session.id, CLASS_6A6_ID);
+    const mistakeTo2 = afterMistake.filter((r) => r.groupName === 'Tổ 2');
+    expect(mistakeTo2.every((r) => r.status === 'present')).toBe(true);
+
+    // Bấm Hoàn tác (restoreGroupRecords)
+    await attendanceService.restoreGroupRecords(session.id, snapshotTo2);
+    const afterUndo = await attendanceService.getSessionRecords(session.id, CLASS_6A6_ID);
+    const undoneStudent = afterUndo.find((r) => r.id === to2Records[0].id);
+
+    // Bạn bị sốt đã được phục hồi đúng trạng thái và ghi chú cũ
+    expect(undoneStudent?.status).toBe('excused_absence');
+    expect(undoneStudent?.note).toBe('Sốt xuất huyết');
+  }, 15000);
+
   it('tạo báo cáo chuyên cần tháng tổng hợp đầy đủ 47 học sinh', async () => {
     const report = await attendanceService.getMonthlyAttendanceReport(CLASS_6A6_ID, 2026, 9);
     expect(report.totalStudents).toBe(47);
