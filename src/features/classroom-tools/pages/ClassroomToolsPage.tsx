@@ -408,6 +408,9 @@ export const ClassroomToolsPage: React.FC = () => {
         onClose={() => setIsAwardModalOpen(false)}
         classId={classId}
         onSuccess={handleAwardSuccess}
+        onCategoryAdded={(newCat) => {
+          setCategories((prev) => [...prev, newCat]);
+        }}
         students={students}
         groups={groups}
         categories={categories}

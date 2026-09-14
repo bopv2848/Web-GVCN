@@ -22,9 +22,18 @@ export interface CreateTransactionParams {
   note?: string;
 }
 
+export interface CreateCategoryParams {
+  classId: string;
+  type: 'add' | 'subtract';
+  categoryGroup: 'Học tập' | 'Nề nếp' | 'Phong trào' | 'Đột xuất';
+  title: string;
+  defaultPoints: number;
+  defaultStars?: number;
+}
+
 export const pointsService = {
   /**
-   * Lấy danh sách 16 tiêu chí điểm thi đua chuẩn
+   * Lấy danh sách tiêu chí điểm thi đua chuẩn (kèm khử trùng lặp)
    */
   async getCategories(classId: string): Promise<PointCategory[]> {
     const { data, error } = await supabase
@@ -38,15 +47,81 @@ export const pointsService = {
       return [];
     }
 
+    const seen = new Set<string>();
+    const uniqueList: PointCategory[] = [];
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return data.map((c: any) => ({
-      id: c.id,
-      type: c.type as 'add' | 'subtract',
-      categoryGroup: c.category_group,
-      title: c.title,
-      defaultPoints: c.default_points,
-      defaultStars: c.default_stars,
-    }));
+    data.forEach((c: any) => {
+      const key = `${c.type}-${c.title?.trim().toLowerCase()}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniqueList.push({
+          id: c.id,
+          type: c.type as 'add' | 'subtract',
+          categoryGroup: c.category_group,
+          title: c.title,
+          defaultPoints: c.default_points,
+          defaultStars: c.default_stars,
+        });
+      }
+    });
+
+    return uniqueList;
+  },
+
+  /**
+   * Bổ sung thêm tiêu chí nề nếp thi đua mới vào CSDL
+   */
+  async createCategory(params: CreateCategoryParams): Promise<PointCategory> {
+    const defaultStars = params.defaultStars ?? (params.type === 'add' ? params.defaultPoints : 0);
+    const { data, error } = await supabase
+      .from('point_categories')
+      .insert({
+        class_id: params.classId,
+        type: params.type,
+        category_group: params.categoryGroup,
+        title: params.title.trim(),
+        default_points: params.defaultPoints,
+        default_stars: defaultStars,
+      })
+      .select()
+      .single();
+
+    if (error || !data) {
+      console.warn('Lỗi lưu tiêu chí vào CSDL Supabase, sử dụng bộ nhớ cục bộ:', error);
+      return {
+        id: crypto.randomUUID(),
+        type: params.type,
+        categoryGroup: params.categoryGroup,
+        title: params.title.trim(),
+        defaultPoints: params.defaultPoints,
+        defaultStars,
+      };
+    }
+
+    return {
+      id: data.id,
+      type: data.type as 'add' | 'subtract',
+      categoryGroup: data.category_group,
+      title: data.title,
+      defaultPoints: data.default_points,
+      defaultStars: data.default_stars,
+    };
+  },
+
+  /**
+   * Xóa tiêu chí thi đua khỏi CSDL
+   */
+  async deleteCategory(categoryId: string): Promise<boolean> {
+    const { error } = await supabase
+      .from('point_categories')
+      .delete()
+      .eq('id', categoryId);
+
+    if (error) {
+      console.warn('Lỗi xóa tiêu chí khỏi CSDL:', error);
+      return false;
+    }
+    return true;
   },
 
   /**

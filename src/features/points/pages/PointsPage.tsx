@@ -314,6 +314,9 @@ export const PointsPage: React.FC = () => {
         onSuccess={() => {
           loadInitialData();
         }}
+        onCategoryAdded={(newCat) => {
+          setCategories((prev) => [...prev, newCat]);
+        }}
         students={students}
         groups={groups}
         categories={categories}

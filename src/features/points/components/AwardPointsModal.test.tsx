@@ -8,6 +8,8 @@ import type { Student, Group } from '../../../types/student';
 vi.mock('../services/pointsService', () => ({
   pointsService: {
     createTransaction: vi.fn(),
+    createCategory: vi.fn(),
+    deleteCategory: vi.fn(),
   },
 }));
 
@@ -220,5 +222,89 @@ describe('AwardPointsModal Component', () => {
         reason: 'Phát biểu xây dựng bài tích cực',
       })
     );
+  });
+
+  it('cho phép mở form bổ sung tiêu chí mới vào phần điểm cộng và tự động kích hoạt tiêu chí vừa tạo', async () => {
+    const handleCategoryAdded = vi.fn();
+    const mockNewCategory: PointCategory = {
+      id: 'cat-new-999',
+      type: 'add',
+      categoryGroup: 'Học tập',
+      title: 'Đạt giải Nhất thi Olympic Tiếng Anh',
+      defaultPoints: 10,
+      defaultStars: 10,
+    };
+    (pointsService.createCategory as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(mockNewCategory);
+
+    render(
+      <AwardPointsModal
+        isOpen={true}
+        onClose={vi.fn()}
+        classId="class-1"
+        onSuccess={vi.fn()}
+        onCategoryAdded={handleCategoryAdded}
+        students={mockStudents}
+        groups={mockGroups}
+        categories={mockCategories}
+      />
+    );
+
+    // Bấm nút "➕ Bổ sung tiêu chí"
+    const addCatBtn = screen.getByRole('button', { name: /➕ Bổ sung tiêu chí/i });
+    fireEvent.click(addCatBtn);
+
+    // Form bổ sung tiêu chí xuất hiện
+    expect(screen.getByText(/Bổ sung tiêu chí Điểm Cộng mới/i)).toBeInTheDocument();
+
+    // Nhập tên tiêu chí mới
+    const titleInput = screen.getByPlaceholderText(/VD: Đạt giải Nhất thể thao/i);
+    fireEvent.change(titleInput, { target: { value: 'Đạt giải Nhất thi Olympic Tiếng Anh' } });
+
+    // Bấm lưu tiêu chí mới
+    const saveCatBtn = screen.getByRole('button', { name: /Lưu tiêu chí mới/i });
+    await act(async () => {
+      fireEvent.click(saveCatBtn);
+    });
+
+    expect(pointsService.createCategory).toHaveBeenCalledWith(
+      expect.objectContaining({
+        classId: 'class-1',
+        type: 'add',
+        title: 'Đạt giải Nhất thi Olympic Tiếng Anh',
+      })
+    );
+    expect(handleCategoryAdded).toHaveBeenCalledWith(mockNewCategory);
+
+    // Tiêu chí mới xuất hiện trên giao diện và được tự động chọn (+10đ, ⭐+10)
+    expect(screen.getByText('Đạt giải Nhất thi Olympic Tiếng Anh')).toBeInTheDocument();
+    expect(screen.getByText(/Đã bổ sung tiêu chí "Đạt giải Nhất thi Olympic Tiếng Anh"/i)).toBeInTheDocument();
+  });
+
+  it('cho phép xóa tiêu chí khỏi danh mục khi có xác nhận của giáo viên', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    (pointsService.deleteCategory as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(true);
+
+    render(
+      <AwardPointsModal
+        isOpen={true}
+        onClose={vi.fn()}
+        classId="class-1"
+        onSuccess={vi.fn()}
+        students={mockStudents}
+        groups={mockGroups}
+        categories={mockCategories}
+      />
+    );
+
+    expect(screen.getByText('Đi học đầy đủ cả tuần')).toBeInTheDocument();
+
+    // Tìm nút xóa của tiêu chí "Đi học đầy đủ cả tuần" (cat-add-2)
+    const deleteBtn = screen.getByTestId('delete-cat-cat-add-2');
+    await act(async () => {
+      fireEvent.click(deleteBtn);
+    });
+
+    expect(pointsService.deleteCategory).toHaveBeenCalledWith('cat-add-2');
+    expect(screen.queryByText('Đi học đầy đủ cả tuần')).not.toBeInTheDocument();
   });
 });

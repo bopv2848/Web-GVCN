@@ -4,6 +4,7 @@ import { Button } from '../../../components/common/Button';
 import type { PointCategory } from '../../../types/points';
 import type { Student, Group } from '../../../types/student';
 import { pointsService, type GroupPointsSummary } from '../services/pointsService';
+import { AddCategoryForm } from './AddCategoryForm';
 
 interface AwardPointsModalProps {
   isOpen: boolean;
@@ -14,6 +15,7 @@ interface AwardPointsModalProps {
   groups: Group[];
   categories: PointCategory[];
   groupSummaries?: GroupPointsSummary[];
+  onCategoryAdded?: (newCategory: PointCategory) => void;
 }
 
 export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
@@ -25,16 +27,27 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
   groups,
   categories,
   groupSummaries,
+  onCategoryAdded,
 }) => {
   const [targetType, setTargetType] = useState<'student' | 'group' | 'class'>('student');
   const [selectedStudentId, setSelectedStudentId] = useState<string>('');
   const [selectedGroupId, setSelectedGroupId] = useState<string>('');
+
+  // Quản lý danh mục tiêu chí nội bộ (hỗ trợ bổ sung tiêu chí mới tại chỗ)
+  const [localCategories, setLocalCategories] = useState<PointCategory[]>(categories);
+  useEffect(() => {
+    setLocalCategories(categories);
+  }, [categories]);
 
   // Hỗ trợ chọn nhiều tiêu chí riêng biệt cho phần Điểm cộng và Điểm trừ
   const [selectedAddCategoryIds, setSelectedAddCategoryIds] = useState<string[]>([]);
   const [selectedSubCategoryIds, setSelectedSubCategoryIds] = useState<string[]>([]);
   const [isCustomAdd, setIsCustomAdd] = useState<boolean>(false);
   const [isCustomSub, setIsCustomSub] = useState<boolean>(false);
+
+  // Form bổ sung tiêu chí mới
+  const [isAddingCategory, setIsAddingCategory] = useState<boolean>(false);
+  const [categorySuccessMessage, setCategorySuccessMessage] = useState<string>('');
 
   const [pointType, setPointType] = useState<'add' | 'subtract'>('add');
   const [points, setPoints] = useState<number>(5);
@@ -46,9 +59,31 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
 
   const reasonInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Tách 2 danh mục tiêu chí riêng biệt: Điểm cộng và Điểm trừ
-  const addCategories = useMemo(() => categories.filter((c) => c.type === 'add'), [categories]);
-  const subtractCategories = useMemo(() => categories.filter((c) => c.type === 'subtract'), [categories]);
+  // Tách 2 danh mục tiêu chí riêng biệt: Điểm cộng và Điểm trừ (kèm khử trùng lặp hiển thị)
+  const addCategories = useMemo(() => {
+    const seen = new Set<string>();
+    return localCategories
+      .filter((c) => c.type === 'add')
+      .filter((c) => {
+        const key = c.title.trim().toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+  }, [localCategories]);
+
+  const subtractCategories = useMemo(() => {
+    const seen = new Set<string>();
+    return localCategories
+      .filter((c) => c.type === 'subtract')
+      .filter((c) => {
+        const key = c.title.trim().toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+  }, [localCategories]);
+
   const activeCategories = pointType === 'add' ? addCategories : subtractCategories;
 
   // Bật/tắt chọn tiêu chí (Cho phép chọn nhiều hoặc bỏ chọn)
@@ -59,7 +94,7 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
         setSelectedAddCategoryIds((prev) => {
           const isAlready = prev.includes(cat.id);
           const next = isAlready ? prev.filter((id) => id !== cat.id) : [...prev, cat.id];
-          const activeCats = categories.filter((c) => next.includes(c.id));
+          const activeCats = localCategories.filter((c) => next.includes(c.id));
           const totalPts = activeCats.reduce((sum, c) => sum + Math.abs(c.defaultPoints), 0);
           const totalStrs = activeCats.reduce((sum, c) => sum + Math.abs(c.defaultStars), 0);
 
@@ -79,7 +114,7 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
         setSelectedSubCategoryIds((prev) => {
           const isAlready = prev.includes(cat.id);
           const next = isAlready ? prev.filter((id) => id !== cat.id) : [...prev, cat.id];
-          const activeCats = categories.filter((c) => next.includes(c.id));
+          const activeCats = localCategories.filter((c) => next.includes(c.id));
           const totalPts = activeCats.reduce((sum, c) => sum + Math.abs(c.defaultPoints), 0);
 
           if (next.length > 0) {
@@ -95,7 +130,48 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
         });
       }
     },
-    [categories]
+    [localCategories]
+  );
+
+  // Xử lý khi tiêu chí mới được tạo thành công
+  const handleCategoryCreated = useCallback(
+    (newCategory: PointCategory) => {
+      setLocalCategories((prev) => [...prev, newCategory]);
+      onCategoryAdded?.(newCategory);
+      handleToggleCategory(newCategory);
+      setCategorySuccessMessage(
+        `Đã bổ sung tiêu chí "${newCategory.title}" vào Phần ${
+          newCategory.type === 'add' ? 'Điểm Cộng' : 'Điểm Trừ'
+        } thành công!`
+      );
+      setTimeout(() => {
+        setCategorySuccessMessage('');
+      }, 4000);
+    },
+    [handleToggleCategory, onCategoryAdded]
+  );
+
+  // Xóa tiêu chí khỏi danh mục
+  const handleDeleteCategory = useCallback(
+    async (e: React.MouseEvent, cat: PointCategory) => {
+      e.stopPropagation();
+      if (!window.confirm(`Thầy/Cô có chắc chắn muốn xóa tiêu chí "${cat.title}" khỏi danh mục không?`)) {
+        return;
+      }
+
+      try {
+        await pointsService.deleteCategory(cat.id);
+        setLocalCategories((prev) => prev.filter((c) => c.id !== cat.id));
+        if (cat.type === 'add') {
+          setSelectedAddCategoryIds((prev) => prev.filter((id) => id !== cat.id));
+        } else {
+          setSelectedSubCategoryIds((prev) => prev.filter((id) => id !== cat.id));
+        }
+      } catch (err) {
+        console.error('Lỗi xóa tiêu chí:', err);
+      }
+    },
+    []
   );
 
   // Chọn chế độ "Tiêu chí khác..." để tự do nhập
@@ -136,7 +212,7 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
       setPointType(newType);
       if (newType === 'add') {
         if (selectedAddCategoryIds.length > 0) {
-          const activeCats = categories.filter((c) => selectedAddCategoryIds.includes(c.id));
+          const activeCats = localCategories.filter((c) => selectedAddCategoryIds.includes(c.id));
           setPoints(activeCats.reduce((sum, c) => sum + Math.abs(c.defaultPoints), 0));
           setStars(activeCats.reduce((sum, c) => sum + Math.abs(c.defaultStars), 0));
           setReason(activeCats.map((c) => c.title).join('; '));
@@ -147,7 +223,7 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
         }
       } else {
         if (selectedSubCategoryIds.length > 0) {
-          const activeCats = categories.filter((c) => selectedSubCategoryIds.includes(c.id));
+          const activeCats = localCategories.filter((c) => selectedSubCategoryIds.includes(c.id));
           setPoints(activeCats.reduce((sum, c) => sum + Math.abs(c.defaultPoints), 0));
           setStars(0);
           setReason(activeCats.map((c) => c.title).join('; '));
@@ -158,7 +234,7 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
         }
       }
     },
-    [categories, selectedAddCategoryIds, selectedSubCategoryIds, isCustomAdd, isCustomSub]
+    [localCategories, selectedAddCategoryIds, selectedSubCategoryIds, isCustomAdd, isCustomSub]
   );
 
   // Reset khi mở modal
@@ -185,8 +261,8 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
 
   // Tính toán số liệu cho Khung Xem Trước Điểm Tổng Kết Trực Tiếp (Live Preview Badge)
   const previewData = useMemo(() => {
-    const selectedAddCats = categories.filter((c) => selectedAddCategoryIds.includes(c.id));
-    const selectedSubCats = categories.filter((c) => selectedSubCategoryIds.includes(c.id));
+    const selectedAddCats = localCategories.filter((c) => selectedAddCategoryIds.includes(c.id));
+    const selectedSubCats = localCategories.filter((c) => selectedSubCategoryIds.includes(c.id));
     const hasDual = selectedAddCats.length > 0 && selectedSubCats.length > 0;
 
     let deltaPts: number;
@@ -292,7 +368,7 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
     students,
     groups,
     groupSummaries,
-    categories,
+    localCategories,
     selectedAddCategoryIds,
     selectedSubCategoryIds,
     points,
@@ -311,8 +387,8 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
     setErrorMessage('');
 
     try {
-      const selectedAddCats = categories.filter((c) => selectedAddCategoryIds.includes(c.id));
-      const selectedSubCats = categories.filter((c) => selectedSubCategoryIds.includes(c.id));
+      const selectedAddCats = localCategories.filter((c) => selectedAddCategoryIds.includes(c.id));
+      const selectedSubCats = localCategories.filter((c) => selectedSubCategoryIds.includes(c.id));
 
       if (selectedAddCats.length > 0 && selectedSubCats.length > 0) {
         // Ghi nhận đồng thời 2 giao dịch minh bạch cho Thưởng và Vi phạm
@@ -465,11 +541,25 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
 
         {/* 2. Chọn Tiêu chí mẫu - Cho phép chọn nhiều tiêu chí hoặc tự do nhập */}
         <div>
-          <div className="flex items-center justify-between mb-1.5">
+          <div className="flex items-center justify-between mb-1.5 flex-wrap gap-2">
             <label className="text-xs font-bold text-slate-600 uppercase">
               2. Tiêu chí nề nếp thi đua (Chọn 1 hoặc nhiều tiêu chí):
             </label>
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsAddingCategory((prev) => !prev)}
+                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[11px] font-black transition-all cursor-pointer shadow-2xs border ${
+                  isAddingCategory
+                    ? 'bg-slate-200 text-slate-700 border-slate-300'
+                    : pointType === 'add'
+                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-700'
+                    : 'bg-rose-600 hover:bg-rose-700 text-white border-rose-700'
+                }`}
+                title={`Bổ sung tiêu chí mới vào phần ${pointType === 'add' ? 'Điểm cộng' : 'Điểm trừ'}`}
+              >
+                <span>{isAddingCategory ? '✕ Đóng form' : '➕ Bổ sung tiêu chí'}</span>
+              </button>
               {((pointType === 'add' ? selectedAddCategoryIds.length : selectedSubCategoryIds.length) > 0 ||
                 (pointType === 'add' ? isCustomAdd : isCustomSub)) && (
                 <button
@@ -542,6 +632,23 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
             </button>
           </div>
 
+          {/* Thông báo tạo tiêu chí thành công */}
+          {categorySuccessMessage && (
+            <div className="mb-2 px-3 py-2 rounded-xl bg-emerald-100 border border-emerald-300 text-emerald-900 text-xs font-bold flex items-center gap-2 animate-fade-in">
+              <span>🎉</span>
+              <span>{categorySuccessMessage}</span>
+            </div>
+          )}
+
+          {/* Form bổ sung tiêu chí mới trực tiếp */}
+          <AddCategoryForm
+            isOpen={isAddingCategory}
+            onClose={() => setIsAddingCategory(false)}
+            classId={classId}
+            pointType={pointType}
+            onCategoryCreated={handleCategoryCreated}
+          />
+
           {/* Danh sách thẻ chọn đa tiêu chí dạng lưới (Multi-select Chips Grid) */}
           <div className="p-2.5 rounded-2xl border border-slate-200 bg-slate-50/80 max-h-56 overflow-y-auto">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -552,11 +659,9 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
                     : selectedSubCategoryIds.includes(cat.id);
 
                 return (
-                  <button
+                  <div
                     key={cat.id}
-                    type="button"
-                    onClick={() => handleToggleCategory(cat)}
-                    className={`p-2 rounded-xl text-left text-xs transition-all border flex items-start gap-2 cursor-pointer ${
+                    className={`group rounded-xl border transition-all flex items-center overflow-hidden ${
                       isSelected
                         ? pointType === 'add'
                           ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs ring-2 ring-emerald-500/20'
@@ -564,40 +669,81 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
                         : 'bg-white hover:bg-slate-100/80 text-slate-700 border-slate-200/80'
                     }`}
                   >
-                    <span className="text-sm mt-0.5 shrink-0">
-                      {isSelected ? '☑️' : '⬜'}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1">
-                        <span
-                          className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
-                            isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
-                          }`}
-                        >
-                          {cat.categoryGroup}
-                        </span>
-                        <span
-                          className={`text-[11px] font-black ${
-                            isSelected
-                              ? 'text-white'
-                              : cat.type === 'add'
-                              ? 'text-emerald-600'
-                              : 'text-rose-600'
-                          }`}
-                        >
-                          {cat.type === 'add' ? `+${cat.defaultPoints}đ` : `${cat.defaultPoints}đ`}
-                          {cat.defaultStars > 0 && ` / ⭐+${cat.defaultStars}`}
-                        </span>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleCategory(cat)}
+                      className="flex-1 p-2 text-left text-xs flex items-start gap-2 cursor-pointer outline-none min-w-0"
+                    >
+                      <span className="text-sm mt-0.5 shrink-0">
+                        {isSelected ? '☑️' : '⬜'}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1">
+                          <span
+                            className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
+                              isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
+                            }`}
+                          >
+                            {cat.categoryGroup}
+                          </span>
+                          <span
+                            className={`text-[11px] font-black ${
+                              isSelected
+                                ? 'text-white'
+                                : cat.type === 'add'
+                                ? 'text-emerald-600'
+                                : 'text-rose-600'
+                            }`}
+                          >
+                            {cat.type === 'add' ? `+${cat.defaultPoints}đ` : `${cat.defaultPoints}đ`}
+                            {cat.defaultStars > 0 && ` / ⭐+${cat.defaultStars}`}
+                          </span>
+                        </div>
+                        <div className="font-bold text-xs truncate mt-0.5" title={cat.title}>
+                          {cat.title}
+                        </div>
                       </div>
-                      <div className="font-bold text-xs truncate mt-0.5" title={cat.title}>
-                        {cat.title}
-                      </div>
-                    </div>
-                  </button>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => handleDeleteCategory(e, cat)}
+                      className={`opacity-0 group-hover:opacity-70 hover:opacity-100 p-2 text-xs transition-opacity cursor-pointer shrink-0 ${
+                        isSelected ? 'text-white hover:text-rose-200' : 'text-slate-400 hover:text-rose-600'
+                      }`}
+                      title={`Xóa tiêu chí "${cat.title}"`}
+                      aria-label="Xóa"
+                      data-testid={`delete-cat-${cat.id}`}
+                    >
+                      🗑️
+                    </button>
+                  </div>
                 );
               })}
 
-              {/* Nút Tiêu chí khác (Tự do nhập điểm & lý do) */}
+              {/* Nút Bổ sung tiêu chí mới vào danh mục */}
+              <button
+                type="button"
+                onClick={() => setIsAddingCategory(true)}
+                className={`p-2 rounded-xl text-left text-xs transition-all border flex items-center gap-2 cursor-pointer ${
+                  pointType === 'add'
+                    ? 'bg-white hover:bg-emerald-50 text-emerald-800 border-dashed border-emerald-400'
+                    : 'bg-white hover:bg-rose-50 text-rose-800 border-dashed border-rose-400'
+                }`}
+              >
+                <span className="text-sm shrink-0">➕</span>
+                <div className="min-w-0 flex-1">
+                  <div className="font-bold text-xs">
+                    {pointType === 'add'
+                      ? '➕ Tạo tiêu chí mới...'
+                      : '➕ Tạo tiêu chí vi phạm mới...'}
+                  </div>
+                  <div className="text-[10px] text-slate-500">
+                    Lưu vĩnh viễn vào danh mục của lớp
+                  </div>
+                </div>
+              </button>
+
+              {/* Nút Tiêu chí khác (Tự do nhập điểm & lý do cho 1 lần) */}
               <button
                 type="button"
                 onClick={() => handleSelectCustomCategory(pointType)}
@@ -608,7 +754,7 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
                 }`}
               >
                 <span className="text-sm shrink-0">
-                  {(pointType === 'add' ? isCustomAdd : isCustomSub) ? '✨' : '➕'}
+                  {(pointType === 'add' ? isCustomAdd : isCustomSub) ? '✨' : '📝'}
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="font-bold text-xs">
