@@ -3,7 +3,7 @@ import { Modal } from '../../../components/common/Modal';
 import { Button } from '../../../components/common/Button';
 import type { PointCategory } from '../../../types/points';
 import type { Student, Group } from '../../../types/student';
-import { pointsService } from '../services/pointsService';
+import { pointsService, type GroupPointsSummary } from '../services/pointsService';
 
 interface AwardPointsModalProps {
   isOpen: boolean;
@@ -13,6 +13,7 @@ interface AwardPointsModalProps {
   students: Student[];
   groups: Group[];
   categories: PointCategory[];
+  groupSummaries?: GroupPointsSummary[];
 }
 
 export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
@@ -23,6 +24,7 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
   students,
   groups,
   categories,
+  groupSummaries,
 }) => {
   const [targetType, setTargetType] = useState<'student' | 'group' | 'class'>('student');
   const [selectedStudentId, setSelectedStudentId] = useState<string>('');
@@ -100,6 +102,102 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
     selectedGroupId,
     selectedCategoryId,
     handleSelectCategory,
+  ]);
+
+  // Tính toán số liệu cho Khung Xem Trước Điểm Tổng Kết Trực Tiếp (Live Preview Badge)
+  const previewData = useMemo(() => {
+    const safePoints = Math.max(0, points || 0);
+    const safeStars = Math.max(0, stars || 0);
+
+    if (targetType === 'student') {
+      const targetStudent = students.find((s) => s.id === selectedStudentId);
+      const name = targetStudent
+        ? `${targetStudent.fullName} (${targetStudent.groupName || 'Chưa chia tổ'})`
+        : 'Chưa chọn học sinh';
+      const curPts = targetStudent?.points ?? 0;
+      const curStars = targetStudent?.stars ?? 0;
+      const nextPts = pointType === 'add' ? curPts + safePoints : curPts - safePoints;
+      const nextStars = pointType === 'add' ? curStars + safeStars : Math.max(0, curStars - safeStars);
+
+      return {
+        targetName: name,
+        targetDesc: 'Cá nhân học sinh',
+        currentPoints: curPts,
+        newPoints: nextPts,
+        deltaPoints: pointType === 'add' ? safePoints : -safePoints,
+        currentStars: curStars,
+        newStars: nextStars,
+        deltaStars: pointType === 'add' ? safeStars : -safeStars,
+      };
+    }
+
+    if (targetType === 'group') {
+      const targetGroup = groups.find((g) => g.id === selectedGroupId);
+      const groupStudents = students.filter(
+        (s) => s.groupId === selectedGroupId || s.groupName === targetGroup?.name
+      );
+      const targetSummary = groupSummaries?.find(
+        (g) => g.id === selectedGroupId || g.name === targetGroup?.name
+      );
+      const count = groupStudents.length || 1;
+      const curPts =
+        targetSummary?.totalPoints ??
+        groupStudents.reduce((acc, s) => acc + (s.points || 0), 0);
+      const curStars =
+        targetSummary?.totalStars ??
+        groupStudents.reduce((acc, s) => acc + (s.stars || 0), 0);
+      const totalDeltaPts = safePoints * count;
+      const totalDeltaStars = safeStars * count;
+      const nextPts = pointType === 'add' ? curPts + totalDeltaPts : curPts - totalDeltaPts;
+      const nextStars =
+        pointType === 'add'
+          ? curStars + totalDeltaStars
+          : Math.max(0, curStars - totalDeltaStars);
+
+      return {
+        targetName: `${targetGroup?.name || 'Tổ'} (${count} học sinh)`,
+        targetDesc: `Mỗi bạn: ${pointType === 'add' ? `+${safePoints}đ` : `-${safePoints}đ`}`,
+        currentPoints: curPts,
+        newPoints: nextPts,
+        deltaPoints: pointType === 'add' ? totalDeltaPts : -totalDeltaPts,
+        currentStars: curStars,
+        newStars: nextStars,
+        deltaStars: pointType === 'add' ? totalDeltaStars : -totalDeltaStars,
+      };
+    }
+
+    // Cả lớp
+    const count = students.length || 47;
+    const curPts = students.reduce((acc, s) => acc + (s.points || 0), 0);
+    const curStars = students.reduce((acc, s) => acc + (s.stars || 0), 0);
+    const totalDeltaPts = safePoints * count;
+    const totalDeltaStars = safeStars * count;
+    const nextPts = pointType === 'add' ? curPts + totalDeltaPts : curPts - totalDeltaPts;
+    const nextStars =
+      pointType === 'add'
+        ? curStars + totalDeltaStars
+        : Math.max(0, curStars - totalDeltaStars);
+
+    return {
+      targetName: `Cả Lớp (${count} học sinh)`,
+      targetDesc: `Mỗi bạn: ${pointType === 'add' ? `+${safePoints}đ` : `-${safePoints}đ`}`,
+      currentPoints: curPts,
+      newPoints: nextPts,
+      deltaPoints: pointType === 'add' ? totalDeltaPts : -totalDeltaPts,
+      currentStars: curStars,
+      newStars: nextStars,
+      deltaStars: pointType === 'add' ? totalDeltaStars : -totalDeltaStars,
+    };
+  }, [
+    targetType,
+    selectedStudentId,
+    selectedGroupId,
+    students,
+    groups,
+    groupSummaries,
+    points,
+    stars,
+    pointType,
   ]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -362,6 +460,65 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
             placeholder="Thêm thông tin hoặc người làm chứng..."
             className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs text-slate-700 outline-none resize-none"
           />
+        </div>
+
+        {/* Khung Xem Trước Điểm Tổng Kết Trực Tiếp (Live Preview Badge) */}
+        <div
+          data-testid="live-preview-badge"
+          className={`p-3 rounded-2xl border transition-all ${
+            pointType === 'add'
+              ? 'bg-emerald-50/70 border-emerald-200 text-emerald-950'
+              : 'bg-rose-50/70 border-rose-200 text-rose-950'
+          }`}
+        >
+          <div className="flex items-center justify-between text-xs font-black mb-1.5">
+            <span className="flex items-center gap-1.5">
+              <span>{pointType === 'add' ? '🎯' : '⚠️'}</span>
+              <span className="uppercase tracking-wide">Xem trước biến động điểm</span>
+            </span>
+            <span
+              className={`text-[11px] font-black px-2 py-0.5 rounded-full ${
+                pointType === 'add'
+                  ? 'bg-emerald-200/70 text-emerald-800'
+                  : 'bg-rose-200/70 text-rose-800'
+              }`}
+            >
+              {previewData.targetDesc}
+            </span>
+          </div>
+
+          {/* Chi tiết biến động */}
+          <div className="bg-white/90 backdrop-blur-xs rounded-xl p-2.5 border border-slate-200/60 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div className="font-bold text-slate-800 truncate max-w-[210px]" title={previewData.targetName}>
+              {previewData.targetName}
+            </div>
+
+            <div className="flex items-center gap-3">
+              {/* Điểm số */}
+              <div className="flex items-center gap-1 font-semibold">
+                <span className="text-slate-500">{previewData.currentPoints}đ</span>
+                <span className="text-slate-400 font-normal">➔</span>
+                <span className={`font-black ${pointType === 'add' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                  {previewData.newPoints}đ
+                </span>
+                <span className={`text-[11px] font-bold ${pointType === 'add' ? 'text-emerald-700' : 'text-rose-700'}`}>
+                  ({previewData.deltaPoints >= 0 ? `+${previewData.deltaPoints}đ` : `${previewData.deltaPoints}đ`})
+                </span>
+              </div>
+
+              {/* Sao */}
+              {(stars > 0 || previewData.currentStars > 0) && (
+                <div className="flex items-center gap-1 font-semibold pl-2.5 border-l border-slate-200">
+                  <span className="text-slate-500">{previewData.currentStars}⭐</span>
+                  <span className="text-slate-400 font-normal">➔</span>
+                  <span className="font-black text-amber-600">{previewData.newStars}⭐</span>
+                  <span className="text-[11px] font-bold text-amber-700">
+                    ({previewData.deltaStars > 0 ? `+${previewData.deltaStars}⭐` : (previewData.deltaStars < 0 ? `${previewData.deltaStars}⭐` : '0⭐')})
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Footer Actions */}

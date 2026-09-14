@@ -317,6 +317,7 @@ export const PointsPage: React.FC = () => {
         students={students}
         groups={groups}
         categories={categories}
+        groupSummaries={groupSummaries}
       />
     </div>
   );

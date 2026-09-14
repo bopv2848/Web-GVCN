@@ -156,4 +156,39 @@ describe('AwardPointsModal Component', () => {
       })
     );
   });
+
+  it('hiển thị trực tiếp khung xem trước biến động điểm (Live Preview Badge)', () => {
+    render(
+      <AwardPointsModal
+        isOpen={true}
+        onClose={vi.fn()}
+        classId="class-1"
+        onSuccess={vi.fn()}
+        students={mockStudents}
+        groups={mockGroups}
+        categories={mockCategories}
+      />
+    );
+
+    // Kiểm tra có khung xem trước
+    const previewBadge = screen.getByTestId('live-preview-badge');
+    expect(previewBadge).toBeInTheDocument();
+    expect(screen.getByText(/Xem trước biến động điểm/i)).toBeInTheDocument();
+
+    // Mặc định chọn tiêu chí cộng 3đ: 10đ ➔ 13đ (+3đ) và 5⭐ ➔ 8⭐ (+3⭐)
+    expect(previewBadge).toHaveTextContent('10đ');
+    expect(previewBadge).toHaveTextContent('13đ');
+    expect(previewBadge).toHaveTextContent('(+3đ)');
+    expect(previewBadge).toHaveTextContent('5⭐');
+    expect(previewBadge).toHaveTextContent('8⭐');
+    expect(previewBadge).toHaveTextContent('(+3⭐)');
+
+    // Chuyển sang phần điểm trừ 5đ: 10đ ➔ 5đ (-5đ)
+    const subTabBtn = screen.getByRole('button', { name: /PHẦN ĐIỂM TRỪ/i });
+    fireEvent.click(subTabBtn);
+
+    expect(previewBadge).toHaveTextContent('10đ');
+    expect(previewBadge).toHaveTextContent('5đ');
+    expect(previewBadge).toHaveTextContent('(-5đ)');
+  });
 });
