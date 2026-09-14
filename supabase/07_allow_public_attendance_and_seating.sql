@@ -89,3 +89,21 @@ ON public.class_configs
 FOR ALL 
 USING (true) 
 WITH CHECK (true);
+
+
+-- 6. MỞ QUYỀN GHI SỔ CÁI THI ĐUA (point_transactions)
+DROP POLICY IF EXISTS "Point transactions mutate public" ON public.point_transactions;
+CREATE POLICY "Point transactions mutate public" 
+ON public.point_transactions 
+FOR ALL 
+USING (true) 
+WITH CHECK (true);
+
+
+-- 7. CẤU HÌNH CỘT created_by MẶC ĐỊNH CHO MÔI TRƯỜNG TEST (THẦY PHAN VĂN BỘ)
+ALTER TABLE public.attendance_sessions ALTER COLUMN created_by DROP NOT NULL;
+ALTER TABLE public.attendance_sessions ALTER COLUMN created_by SET DEFAULT '601dce7f-13e4-4680-b2f9-f86ed1a17079';
+
+ALTER TABLE public.point_transactions ALTER COLUMN created_by DROP NOT NULL;
+ALTER TABLE public.point_transactions ALTER COLUMN created_by SET DEFAULT '601dce7f-13e4-4680-b2f9-f86ed1a17079';
+
