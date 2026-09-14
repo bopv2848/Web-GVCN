@@ -63,6 +63,34 @@ test.describe('Web-GVCN App Smoke Tests', () => {
     // 7. Kiểm tra giao dịch hiển thị ngay trên dòng nhật ký sổ cái
     await expect(page.locator('text=Phát biểu xây dựng bài sôi nổi').first()).toBeVisible({ timeout: 10000 });
   });
+
+  test('should allow teacher to edit criterion points and stars directly from award modal', async ({ page }) => {
+    await page.goto('/points?action=award');
+
+    // Chờ modal Chấm Điểm mở ra
+    await expect(page.getByRole('heading', { name: /Chấm Điểm Nề Nếp & Thi Đua/i })).toBeVisible({ timeout: 10000 });
+
+    // Tìm nút chỉnh sửa tiêu chí đầu tiên
+    const editBtn = page.locator('[data-testid^="edit-cat-"]').first();
+    await expect(editBtn).toBeVisible({ timeout: 10000 });
+    await editBtn.click();
+
+    // Modal Điều Chỉnh Tiêu Chí xuất hiện
+    await expect(page.getByRole('heading', { name: /Điều Chỉnh Tiêu Chí/i })).toBeVisible({ timeout: 5000 });
+
+    // Bấm nút mốc điểm nhanh +10đ
+    const quickPointBtn = page.getByRole('button', { name: '+10đ', exact: true });
+    if (await quickPointBtn.isVisible()) {
+      await quickPointBtn.click();
+    }
+
+    // Bấm Lưu thay đổi
+    await page.getByRole('button', { name: /💾 Lưu thay đổi/i }).click();
+
+    // Modal chỉnh sửa đóng lại và hiển thị thông báo thành công
+    await expect(page.getByRole('heading', { name: /Điều Chỉnh Tiêu Chí/i })).not.toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=Đã điều chỉnh tiêu chí')).toBeVisible({ timeout: 5000 });
+  });
 });
 
 

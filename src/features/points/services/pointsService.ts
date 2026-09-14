@@ -32,6 +32,13 @@ export interface CreateCategoryParams {
   defaultStars?: number;
 }
 
+export interface UpdateCategoryParams {
+  title?: string;
+  categoryGroup?: 'Học tập' | 'Nề nếp' | 'Phong trào' | 'Đột xuất';
+  defaultPoints?: number;
+  defaultStars?: number;
+}
+
 const getLocalTransactions = (classId: string): PointTransaction[] => {
   try {
     const raw = localStorage.getItem(`gvcn_points_tx_${classId}`);
@@ -116,6 +123,41 @@ export const pointsService = {
         defaultPoints: params.defaultPoints,
         defaultStars,
       };
+    }
+
+    return {
+      id: data.id,
+      type: data.type as 'add' | 'subtract',
+      categoryGroup: data.category_group,
+      title: data.title,
+      defaultPoints: data.default_points,
+      defaultStars: data.default_stars,
+    };
+  },
+
+  /**
+   * Cập nhật thông tin, điểm số và số sao của tiêu chí thi đua
+   */
+  async updateCategory(
+    categoryId: string,
+    params: UpdateCategoryParams
+  ): Promise<PointCategory | null> {
+    const updatePayload: Record<string, unknown> = {};
+    if (params.title !== undefined) updatePayload.title = params.title.trim();
+    if (params.categoryGroup !== undefined) updatePayload.category_group = params.categoryGroup;
+    if (params.defaultPoints !== undefined) updatePayload.default_points = params.defaultPoints;
+    if (params.defaultStars !== undefined) updatePayload.default_stars = params.defaultStars;
+
+    const { data, error } = await supabase
+      .from('point_categories')
+      .update(updatePayload)
+      .eq('id', categoryId)
+      .select()
+      .single();
+
+    if (error || !data) {
+      console.warn('Lỗi cập nhật tiêu chí trong CSDL Supabase:', error);
+      return null;
     }
 
     return {

@@ -5,6 +5,7 @@ import type { PointCategory } from '../../../types/points';
 import type { Student, Group } from '../../../types/student';
 import { pointsService, type GroupPointsSummary } from '../services/pointsService';
 import { AddCategoryForm } from './AddCategoryForm';
+import { EditCategoryModal } from './EditCategoryModal';
 
 interface AwardPointsModalProps {
   isOpen: boolean;
@@ -16,6 +17,7 @@ interface AwardPointsModalProps {
   categories: PointCategory[];
   groupSummaries?: GroupPointsSummary[];
   onCategoryAdded?: (newCategory: PointCategory) => void;
+  onCategoryUpdated?: (updatedCategory: PointCategory) => void;
 }
 
 export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
@@ -28,6 +30,7 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
   categories,
   groupSummaries,
   onCategoryAdded,
+  onCategoryUpdated,
 }) => {
   const [targetType, setTargetType] = useState<'student' | 'students' | 'group' | 'class'>('student');
   const [selectedStudentId, setSelectedStudentId] = useState<string>(students[0]?.id || '');
@@ -62,6 +65,8 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
 
   // Form bổ sung tiêu chí mới
   const [isAddingCategory, setIsAddingCategory] = useState<boolean>(false);
+  // Form điều chỉnh điểm cộng, điểm trừ và số sao của tiêu chí
+  const [editingCategory, setEditingCategory] = useState<PointCategory | null>(null);
   const [categorySuccessMessage, setCategorySuccessMessage] = useState<string>('');
 
   const [pointType, setPointType] = useState<'add' | 'subtract'>('add');
@@ -164,6 +169,53 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
       }, 4000);
     },
     [handleToggleCategory, onCategoryAdded]
+  );
+
+  // Xử lý khi tiêu chí được chỉnh sửa thành công (điểm cộng, điểm trừ, sao)
+  const handleCategoryUpdated = useCallback(
+    (updatedCat: PointCategory) => {
+      setLocalCategories((prev) =>
+        prev.map((c) => (c.id === updatedCat.id ? updatedCat : c))
+      );
+      onCategoryUpdated?.(updatedCat);
+
+      // Nếu tiêu chí đang được chọn, tự động tính lại điểm số và lý do tức thì
+      if (updatedCat.type === 'add') {
+        setSelectedAddCategoryIds((prev) => {
+          if (!prev.includes(updatedCat.id)) return prev;
+          const activeCats = localCategories
+            .map((c) => (c.id === updatedCat.id ? updatedCat : c))
+            .filter((c) => prev.includes(c.id));
+          const totalPts = activeCats.reduce((sum, c) => sum + Math.abs(c.defaultPoints), 0);
+          const totalStrs = activeCats.reduce((sum, c) => sum + Math.abs(c.defaultStars), 0);
+          setPoints(totalPts);
+          setStars(totalStrs);
+          setReason(activeCats.map((c) => c.title).join('; '));
+          return prev;
+        });
+      } else {
+        setSelectedSubCategoryIds((prev) => {
+          if (!prev.includes(updatedCat.id)) return prev;
+          const activeCats = localCategories
+            .map((c) => (c.id === updatedCat.id ? updatedCat : c))
+            .filter((c) => prev.includes(c.id));
+          const totalPts = activeCats.reduce((sum, c) => sum + Math.abs(c.defaultPoints), 0);
+          setPoints(totalPts);
+          setReason(activeCats.map((c) => c.title).join('; '));
+          return prev;
+        });
+      }
+
+      setCategorySuccessMessage(
+        `Đã điều chỉnh tiêu chí "${updatedCat.title}" (${
+          updatedCat.type === 'add' ? `+${updatedCat.defaultPoints}` : `-${updatedCat.defaultPoints}`
+        }đ${updatedCat.type === 'add' && updatedCat.defaultStars > 0 ? `, ⭐+${updatedCat.defaultStars}` : ''}) thành công!`
+      );
+      setTimeout(() => {
+        setCategorySuccessMessage('');
+      }, 4000);
+    },
+    [localCategories, onCategoryUpdated]
   );
 
   // Xóa tiêu chí khỏi danh mục
@@ -561,8 +613,9 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Chấm Điểm Nề Nếp & Thi Đua" size="3xl">
-      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
+    <>
+      <Modal isOpen={isOpen} onClose={onClose} title="Chấm Điểm Nề Nếp & Thi Đua" size="3xl">
+        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
         {errorMessage && (
           <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs sm:text-sm font-bold rounded-xl">
             ⚠️ {errorMessage}
@@ -964,7 +1017,7 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
                         {isSelected ? '☑️' : '⬜'}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <span
                             className={`text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded ${
                               isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
@@ -973,16 +1026,23 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
                             {cat.categoryGroup}
                           </span>
                           <span
-                            className={`text-xs sm:text-sm font-black ${
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingCategory(cat);
+                            }}
+                            className={`text-xs sm:text-sm font-black px-1.5 py-0.5 rounded transition-all cursor-pointer hover:underline inline-flex items-center gap-1 ${
                               isSelected
-                                ? 'text-white'
+                                ? 'text-white hover:bg-white/20'
                                 : cat.type === 'add'
-                                ? 'text-emerald-600'
-                                : 'text-rose-600'
+                                ? 'text-emerald-600 hover:bg-emerald-50'
+                                : 'text-rose-600 hover:bg-rose-50'
                             }`}
+                            title={`Bấm để điều chỉnh điểm số & sao của tiêu chí "${cat.title}"`}
+                            data-testid={`badge-edit-cat-${cat.id}`}
                           >
-                            {cat.type === 'add' ? `+${cat.defaultPoints}đ` : `${cat.defaultPoints}đ`}
-                            {cat.defaultStars > 0 && ` / ⭐+${cat.defaultStars}`}
+                            <span>{cat.type === 'add' ? `+${cat.defaultPoints}đ` : `${cat.defaultPoints}đ`}</span>
+                            {cat.defaultStars > 0 && <span> / ⭐+{cat.defaultStars}</span>}
+                            <span className="text-[10px] opacity-70">✏️</span>
                           </span>
                         </div>
                         <div className="font-bold text-xs sm:text-sm truncate mt-1" title={cat.title}>
@@ -990,18 +1050,37 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
                         </div>
                       </div>
                     </button>
-                    <button
-                      type="button"
-                      onClick={(e) => handleDeleteCategory(e, cat)}
-                      className={`opacity-0 group-hover:opacity-70 hover:opacity-100 p-2.5 text-xs transition-opacity cursor-pointer shrink-0 ${
-                        isSelected ? 'text-white hover:text-rose-200' : 'text-slate-400 hover:text-rose-600'
-                      }`}
-                      title={`Xóa tiêu chí "${cat.title}"`}
-                      aria-label="Xóa"
-                      data-testid={`delete-cat-${cat.id}`}
-                    >
-                      🗑️
-                    </button>
+                    <div className="flex items-center pr-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingCategory(cat);
+                        }}
+                        className={`p-1.5 sm:p-2 text-xs rounded-lg transition-all cursor-pointer ${
+                          isSelected
+                            ? 'text-white/80 hover:text-white hover:bg-white/20'
+                            : 'text-slate-400 hover:text-primary hover:bg-slate-100'
+                        }`}
+                        title={`Điều chỉnh điểm, sao và tiêu chí "${cat.title}"`}
+                        aria-label="Chỉnh sửa tiêu chí"
+                        data-testid={`edit-cat-${cat.id}`}
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => handleDeleteCategory(e, cat)}
+                        className={`opacity-0 sm:group-hover:opacity-70 hover:opacity-100 p-1.5 sm:p-2 text-xs transition-opacity cursor-pointer ${
+                          isSelected ? 'text-white hover:text-rose-200' : 'text-slate-400 hover:text-rose-600'
+                        }`}
+                        title={`Xóa tiêu chí "${cat.title}"`}
+                        aria-label="Xóa"
+                        data-testid={`delete-cat-${cat.id}`}
+                      >
+                        🗑️
+                      </button>
+                    </div>
                   </div>
                 );
               })}
@@ -1221,5 +1300,14 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
         </div>
       </form>
     </Modal>
+
+    {/* Modal Điều chỉnh điểm cộng, điểm trừ, số sao của tiêu chí */}
+    <EditCategoryModal
+      isOpen={Boolean(editingCategory)}
+      onClose={() => setEditingCategory(null)}
+      category={editingCategory}
+      onCategoryUpdated={handleCategoryUpdated}
+    />
+  </>
   );
 };

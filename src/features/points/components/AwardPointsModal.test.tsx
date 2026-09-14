@@ -10,6 +10,7 @@ vi.mock('../services/pointsService', () => ({
     createTransaction: vi.fn(),
     createCategory: vi.fn(),
     deleteCategory: vi.fn(),
+    updateCategory: vi.fn(),
   },
 }));
 
@@ -438,5 +439,74 @@ describe('AwardPointsModal Component', () => {
     // Hiển thị thông báo lỗi
     expect(screen.getByText(/Vui lòng chọn ít nhất 1 học sinh trong danh sách/i)).toBeInTheDocument();
     expect(pointsService.createTransaction).not.toHaveBeenCalled();
+  });
+
+  it('cho phép giáo viên bấm chỉnh sửa tiêu chí để điều chỉnh điểm cộng, điểm trừ và số sao', async () => {
+    const mockUpdatedCategory: PointCategory = {
+      id: 'cat-add-1',
+      type: 'add',
+      categoryGroup: 'Học tập',
+      title: 'Phát biểu xây dựng bài tích cực',
+      defaultPoints: 10,
+      defaultStars: 10,
+    };
+    (pointsService.updateCategory as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(mockUpdatedCategory);
+    const onCategoryUpdatedMock = vi.fn();
+
+    render(
+      <AwardPointsModal
+        isOpen={true}
+        onClose={vi.fn()}
+        classId="class-1"
+        onSuccess={vi.fn()}
+        students={mockStudents}
+        groups={mockGroups}
+        categories={mockCategories}
+        onCategoryUpdated={onCategoryUpdatedMock}
+      />
+    );
+
+    // Tìm nút chỉnh sửa tiêu chí cat-add-1
+    const editBtn = screen.getByTestId('edit-cat-cat-add-1');
+    expect(editBtn).toBeInTheDocument();
+
+    // Bấm nút chỉnh sửa để mở modal
+    fireEvent.click(editBtn);
+
+    // Modal chỉnh sửa tiêu chí xuất hiện
+    expect(screen.getByText(/Điều Chỉnh Tiêu Chí Khen Thưởng/i)).toBeInTheDocument();
+
+    // Bấm mốc điểm nhanh +10đ
+    const quickPoint10 = screen.getByRole('button', { name: '+10đ' });
+    fireEvent.click(quickPoint10);
+
+    // Bấm mốc sao nhanh ⭐ 10
+    const quickStar10 = screen.getByRole('button', { name: '⭐ 10' });
+    fireEvent.click(quickStar10);
+
+    // Bấm nút "💾 Lưu thay đổi"
+    const saveBtn = screen.getByRole('button', { name: /💾 Lưu thay đổi/i });
+    await act(async () => {
+      fireEvent.click(saveBtn);
+    });
+
+    // Xác minh pointsService.updateCategory được gọi đúng thông số
+    expect(pointsService.updateCategory).toHaveBeenCalledWith(
+      'cat-add-1',
+      expect.objectContaining({
+        title: 'Phát biểu xây dựng bài tích cực',
+        defaultPoints: 10,
+        defaultStars: 10,
+      })
+    );
+
+    // Callback onCategoryUpdatedMock được gọi
+    expect(onCategoryUpdatedMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'cat-add-1',
+        defaultPoints: 10,
+        defaultStars: 10,
+      })
+    );
   });
 });

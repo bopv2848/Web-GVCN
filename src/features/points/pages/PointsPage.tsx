@@ -558,6 +558,11 @@ export const PointsPage: React.FC = () => {
         onCategoryAdded={(newCat) => {
           setCategories((prev) => [...prev, newCat]);
         }}
+        onCategoryUpdated={(updatedCat) => {
+          setCategories((prev) =>
+            prev.map((c) => (c.id === updatedCat.id ? updatedCat : c))
+          );
+        }}
         students={students}
         groups={groups}
         categories={categories}
