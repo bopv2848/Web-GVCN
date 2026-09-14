@@ -450,24 +450,24 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Chấm Điểm Nề Nếp & Thi Đua" size="xl">
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <Modal isOpen={isOpen} onClose={onClose} title="Chấm Điểm Nề Nếp & Thi Đua" size="3xl">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
         {errorMessage && (
-          <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold rounded-xl">
+          <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs sm:text-sm font-bold rounded-xl">
             ⚠️ {errorMessage}
           </div>
         )}
 
         {/* 1. Chọn Đối tượng áp dụng */}
         <div>
-          <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase">
+          <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1.5 uppercase tracking-wide">
             1. Áp dụng cho:
           </label>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-2.5">
             <button
               type="button"
               onClick={() => setTargetType('student')}
-              className={`py-2 rounded-xl text-xs font-bold transition-all ${
+              className={`py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
                 targetType === 'student'
                   ? 'bg-primary text-white shadow-xs'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -478,7 +478,7 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
             <button
               type="button"
               onClick={() => setTargetType('group')}
-              className={`py-2 rounded-xl text-xs font-bold transition-all ${
+              className={`py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
                 targetType === 'group'
                   ? 'bg-primary text-white shadow-xs'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -489,7 +489,7 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
             <button
               type="button"
               onClick={() => setTargetType('class')}
-              className={`py-2 rounded-xl text-xs font-bold transition-all ${
+              className={`py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
                 targetType === 'class'
                   ? 'bg-primary text-white shadow-xs'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -503,13 +503,13 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
         {/* Chọn Học sinh cụ thể hoặc Tổ cụ thể */}
         {targetType === 'student' && (
           <div>
-            <label className="block text-xs font-bold text-slate-600 mb-1">
+            <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1">
               Chọn học sinh:
             </label>
             <select
               value={selectedStudentId}
               onChange={(e) => setSelectedStudentId(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 bg-slate-50 focus:bg-white focus:border-primary outline-none"
+              className="w-full px-4 py-3 rounded-xl border border-slate-300 text-xs sm:text-sm font-bold text-slate-800 bg-slate-50 focus:bg-white focus:border-primary outline-none"
             >
               {students.map((s) => (
                 <option key={s.id} value={s.id}>
@@ -522,13 +522,13 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
 
         {targetType === 'group' && (
           <div>
-            <label className="block text-xs font-bold text-slate-600 mb-1">
+            <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1">
               Chọn tổ:
             </label>
             <select
               value={selectedGroupId}
               onChange={(e) => setSelectedGroupId(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 bg-slate-50 focus:bg-white focus:border-primary outline-none"
+              className="w-full px-4 py-3 rounded-xl border border-slate-300 text-xs sm:text-sm font-bold text-slate-800 bg-slate-50 focus:bg-white focus:border-primary outline-none"
             >
               {groups.map((g) => (
                 <option key={g.id} value={g.id}>
@@ -541,15 +541,15 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
 
         {/* 2. Chọn Tiêu chí mẫu - Cho phép chọn nhiều tiêu chí hoặc tự do nhập */}
         <div>
-          <div className="flex items-center justify-between mb-1.5 flex-wrap gap-2">
-            <label className="text-xs font-bold text-slate-600 uppercase">
+          <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+            <label className="text-xs sm:text-sm font-bold text-slate-700 uppercase tracking-wide">
               2. Tiêu chí nề nếp thi đua (Chọn 1 hoặc nhiều tiêu chí):
             </label>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               <button
                 type="button"
                 onClick={() => setIsAddingCategory((prev) => !prev)}
-                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[11px] font-black transition-all cursor-pointer shadow-2xs border ${
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer shadow-2xs border ${
                   isAddingCategory
                     ? 'bg-slate-200 text-slate-700 border-slate-300'
                     : pointType === 'add'
@@ -565,12 +565,12 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
                 <button
                   type="button"
                   onClick={() => handleClearCategories(pointType)}
-                  className="text-[11px] font-bold text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                  className="text-xs font-bold text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
                 >
                   ✕ Bỏ chọn tất cả
                 </button>
               )}
-              <span className="text-[11px] font-semibold text-slate-400">
+              <span className="text-xs font-semibold text-slate-500">
                 {pointType === 'add'
                   ? selectedAddCategoryIds.length > 0
                     ? `Đã chọn: ${selectedAddCategoryIds.length} tiêu chí`
@@ -587,21 +587,21 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
           </div>
 
           {/* 2 Tab chuyển đổi: Phần Điểm Cộng & Phần Điểm Trừ */}
-          <div className="grid grid-cols-2 gap-2 mb-2">
+          <div className="grid grid-cols-2 gap-2.5 mb-2.5">
             <button
               type="button"
               onClick={() => handleSwitchPointType('add')}
-              className={`py-2 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 border cursor-pointer ${
+              className={`py-3 px-4 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-2 border cursor-pointer ${
                 pointType === 'add'
                   ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
                   : 'bg-emerald-50/70 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
               }`}
             >
-              <span>🌟</span>
+              <span className="text-base">🌟</span>
               <span>➕ PHẦN ĐIỂM CỘNG</span>
               {selectedAddCategoryIds.length > 0 && (
                 <span
-                  className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+                  className={`px-2 py-0.5 rounded-full text-xs font-black ${
                     pointType === 'add' ? 'bg-white text-emerald-800' : 'bg-emerald-600 text-white'
                   }`}
                 >
@@ -612,17 +612,17 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
             <button
               type="button"
               onClick={() => handleSwitchPointType('subtract')}
-              className={`py-2 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 border cursor-pointer ${
+              className={`py-3 px-4 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-2 border cursor-pointer ${
                 pointType === 'subtract'
                   ? 'bg-rose-600 text-white border-rose-600 shadow-xs'
                   : 'bg-rose-50/70 text-rose-800 border-rose-200 hover:bg-rose-100'
               }`}
             >
-              <span>⚠️</span>
+              <span className="text-base">⚠️</span>
               <span>➖ PHẦN ĐIỂM TRỪ</span>
               {selectedSubCategoryIds.length > 0 && (
                 <span
-                  className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+                  className={`px-2 py-0.5 rounded-full text-xs font-black ${
                     pointType === 'subtract' ? 'bg-white text-rose-800' : 'bg-rose-600 text-white'
                   }`}
                 >
@@ -634,7 +634,7 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
 
           {/* Thông báo tạo tiêu chí thành công */}
           {categorySuccessMessage && (
-            <div className="mb-2 px-3 py-2 rounded-xl bg-emerald-100 border border-emerald-300 text-emerald-900 text-xs font-bold flex items-center gap-2 animate-fade-in">
+            <div className="mb-2 px-3.5 py-2.5 rounded-xl bg-emerald-100 border border-emerald-300 text-emerald-900 text-xs sm:text-sm font-bold flex items-center gap-2 animate-fade-in">
               <span>🎉</span>
               <span>{categorySuccessMessage}</span>
             </div>
@@ -650,8 +650,8 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
           />
 
           {/* Danh sách thẻ chọn đa tiêu chí dạng lưới (Multi-select Chips Grid) */}
-          <div className="p-2.5 rounded-2xl border border-slate-200 bg-slate-50/80 max-h-56 overflow-y-auto">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="p-3 sm:p-3.5 rounded-2xl border border-slate-200 bg-slate-50/80 max-h-72 sm:max-h-80 overflow-y-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
               {activeCategories.map((cat) => {
                 const isSelected =
                   pointType === 'add'
@@ -672,22 +672,22 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
                     <button
                       type="button"
                       onClick={() => handleToggleCategory(cat)}
-                      className="flex-1 p-2 text-left text-xs flex items-start gap-2 cursor-pointer outline-none min-w-0"
+                      className="flex-1 p-2.5 text-left text-xs sm:text-sm flex items-start gap-2.5 cursor-pointer outline-none min-w-0"
                     >
-                      <span className="text-sm mt-0.5 shrink-0">
+                      <span className="text-base mt-0.5 shrink-0">
                         {isSelected ? '☑️' : '⬜'}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1.5">
                           <span
-                            className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
+                            className={`text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded ${
                               isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
                             }`}
                           >
                             {cat.categoryGroup}
                           </span>
                           <span
-                            className={`text-[11px] font-black ${
+                            className={`text-xs sm:text-sm font-black ${
                               isSelected
                                 ? 'text-white'
                                 : cat.type === 'add'
@@ -699,7 +699,7 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
                             {cat.defaultStars > 0 && ` / ⭐+${cat.defaultStars}`}
                           </span>
                         </div>
-                        <div className="font-bold text-xs truncate mt-0.5" title={cat.title}>
+                        <div className="font-bold text-xs sm:text-sm truncate mt-1" title={cat.title}>
                           {cat.title}
                         </div>
                       </div>
@@ -707,7 +707,7 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
                     <button
                       type="button"
                       onClick={(e) => handleDeleteCategory(e, cat)}
-                      className={`opacity-0 group-hover:opacity-70 hover:opacity-100 p-2 text-xs transition-opacity cursor-pointer shrink-0 ${
+                      className={`opacity-0 group-hover:opacity-70 hover:opacity-100 p-2.5 text-xs transition-opacity cursor-pointer shrink-0 ${
                         isSelected ? 'text-white hover:text-rose-200' : 'text-slate-400 hover:text-rose-600'
                       }`}
                       title={`Xóa tiêu chí "${cat.title}"`}
@@ -724,20 +724,20 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
               <button
                 type="button"
                 onClick={() => setIsAddingCategory(true)}
-                className={`p-2 rounded-xl text-left text-xs transition-all border flex items-center gap-2 cursor-pointer ${
+                className={`p-2.5 rounded-xl text-left text-xs sm:text-sm transition-all border flex items-center gap-2.5 cursor-pointer ${
                   pointType === 'add'
                     ? 'bg-white hover:bg-emerald-50 text-emerald-800 border-dashed border-emerald-400'
                     : 'bg-white hover:bg-rose-50 text-rose-800 border-dashed border-rose-400'
                 }`}
               >
-                <span className="text-sm shrink-0">➕</span>
+                <span className="text-base shrink-0">➕</span>
                 <div className="min-w-0 flex-1">
-                  <div className="font-bold text-xs">
+                  <div className="font-bold text-xs sm:text-sm">
                     {pointType === 'add'
                       ? '➕ Tạo tiêu chí mới...'
                       : '➕ Tạo tiêu chí vi phạm mới...'}
                   </div>
-                  <div className="text-[10px] text-slate-500">
+                  <div className="text-[11px] text-slate-500 mt-0.5">
                     Lưu vĩnh viễn vào danh mục của lớp
                   </div>
                 </div>
@@ -747,27 +747,27 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
               <button
                 type="button"
                 onClick={() => handleSelectCustomCategory(pointType)}
-                className={`p-2 rounded-xl text-left text-xs transition-all border flex items-center gap-2 cursor-pointer ${
+                className={`p-2.5 rounded-xl text-left text-xs sm:text-sm transition-all border flex items-center gap-2.5 cursor-pointer ${
                   (pointType === 'add' ? isCustomAdd : isCustomSub)
                     ? 'bg-amber-500 text-white border-amber-500 shadow-xs ring-2 ring-amber-500/20'
                     : 'bg-white hover:bg-amber-50 text-slate-700 border-dashed border-amber-300'
                 }`}
               >
-                <span className="text-sm shrink-0">
+                <span className="text-base shrink-0">
                   {(pointType === 'add' ? isCustomAdd : isCustomSub) ? '✨' : '📝'}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <div className="font-bold text-xs">
+                  <div className="font-bold text-xs sm:text-sm">
                     {pointType === 'add'
                       ? '✨ Tiêu chí thưởng khác...'
                       : '✨ Vi phạm / Nhắc nhở khác...'}
                   </div>
                   <div
-                    className={`text-[10px] ${
+                    className={`text-[11px] ${
                       (pointType === 'add' ? isCustomAdd : isCustomSub)
                         ? 'text-amber-100'
                         : 'text-amber-700'
-                    }`}
+                    } mt-0.5`}
                   >
                     Tự do nhập điểm số & lý do tùy biến
                   </div>
@@ -778,13 +778,13 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
         </div>
 
         {/* 3. Hình thức Thưởng / Phạt & Điểm số */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
-            <label className="block text-xs font-bold text-slate-600 mb-1">Hình thức:</label>
+            <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1">Hình thức:</label>
             <select
               value={pointType}
               onChange={(e) => handleSwitchPointType(e.target.value as 'add' | 'subtract')}
-              className={`w-full px-3 py-2 rounded-xl border text-xs font-black outline-none transition-colors ${
+              className={`w-full px-3.5 py-2.5 rounded-xl border text-xs sm:text-sm font-black outline-none transition-colors ${
                 pointType === 'add'
                   ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
                   : 'border-rose-300 bg-rose-50 text-rose-800'
@@ -796,26 +796,26 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-600 mb-1">Điểm thi đua:</label>
+            <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1">Điểm thi đua:</label>
             <input
               type="number"
               min={1}
               max={100}
               value={points}
               onChange={(e) => setPoints(Number(e.target.value))}
-              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 outline-none focus:border-primary"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm font-bold text-slate-800 outline-none focus:border-primary"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-600 mb-1">Sao ⭐:</label>
+            <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1">Sao ⭐:</label>
             <input
               type="number"
               min={0}
               max={50}
               value={stars}
               onChange={(e) => setStars(Number(e.target.value))}
-              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 outline-none focus:border-primary"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm font-bold text-slate-800 outline-none focus:border-primary"
             />
           </div>
         </div>
@@ -823,11 +823,11 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
         {/* 4. Nội dung lý do */}
         <div>
           <div className="flex items-center justify-between mb-1">
-            <label className="text-xs font-bold text-slate-600">
+            <label className="text-xs sm:text-sm font-bold text-slate-700">
               Lý do ghi nhận:
             </label>
             {(isCustomAdd || isCustomSub) && (
-              <span className="text-[11px] font-bold text-amber-600 bg-amber-50 px-2 py-0.2 rounded-md border border-amber-200">
+              <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-md border border-amber-200">
                 ✍️ Chế độ nhập tự do (Tiêu chí khác)
               </span>
             )}
@@ -843,13 +843,13 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
                 ? 'VD: Giúp đỡ bạn học tiến bộ, Nhặt được của rơi, Phát biểu bài...'
                 : 'VD: Đi học trễ, Không làm bài tập, Nói chuyện riêng...'
             }
-            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-semibold text-slate-800 focus:border-primary outline-none"
+            className="w-full px-4 py-3 rounded-xl border border-slate-300 text-xs sm:text-sm font-bold text-slate-800 focus:border-primary outline-none"
           />
         </div>
 
         {/* Ghi chú thêm */}
         <div>
-          <label className="block text-xs font-bold text-slate-600 mb-1">
+          <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1">
             Ghi chú chi tiết (Tùy chọn):
           </label>
           <textarea
@@ -857,61 +857,65 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="Thêm thông tin hoặc người làm chứng..."
-            className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs text-slate-700 outline-none resize-none"
+            className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm text-slate-700 outline-none resize-none"
           />
         </div>
 
         {/* Khung Xem Trước Điểm Tổng Kết Trực Tiếp (Live Preview Badge) */}
         <div
           data-testid="live-preview-badge"
-          className={`p-3 rounded-2xl border transition-all ${
+          className={`p-3.5 sm:p-4 rounded-2xl border-2 transition-all shadow-xs ${
             pointType === 'add'
-              ? 'bg-emerald-50/70 border-emerald-200 text-emerald-950'
-              : 'bg-rose-50/70 border-rose-200 text-rose-950'
+              ? 'bg-emerald-50/80 border-emerald-300 text-emerald-950'
+              : 'bg-rose-50/80 border-rose-300 text-rose-950'
           }`}
         >
-          <div className="flex items-center justify-between text-xs font-black mb-1.5">
-            <span className="flex items-center gap-1.5">
-              <span>{pointType === 'add' ? '🎯' : '⚠️'}</span>
+          <div className="flex items-center justify-between text-xs sm:text-sm font-black mb-2 flex-wrap gap-2">
+            <span className="flex items-center gap-2">
+              <span className="text-base">{pointType === 'add' ? '🎯' : '⚠️'}</span>
               <span className="uppercase tracking-wide">Xem trước biến động điểm</span>
             </span>
             <span
-              className={`text-[11px] font-black px-2 py-0.5 rounded-full ${
+              className={`text-xs font-black px-3 py-0.5 rounded-full border ${
                 pointType === 'add'
-                  ? 'bg-emerald-200/70 text-emerald-800'
-                  : 'bg-rose-200/70 text-rose-800'
+                  ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                  : 'bg-rose-100 text-rose-900 border-rose-300'
               }`}
             >
               {previewData.targetDesc}
             </span>
           </div>
 
-          {/* Chi tiết biến động */}
-          <div className="bg-white/90 backdrop-blur-xs rounded-xl p-2.5 border border-slate-200/60 flex flex-wrap items-center justify-between gap-2 text-xs">
-            <div className="font-bold text-slate-800 truncate max-w-xs sm:max-w-md" title={previewData.targetName}>
+          {/* Chi tiết biến động điểm & số liệu trực quan */}
+          <div className="bg-white/95 backdrop-blur-xs rounded-xl p-3 sm:p-3.5 border border-slate-200/80 flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div className="font-black text-slate-900 text-sm sm:text-base truncate max-w-xs sm:max-w-md" title={previewData.targetName}>
               {previewData.targetName}
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-4 sm:gap-6">
               {/* Điểm số */}
-              <div className="flex items-center gap-1 font-semibold">
-                <span className="text-slate-500">{previewData.currentPoints}đ</span>
-                <span className="text-slate-400 font-normal">➔</span>
-                <span className={`font-black ${pointType === 'add' ? 'text-emerald-600' : 'text-rose-600'}`}>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Điểm:</span>
+                <span className="text-sm font-bold text-slate-500">{previewData.currentPoints}đ</span>
+                <span className="text-slate-400 font-bold mx-0.5">➔</span>
+                <span className={`text-base sm:text-lg font-black ${pointType === 'add' ? 'text-emerald-600' : 'text-rose-600'}`}>
                   {previewData.newPoints}đ
                 </span>
-                <span className={`text-[11px] font-bold ${pointType === 'add' ? 'text-emerald-700' : 'text-rose-700'}`}>
+                <span className={`text-xs sm:text-sm font-black px-2 py-0.5 rounded-lg ${
+                  pointType === 'add' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                }`}>
                   ({previewData.deltaPoints >= 0 ? `+${previewData.deltaPoints}đ` : `${previewData.deltaPoints}đ`})
                 </span>
               </div>
 
-              {/* Sao */}
+              {/* Sao thi đua */}
               {(stars > 0 || previewData.currentStars > 0) && (
-                <div className="flex items-center gap-1 font-semibold pl-2.5 border-l border-slate-200">
-                  <span className="text-slate-500">{previewData.currentStars}⭐</span>
-                  <span className="text-slate-400 font-normal">➔</span>
-                  <span className="font-black text-amber-600">{previewData.newStars}⭐</span>
-                  <span className="text-[11px] font-bold text-amber-700">
+                <div className="flex items-center gap-1.5 pl-3 sm:pl-4 border-l border-slate-200">
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Sao:</span>
+                  <span className="text-sm font-bold text-slate-500">{previewData.currentStars}⭐</span>
+                  <span className="text-slate-400 font-bold mx-0.5">➔</span>
+                  <span className="text-base sm:text-lg font-black text-amber-500">{previewData.newStars}⭐</span>
+                  <span className="text-xs sm:text-sm font-black px-2 py-0.5 rounded-lg bg-amber-100 text-amber-800">
                     ({previewData.deltaStars > 0 ? `+${previewData.deltaStars}⭐` : (previewData.deltaStars < 0 ? `${previewData.deltaStars}⭐` : '0⭐')})
                   </span>
                 </div>
@@ -921,11 +925,11 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
         </div>
 
         {/* Footer Actions */}
-        <div className="flex gap-2 pt-2 border-t border-slate-100 justify-end">
-          <Button type="button" variant="outline" size="md" onClick={onClose}>
+        <div className="flex gap-2.5 pt-2 border-t border-slate-100 justify-end">
+          <Button type="button" variant="outline" size="md" onClick={onClose} className="px-5 py-2.5 text-xs sm:text-sm font-bold">
             Hủy
           </Button>
-          <Button type="submit" variant="primary" size="md" isLoading={isLoading}>
+          <Button type="submit" variant="primary" size="md" isLoading={isLoading} className="px-6 py-2.5 text-xs sm:text-sm font-black shadow-xs">
             GHI NHẬN VÀO SỔ CÁI
           </Button>
         </div>

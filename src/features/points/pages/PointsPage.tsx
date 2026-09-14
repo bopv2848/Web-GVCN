@@ -173,22 +173,22 @@ export const PointsPage: React.FC = () => {
               }`}
             >
               <div className="flex items-center justify-between">
-                <span className="text-xl font-black">
+                <span className="text-xl sm:text-2xl font-black text-slate-850">
                   {rankMedals[idx] || '🎗️'} Hạng {g.rank}
                 </span>
-                <span className="px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-slate-100 text-slate-700">
+                <span className="px-2.5 py-1 rounded-lg text-xs font-black uppercase tracking-wider bg-slate-100 text-slate-700">
                   {g.name}
                 </span>
               </div>
 
               <div className="mt-3 flex items-baseline justify-between">
                 <div>
-                  <span className="text-2xl font-black text-slate-850">
+                  <span className="text-2xl sm:text-3xl font-black text-slate-850">
                     {g.totalPoints > 0 ? `+${g.totalPoints}` : g.totalPoints}
                   </span>
-                  <span className="text-xs font-bold text-slate-500 ml-1">điểm</span>
+                  <span className="text-xs sm:text-sm font-bold text-slate-500 ml-1">điểm</span>
                 </div>
-                <div className="text-amber-500 font-black text-sm">
+                <div className="text-amber-500 font-black text-sm sm:text-base">
                   ⭐ {g.totalStars} sao
                 </div>
               </div>
@@ -240,9 +240,9 @@ export const PointsPage: React.FC = () => {
                 >
                   <div className="flex items-start sm:items-center gap-3">
                     <div
-                      className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm shrink-0 ${
+                      className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center font-black text-sm shrink-0 ${
                         isReversal
-                          ? 'bg-purple-100 text-purple-700'
+                          ? 'bg-slate-100 text-slate-750'
                           : isPositive
                           ? 'bg-emerald-100 text-emerald-700'
                           : 'bg-rose-100 text-rose-700'
@@ -253,10 +253,10 @@ export const PointsPage: React.FC = () => {
 
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-xs text-slate-850">
+                        <span className="font-bold text-xs sm:text-sm text-slate-850">
                           {tx.studentName}
                         </span>
-                        <span className="text-[10px] text-slate-400">
+                        <span className="text-[10px] sm:text-xs text-slate-400">
                           {new Date(tx.occurredAt).toLocaleTimeString('vi-VN', {
                             hour: '2-digit',
                             minute: '2-digit',
@@ -265,7 +265,7 @@ export const PointsPage: React.FC = () => {
                           })}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-600 font-medium mt-0.5">
+                      <p className="text-xs sm:text-sm text-slate-600 font-medium mt-0.5">
                         {tx.reason}
                         {tx.note && <span className="text-slate-400 ml-1">({tx.note})</span>}
                       </p>
@@ -275,14 +275,14 @@ export const PointsPage: React.FC = () => {
                   <div className="flex items-center gap-3 self-end sm:self-center">
                     <div className="text-right">
                       <span
-                        className={`text-sm font-black ${
+                        className={`text-sm sm:text-base font-black ${
                           isPositive ? 'text-emerald-600' : 'text-rose-600'
                         }`}
                       >
                         {isPositive ? `+${tx.points}` : tx.points}đ
                       </span>
                       {tx.stars !== 0 && (
-                        <span className="text-amber-500 text-xs font-bold ml-1.5">
+                        <span className="text-amber-500 text-xs sm:text-sm font-bold ml-1.5">
                           ⭐ {tx.stars > 0 ? `+${tx.stars}` : tx.stars}
                         </span>
                       )}
@@ -292,7 +292,7 @@ export const PointsPage: React.FC = () => {
                     {(user?.role === 'gvcn' || user?.role === 'admin') && !isReversal && (
                       <button
                         onClick={() => handleReverse(tx)}
-                        className="px-2 py-1 text-[10px] font-bold text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                        className="px-2.5 py-1 text-xs font-bold text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
                         title="Hoàn tác giao dịch này"
                       >
                         ↩️ Hoàn tác

@@ -86,11 +86,11 @@ export const AddCategoryForm: React.FC<AddCategoryFormProps> = ({
           : 'bg-rose-50/95 border-rose-300'
       }`}
     >
-      <div className="flex items-center justify-between mb-2.5">
+      <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className="text-base">{pointType === 'add' ? '🌟' : '⚠️'}</span>
+          <span className="text-base sm:text-lg">{pointType === 'add' ? '🌟' : '⚠️'}</span>
           <span
-            className={`text-xs font-black uppercase ${
+            className={`text-xs sm:text-sm font-black uppercase ${
               pointType === 'add' ? 'text-emerald-900' : 'text-rose-900'
             }`}
           >
@@ -107,9 +107,9 @@ export const AddCategoryForm: React.FC<AddCategoryFormProps> = ({
         </button>
       </div>
 
-      <div className="space-y-2.5">
+      <div className="space-y-3">
         <div>
-          <label className="block text-[11px] font-bold text-slate-700 mb-1">
+          <label className="block text-xs font-bold text-slate-700 mb-1">
             Tên tiêu chí <span className="text-rose-500">*</span>:
           </label>
           <input
@@ -125,25 +125,25 @@ export const AddCategoryForm: React.FC<AddCategoryFormProps> = ({
                 ? 'VD: Đạt giải Nhất thể thao, Giúp bạn tiến bộ, Tuyên dương dưới cờ...'
                 : 'VD: Không đeo khăn quàng, Nói tục chửi thề, Quên sách vở...'
             }
-            className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm font-medium text-slate-850 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
           />
           {errorMessage && (
-            <p className="text-[11px] font-bold text-rose-600 mt-1">{errorMessage}</p>
+            <p className="text-xs font-bold text-rose-600 mt-1">{errorMessage}</p>
           )}
         </div>
 
         {/* Nhóm tiêu chí */}
         <div>
-          <label className="block text-[11px] font-bold text-slate-700 mb-1">
+          <label className="block text-xs font-bold text-slate-700 mb-1">
             Nhóm tiêu chí:
           </label>
-          <div className="grid grid-cols-4 gap-1.5">
+          <div className="grid grid-cols-4 gap-2">
             {(['Học tập', 'Nề nếp', 'Phong trào', 'Đột xuất'] as const).map((grp) => (
               <button
                 key={grp}
                 type="button"
                 onClick={() => setCategoryGroup(grp)}
-                className={`py-1.5 px-2 rounded-xl text-[11px] font-bold border transition-all cursor-pointer ${
+                className={`py-2 px-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                   categoryGroup === grp
                     ? pointType === 'add'
                       ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
@@ -158,9 +158,9 @@ export const AddCategoryForm: React.FC<AddCategoryFormProps> = ({
         </div>
 
         {/* Điểm & Sao mặc định */}
-        <div className={`grid ${pointType === 'add' ? 'grid-cols-2' : 'grid-cols-1'} gap-2.5`}>
+        <div className={`grid ${pointType === 'add' ? 'grid-cols-2' : 'grid-cols-1'} gap-3`}>
           <div>
-            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+            <label className="block text-xs font-bold text-slate-700 mb-1">
               Điểm mặc định ({pointType === 'add' ? '+' : '-'}điểm):
             </label>
             <input
@@ -169,12 +169,12 @@ export const AddCategoryForm: React.FC<AddCategoryFormProps> = ({
               max="100"
               value={points}
               onChange={(e) => setPoints(Math.max(1, parseInt(e.target.value) || 1))}
-              className="w-full px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+              className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm font-bold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
             />
           </div>
           {pointType === 'add' && (
             <div>
-              <label className="block text-[11px] font-bold text-slate-700 mb-1">
+              <label className="block text-xs font-bold text-slate-700 mb-1">
                 Sao thi đua mặc định (⭐):
               </label>
               <input
@@ -183,18 +183,18 @@ export const AddCategoryForm: React.FC<AddCategoryFormProps> = ({
                 max="50"
                 value={stars}
                 onChange={(e) => setStars(Math.max(0, parseInt(e.target.value) || 0))}
-                className="w-full px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+                className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm font-bold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
               />
             </div>
           )}
         </div>
 
         {/* Action buttons */}
-        <div className="flex items-center justify-end gap-2 pt-1">
+        <div className="flex items-center justify-end gap-2.5 pt-1.5">
           <button
             type="button"
             onClick={onClose}
-            className="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-200/60 transition-colors cursor-pointer"
+            className="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-200/60 transition-colors cursor-pointer"
           >
             Hủy bỏ
           </button>
@@ -203,7 +203,7 @@ export const AddCategoryForm: React.FC<AddCategoryFormProps> = ({
             variant={pointType === 'add' ? 'primary' : 'danger'}
             onClick={() => handleSubmit()}
             isLoading={isLoading}
-            className="text-xs px-4 py-1.5"
+            className="text-xs sm:text-sm px-4.5 py-2"
           >
             💾 Lưu tiêu chí mới
           </Button>
