@@ -6,7 +6,6 @@ import { studentService } from '../../students/services/studentService';
 import { AwardPointsModal } from '../components/AwardPointsModal';
 import type { PointCategory, PointTransaction } from '../../../types/points';
 import type { Student, Group } from '../../../types/student';
-import { Button } from '../../../components/common/Button';
 import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
 
 export const PointsPage: React.FC = () => {
@@ -47,18 +46,6 @@ export const PointsPage: React.FC = () => {
       );
     }
   }, [searchParams, setSearchParams]);
-
-  const handleOpenAwardModal = () => {
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        next.set('action', 'award');
-        return next;
-      },
-      { replace: true }
-    );
-    setIsModalOpen(true);
-  };
 
   // 1. Tải toàn bộ dữ liệu ban đầu
   const loadInitialData = useCallback(async () => {
@@ -176,15 +163,6 @@ export const PointsPage: React.FC = () => {
             Sổ cái minh bạch Append-only • Ban Cán Sự và GVCN cùng tham gia chấm điểm nề nếp
           </p>
         </div>
-
-        <Button
-          onClick={handleOpenAwardModal}
-          variant="primary"
-          size="md"
-          className="text-xs font-black"
-        >
-          ⭐ + CHẤM ĐIỂM THI ĐUA
-        </Button>
       </div>
 
       {/* Bảng Xếp Hạng Thi Đua 4 Tổ */}

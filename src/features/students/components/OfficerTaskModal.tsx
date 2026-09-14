@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Modal } from '../../../components/common/Modal';
 import type { Student } from '../../../types/student';
 import { getOfficerTaskGuide } from '../constants/officerTasksGuide';
@@ -23,6 +23,13 @@ export const OfficerTaskModal: React.FC<OfficerTaskModalProps> = ({ isOpen, onCl
   const [customNote, setCustomNote] = useState('');
   const [editedMessage, setEditedMessage] = useState('');
   const [hasCustomEdits, setHasCustomEdits] = useState(false);
+  const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (student && isOpen) {
@@ -82,7 +89,10 @@ export const OfficerTaskModal: React.FC<OfficerTaskModalProps> = ({ isOpen, onCl
     try {
       await navigator.clipboard.writeText(currentMessage);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+      copyTimeoutRef.current = setTimeout(() => {
+        setCopied(false);
+      }, 2000);
     } catch {
       alert('Đã tạo nội dung lời dặn!');
     }

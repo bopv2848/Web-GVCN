@@ -3,8 +3,8 @@ import type { MenuItem } from '../../types';
 export const allNavItems: MenuItem[] = [
   { id: 'dashboard', path: '/', label: 'Tổng quan', iconName: '🏠', roles: ['gvcn', 'bancansu', 'bgh', 'admin'] },
   { id: 'students', path: '/students', label: 'Học sinh & Tổ', iconName: '👥', roles: ['gvcn', 'bancansu', 'bgh', 'admin'] },
-  { id: 'points-ledger', path: '/points', label: 'Tích điểm & Sổ cái thi đua', iconName: '📜', roles: ['gvcn', 'bancansu', 'admin'] },
   { id: 'points-award', path: '/points?action=award', label: 'Chấm điểm thi đua', iconName: '⭐', roles: ['gvcn', 'bancansu', 'admin'], badge: 'Tác vụ' },
+  { id: 'points-ledger', path: '/points', label: 'Tích điểm & Sổ cái thi đua', iconName: '📜', roles: ['gvcn', 'bancansu', 'admin'] },
   { id: 'rewards', path: '/rewards', label: 'Shop Đổi quà', iconName: '🎁', roles: ['gvcn', 'bancansu', 'student', 'parent', 'admin'] },
   { id: 'attendance', path: '/attendance', label: 'Điểm danh', iconName: '📅', roles: ['gvcn', 'bancansu', 'bgh', 'admin'] },
   { id: 'seating', path: '/seating', label: 'Sơ đồ chỗ ngồi', iconName: '🪑', roles: ['gvcn', 'bancansu', 'bgh', 'admin'] },
