@@ -65,6 +65,30 @@ describe('attendanceService Unit Tests', () => {
     expect(freshRecords.every((r) => r.status === 'present')).toBe(true);
   });
 
+  it('cho phép điểm danh nhanh toàn bộ học sinh theo Tổ (Có mặt / Vắng có phép)', async () => {
+    const session = await attendanceService.getOrCreateSession(CLASS_6A6_ID, '2026-09-13', 'morning');
+    
+    // Đánh dấu cả Tổ 1 vắng có phép với lý do "Đi trực tuần"
+    await attendanceService.markGroupStatus(session.id, 'Tổ 1', 'excused_absence', 'Đi trực tuần');
+
+    const updatedRecords = await attendanceService.getSessionRecords(session.id, CLASS_6A6_ID);
+    const to1Records = updatedRecords.filter((r) => r.groupName === 'Tổ 1');
+    const otherRecords = updatedRecords.filter((r) => r.groupName !== 'Tổ 1');
+
+    expect(to1Records.length).toBeGreaterThan(0);
+    expect(to1Records.every((r) => r.status === 'excused_absence')).toBe(true);
+    expect(to1Records.every((r) => r.note === 'Đi trực tuần')).toBe(true);
+
+    // Các tổ khác vẫn giữ nguyên trạng thái
+    expect(otherRecords.every((r) => r.status === 'present')).toBe(true);
+
+    // Sau đó bấm Có mặt lại cho cả Tổ 1
+    await attendanceService.markGroupStatus(session.id, 'Tổ 1', 'present');
+    const restoredRecords = await attendanceService.getSessionRecords(session.id, CLASS_6A6_ID);
+    const restoredTo1 = restoredRecords.filter((r) => r.groupName === 'Tổ 1');
+    expect(restoredTo1.every((r) => r.status === 'present')).toBe(true);
+  });
+
   it('tạo báo cáo chuyên cần tháng tổng hợp đầy đủ 47 học sinh', async () => {
     const report = await attendanceService.getMonthlyAttendanceReport(CLASS_6A6_ID, 2026, 9);
     expect(report.totalStudents).toBe(47);

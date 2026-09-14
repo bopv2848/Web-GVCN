@@ -128,6 +128,35 @@ export const useDailyAttendance = (classId: string, todayStr: string) => {
     }
   };
 
+  const handleMarkGroupStatus = async (
+    groupName: string,
+    status: AttendanceStatus,
+    note?: string | null
+  ) => {
+    if (!session || session.isLocked) return;
+
+    setRecords((prev) =>
+      prev.map((r) =>
+        r.groupName === groupName
+          ? {
+              ...r,
+              status,
+              note: note !== undefined ? note : (status === 'present' ? null : r.note),
+              updatedAt: new Date().toISOString(),
+            }
+          : r
+      )
+    );
+
+    try {
+      await attendanceService.markGroupStatus(session.id, groupName, status, note);
+    } catch (err) {
+      console.error('Lỗi điểm danh theo tổ:', err);
+      const fresh = await attendanceService.getSessionRecords(session.id, classId);
+      setRecords(fresh);
+    }
+  };
+
   const handleToggleLock = async () => {
     if (!session) return;
     const newLockState = !session.isLocked;
@@ -191,6 +220,7 @@ export const useDailyAttendance = (classId: string, todayStr: string) => {
     handleStatusChange,
     handleSaveNote,
     handleMarkAllPresent,
+    handleMarkGroupStatus,
     handleToggleLock,
     uniqueGroupsDaily,
     filteredRecordsDaily,

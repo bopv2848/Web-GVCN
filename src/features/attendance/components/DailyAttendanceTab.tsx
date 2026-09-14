@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { AttendanceStatusButtons } from './AttendanceStatusButtons';
+import { GroupAttendanceModal } from './GroupAttendanceModal';
 import { Button } from '../../../components/common/Button';
 import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
 import { parseVietnameseName } from '../../../utils/vietnameseNameSort';
@@ -37,6 +38,7 @@ interface DailyAttendanceTabProps {
   onStatusChange: (recordId: string, status: AttendanceStatus) => void;
   onEditNote: (record: AttendanceRecord) => void;
   onMarkAllPresent: () => void;
+  onMarkGroupStatus: (groupName: string, status: AttendanceStatus, note?: string | null) => void;
   onToggleLock: () => void;
   onPrint: () => void;
 }
@@ -47,6 +49,7 @@ export const DailyAttendanceTab: React.FC<DailyAttendanceTabProps> = ({
   selectedType,
   onTypeChange,
   session,
+  records,
   isLoading,
   canManageLock,
   searchQuery,
@@ -60,9 +63,30 @@ export const DailyAttendanceTab: React.FC<DailyAttendanceTabProps> = ({
   onStatusChange,
   onEditNote,
   onMarkAllPresent,
+  onMarkGroupStatus,
   onToggleLock,
   onPrint,
 }) => {
+  const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
+  const [groupModalInitialGroup, setGroupModalInitialGroup] = useState<string>('');
+  const [groupModalInitialStatus, setGroupModalInitialStatus] = useState<AttendanceStatus>('present');
+
+  const groupCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    records.forEach((r) => {
+      if (r.groupName) {
+        counts[r.groupName] = (counts[r.groupName] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [records]);
+
+  const handleOpenGroupModal = (groupName?: string, initialStatus?: AttendanceStatus) => {
+    setGroupModalInitialGroup(groupName || (selectedGroup !== 'all' ? selectedGroup : uniqueGroups[0] || ''));
+    setGroupModalInitialStatus(initialStatus || 'present');
+    setIsGroupModalOpen(true);
+  };
+
   return (
     <div className="space-y-6 print:hidden">
       {/* 1. Action Bar Hàng ngày */}
@@ -109,15 +133,26 @@ export const DailyAttendanceTab: React.FC<DailyAttendanceTabProps> = ({
 
         <div className="flex flex-wrap items-center gap-2">
           {!session?.isLocked && (
-            <Button
-              type="button"
-              onClick={onMarkAllPresent}
-              variant="outline"
-              size="sm"
-              className="text-xs font-bold"
-            >
-              ✅ Có mặt tất cả
-            </Button>
+            <>
+              <Button
+                type="button"
+                onClick={onMarkAllPresent}
+                variant="outline"
+                size="sm"
+                className="text-xs font-bold"
+              >
+                ✅ Có mặt cả lớp
+              </Button>
+              <Button
+                type="button"
+                onClick={() => handleOpenGroupModal()}
+                variant="outline"
+                size="sm"
+                className="text-xs font-bold border-primary/30 text-primary hover:bg-primary/5"
+              >
+                ⚡ Điểm danh theo Tổ
+              </Button>
+            </>
           )}
 
           {canManageLock && (
@@ -205,6 +240,52 @@ export const DailyAttendanceTab: React.FC<DailyAttendanceTabProps> = ({
         </div>
       </div>
 
+      {/* 3.1. Thanh thao tác nhanh 1 chạm cho Tổ đang chọn */}
+      {!session?.isLocked && selectedGroup !== 'all' && (
+        <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 px-4 bg-gradient-to-r from-primary/5 via-indigo-50/40 to-slate-50 border border-primary/20 rounded-2xl shadow-2xs animate-fade-in">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-primary text-white text-xs font-black shadow-xs">
+              ⚡
+            </span>
+            <div>
+              <span className="text-xs font-black text-slate-850">
+                Thao tác nhanh cho <strong className="text-primary font-black underline decoration-2">{selectedGroup}</strong>
+                <span className="ml-1.5 text-[11px] font-semibold text-slate-500">
+                  ({groupCounts[selectedGroup] || 0} học sinh):
+                </span>
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => onMarkGroupStatus(selectedGroup, 'present')}
+              className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-2xs flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+              title={`Đánh dấu tất cả học sinh ${selectedGroup} có mặt`}
+            >
+              <span>✅</span> Có mặt cả tổ
+            </button>
+            <button
+              type="button"
+              onClick={() => handleOpenGroupModal(selectedGroup, 'excused_absence')}
+              className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-2xs flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+              title={`Đánh dấu ${selectedGroup} vắng có phép (Trực tuần, Văn nghệ, Thi HSG...)`}
+            >
+              <span>📋</span> Vắng có phép...
+            </button>
+            <button
+              type="button"
+              onClick={() => handleOpenGroupModal(selectedGroup, 'unexcused_absence')}
+              className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-2xs flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+              title={`Đánh dấu ${selectedGroup} vắng không phép`}
+            >
+              <span>❌</span> Vắng K.phép...
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* 4. Danh sách học sinh điểm danh */}
       {isLoading ? (
         <div className="p-12 text-center bg-white rounded-3xl border border-slate-200">
@@ -289,6 +370,17 @@ export const DailyAttendanceTab: React.FC<DailyAttendanceTabProps> = ({
           </div>
         </div>
       )}
+
+      {/* 5. Hộp thoại Điểm danh nhanh theo Tổ */}
+      <GroupAttendanceModal
+        isOpen={isGroupModalOpen}
+        onClose={() => setIsGroupModalOpen(false)}
+        uniqueGroups={uniqueGroups}
+        initialGroup={groupModalInitialGroup}
+        initialStatus={groupModalInitialStatus}
+        groupCounts={groupCounts}
+        onApply={onMarkGroupStatus}
+      />
     </div>
   );
 };

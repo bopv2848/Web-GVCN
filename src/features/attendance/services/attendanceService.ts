@@ -345,6 +345,62 @@ export const attendanceService = {
   },
 
   /**
+   * Điểm danh nhanh theo Tổ: Đánh dấu tất cả học sinh trong Tổ sang trạng thái chỉ định
+   * (Ví dụ: Cả Tổ 1 có mặt, hoặc Cả Tổ 2 vắng có phép đi trực tuần/văn nghệ...)
+   */
+  async markGroupStatus(
+    sessionId: string,
+    groupName: string,
+    status: AttendanceStatus,
+    note?: string | null
+  ) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const payload: Record<string, unknown> = {
+        status,
+        updated_by: user?.id || null,
+        updated_at: new Date().toISOString(),
+      };
+      if (note !== undefined) {
+        payload.note = note;
+      }
+
+      await supabase
+        .from('attendance_records')
+        .update(payload)
+        .eq('session_id', sessionId)
+        .eq('group_name', groupName);
+    } catch {
+      // Supabase offline
+    }
+
+    // Đồng bộ localStorage
+    try {
+      const cacheKey = `gvcn_attendance_records_${sessionId}`;
+      const raw = localStorage.getItem(cacheKey);
+      if (raw) {
+        const list = JSON.parse(raw);
+        if (Array.isArray(list)) {
+          const updated = list.map((item: AttendanceRecord) => {
+            if (item.groupName === groupName) {
+              return {
+                ...item,
+                status,
+                note: note !== undefined ? note : (status === 'present' ? null : item.note),
+                updatedAt: new Date().toISOString(),
+              };
+            }
+            return item;
+          });
+          localStorage.setItem(cacheKey, JSON.stringify(updated));
+        }
+      }
+    } catch {
+      // Bỏ qua lỗi lưu
+    }
+  },
+
+  /**
    * Khóa hoặc mở khóa phiên điểm danh
    */
   async toggleLockSession(sessionId: string, isLocked: boolean) {
