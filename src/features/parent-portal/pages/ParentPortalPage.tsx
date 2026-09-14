@@ -36,23 +36,6 @@ export const ParentPortalPage: React.FC = () => {
   const [selectedStudentId, setSelectedStudentId] = useState<string>('');
   const [copySuccess, setCopySuccess] = useState(false);
 
-  // Tải danh sách học sinh nếu là GVCN đăng nhập
-  useEffect(() => {
-    if (isTeacher && currentClass?.id) {
-      studentService
-        .getStudents(currentClass.id)
-        .then((students) => {
-          setTeacherStudents(students);
-          // Mặc định chọn học sinh đầu tiên nếu chưa chọn và chưa có portalData
-          if (students.length > 0 && !selectedStudentId && !urlToken && !queryToken) {
-            setSelectedStudentId(students[0].id);
-            loadStudentData(students[0].id);
-          }
-        })
-        .catch((err) => console.error('Lỗi tải danh sách học sinh xem trước:', err));
-    }
-  }, [isTeacher, currentClass?.id]);
-
   const loadStudentData = useCallback(async (studentId: string) => {
     setIsLoading(true);
     setErrorMessage(null);
@@ -66,6 +49,29 @@ export const ParentPortalPage: React.FC = () => {
       setIsLoading(false);
     }
   }, []);
+
+  const classId = currentClass?.id;
+
+  // Tải danh sách học sinh nếu là GVCN đăng nhập
+  useEffect(() => {
+    if (isTeacher && classId) {
+      studentService
+        .getStudents(classId)
+        .then((students) => {
+          setTeacherStudents(students);
+        })
+        .catch((err) => console.error('Lỗi tải danh sách học sinh xem trước:', err));
+    }
+  }, [isTeacher, classId]);
+
+  // Tự động chọn học sinh đầu tiên cho GVCN xem trước khi chưa chọn
+  useEffect(() => {
+    if (isTeacher && teacherStudents.length > 0 && !selectedStudentId && !urlToken && !queryToken) {
+      const firstStudentId = teacherStudents[0].id;
+      setSelectedStudentId(firstStudentId);
+      loadStudentData(firstStudentId);
+    }
+  }, [isTeacher, teacherStudents, selectedStudentId, urlToken, queryToken, loadStudentData]);
 
   const handleLookupByToken = useCallback(
     async (tokenStr: string) => {

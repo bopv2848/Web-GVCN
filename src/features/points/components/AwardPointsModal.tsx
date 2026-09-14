@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Modal } from '../../../components/common/Modal';
 import { Button } from '../../../components/common/Button';
 import type { PointCategory } from '../../../types/points';
@@ -36,6 +36,20 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
 
+  const handleSelectCategory = useCallback(
+    (catId: string) => {
+      setSelectedCategoryId(catId);
+      const cat = categories.find((c) => c.id === catId);
+      if (cat) {
+        setPointType(cat.type);
+        setPoints(cat.defaultPoints);
+        setStars(cat.defaultStars);
+        setReason(cat.title);
+      }
+    },
+    [categories]
+  );
+
   // Reset khi mở modal
   useEffect(() => {
     if (isOpen) {
@@ -50,18 +64,16 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
         handleSelectCategory(categories[0].id);
       }
     }
-  }, [isOpen, students, groups, categories]);
-
-  const handleSelectCategory = (catId: string) => {
-    setSelectedCategoryId(catId);
-    const cat = categories.find((c) => c.id === catId);
-    if (cat) {
-      setPointType(cat.type);
-      setPoints(cat.defaultPoints);
-      setStars(cat.defaultStars);
-      setReason(cat.title);
-    }
-  };
+  }, [
+    isOpen,
+    students,
+    groups,
+    categories,
+    selectedStudentId,
+    selectedGroupId,
+    selectedCategoryId,
+    handleSelectCategory,
+  ]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -32,7 +32,7 @@ export const OfficerTaskModal: React.FC<OfficerTaskModalProps> = ({ isOpen, onCl
       setHasCustomEdits(false);
       setCopied(false);
     }
-  }, [student?.id, isOpen]);
+  }, [student, isOpen]);
 
   if (!student) return null;
 

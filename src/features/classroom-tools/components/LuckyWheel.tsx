@@ -1,8 +1,13 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import type { Student } from '../../../types/student';
 import { soundEffects } from '../utils/soundEffects';
 import { triggerConfetti } from '../utils/confetti';
 import { Button } from '../../../components/common/Button';
+
+const SLICE_COLORS = [
+  '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
+  '#06b6d4', '#ec4899', '#84cc16', '#f97316', '#6366f1'
+];
 
 interface LuckyWheelProps {
   students: Student[];
@@ -25,16 +30,13 @@ export const LuckyWheel: React.FC<LuckyWheelProps> = ({
   const [currentWinner, setCurrentWinner] = useState<Student | null>(null);
 
   // Lọc học sinh tham gia quay
-  const eligibleStudents = students.filter((s) => {
-    const matchGroup = selectedGroup === 'all' || s.groupName === selectedGroup;
-    const matchCalled = excludeCalled ? !calledStudentIds.has(s.id) : true;
-    return matchGroup && matchCalled;
-  });
-
-  const sliceColors = [
-    '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
-    '#06b6d4', '#ec4899', '#84cc16', '#f97316', '#6366f1'
-  ];
+  const eligibleStudents = useMemo(() => {
+    return students.filter((s) => {
+      const matchGroup = selectedGroup === 'all' || s.groupName === selectedGroup;
+      const matchCalled = excludeCalled ? !calledStudentIds.has(s.id) : true;
+      return matchGroup && matchCalled;
+    });
+  }, [students, selectedGroup, excludeCalled, calledStudentIds]);
 
   // Vẽ bánh xe
   const drawWheel = useCallback(
@@ -78,7 +80,7 @@ export const LuckyWheel: React.FC<LuckyWheelProps> = ({
         ctx.moveTo(0, 0);
         ctx.arc(0, 0, radius, angle, angle + sliceAngle);
         ctx.closePath();
-        ctx.fillStyle = sliceColors[idx % sliceColors.length];
+        ctx.fillStyle = SLICE_COLORS[idx % SLICE_COLORS.length];
         ctx.fill();
         ctx.lineWidth = 1.5;
         ctx.strokeStyle = '#ffffff';
@@ -134,7 +136,7 @@ export const LuckyWheel: React.FC<LuckyWheelProps> = ({
       ctx.stroke();
       ctx.restore();
     },
-    [eligibleStudents, sliceColors]
+    [eligibleStudents]
   );
 
   useEffect(() => {
