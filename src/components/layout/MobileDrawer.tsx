@@ -87,6 +87,7 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) =
         <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1.5 custom-scrollbar">
           {visibleNavItems.map((item) => {
             const active = isItemActive(item.path);
+            const isActionItem = item.id === 'points-award';
             return (
               <NavLink
                 key={item.id}
@@ -95,18 +96,28 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) =
                   'flex items-center justify-between px-4 py-3 rounded-xl text-sm font-bold transition-all min-h-[48px]',
                   active
                     ? 'bg-gradient-to-r from-accent to-amber-500 text-slate-950 font-black shadow-md'
+                    : isActionItem
+                    ? 'bg-amber-400/10 text-amber-200 border border-amber-400/40 shadow-[0_0_12px_rgba(251,191,36,0.2)] active:bg-amber-400/20 active:border-amber-300'
                     : 'text-slate-200 hover:bg-white/10 active:bg-white/15'
                 )}
               >
                 <div className="flex items-center gap-3">
-                  <span className="text-xl">{item.iconName}</span>
-                  <span>{item.label}</span>
+                  <span className={cn('text-xl', isActionItem && !active && 'animate-pulse')}>
+                    {item.iconName}
+                  </span>
+                  <span className={cn(isActionItem && 'font-black text-amber-100')}>
+                    {item.label}
+                  </span>
                 </div>
                 {item.badge && (
                   <span
                     className={cn(
                       'text-[9px] font-black px-2 py-0.5 rounded-full uppercase',
-                      active ? 'bg-slate-950 text-amber-300' : 'bg-rose-500/30 text-rose-200'
+                      active
+                        ? 'bg-slate-950 text-amber-300'
+                        : isActionItem
+                        ? 'bg-amber-400 text-slate-950 font-black shadow-xs'
+                        : 'bg-rose-500/30 text-rose-200'
                     )}
                   >
                     {item.badge}
