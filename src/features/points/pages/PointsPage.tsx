@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
 import { pointsService, type GroupPointsSummary } from '../services/pointsService';
 import { studentService } from '../../students/services/studentService';
@@ -10,6 +11,7 @@ import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
 
 export const PointsPage: React.FC = () => {
   const { currentClass, user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const classId = currentClass?.id || '66666666-6666-6666-6666-666666666666';
 
   const [groupSummaries, setGroupSummaries] = useState<GroupPointsSummary[]>([]);
@@ -23,6 +25,40 @@ export const PointsPage: React.FC = () => {
   const [highlightedTxId, setHighlightedTxId] = useState<string | null>(null);
 
   const highlightTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Tự động mở modal khi có query param ?action=award
+  useEffect(() => {
+    if (searchParams.get('action') === 'award') {
+      setIsModalOpen(true);
+    }
+  }, [searchParams]);
+
+  // Đóng modal và dọn dẹp param trên URL
+  const handleCloseModal = useCallback(() => {
+    setIsModalOpen(false);
+    if (searchParams.get('action') === 'award') {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete('action');
+          return next;
+        },
+        { replace: true }
+      );
+    }
+  }, [searchParams, setSearchParams]);
+
+  const handleOpenAwardModal = () => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set('action', 'award');
+        return next;
+      },
+      { replace: true }
+    );
+    setIsModalOpen(true);
+  };
 
   // 1. Tải toàn bộ dữ liệu ban đầu
   const loadInitialData = useCallback(async () => {
@@ -142,7 +178,7 @@ export const PointsPage: React.FC = () => {
         </div>
 
         <Button
-          onClick={() => setIsModalOpen(true)}
+          onClick={handleOpenAwardModal}
           variant="primary"
           size="md"
           className="text-xs font-black"
@@ -309,10 +345,11 @@ export const PointsPage: React.FC = () => {
       {/* Modal Chấm điểm */}
       <AwardPointsModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={handleCloseModal}
         classId={classId}
         onSuccess={() => {
           loadInitialData();
+          handleCloseModal();
         }}
         onCategoryAdded={(newCat) => {
           setCategories((prev) => [...prev, newCat]);

@@ -18,7 +18,7 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) =
   // Automatically close drawer when navigating
   useEffect(() => {
     onClose();
-  }, [location.pathname, onClose]);
+  }, [location.pathname, location.search, onClose]);
 
   // Lock body scroll when drawer is open
   useEffect(() => {
@@ -35,6 +35,20 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) =
   if (!isOpen) return null;
 
   const visibleNavItems = allNavItems.filter((item) => item.roles.includes(currentRole));
+
+  const isItemActive = (itemPath: string) => {
+    if (itemPath.includes('?')) {
+      const [path, query] = itemPath.split('?');
+      return location.pathname === path && location.search.includes(query);
+    }
+    if (itemPath === '/points') {
+      return location.pathname === '/points' && !location.search.includes('action=award');
+    }
+    if (itemPath === '/') {
+      return location.pathname === '/' && !location.search;
+    }
+    return location.pathname === itemPath;
+  };
 
   return (
     <div className="fixed inset-0 z-50 md:hidden flex animate-fade-in">
@@ -71,39 +85,36 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) =
 
         {/* Navigation Items */}
         <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1.5 custom-scrollbar">
-          {visibleNavItems.map((item) => (
-            <NavLink
-              key={item.id}
-              to={item.path}
-              className={({ isActive }) =>
-                cn(
+          {visibleNavItems.map((item) => {
+            const active = isItemActive(item.path);
+            return (
+              <NavLink
+                key={item.id}
+                to={item.path}
+                className={cn(
                   'flex items-center justify-between px-4 py-3 rounded-xl text-sm font-bold transition-all min-h-[48px]',
-                  isActive
+                  active
                     ? 'bg-gradient-to-r from-accent to-amber-500 text-slate-950 font-black shadow-md'
                     : 'text-slate-200 hover:bg-white/10 active:bg-white/15'
-                )
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">{item.iconName}</span>
-                    <span>{item.label}</span>
-                  </div>
-                  {item.badge && (
-                    <span
-                      className={cn(
-                        'text-[9px] font-black px-2 py-0.5 rounded-full uppercase',
-                        isActive ? 'bg-slate-950 text-amber-300' : 'bg-rose-500/30 text-rose-200'
-                      )}
-                    >
-                      {item.badge}
-                    </span>
-                  )}
-                </>
-              )}
-            </NavLink>
-          ))}
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">{item.iconName}</span>
+                  <span>{item.label}</span>
+                </div>
+                {item.badge && (
+                  <span
+                    className={cn(
+                      'text-[9px] font-black px-2 py-0.5 rounded-full uppercase',
+                      active ? 'bg-slate-950 text-amber-300' : 'bg-rose-500/30 text-rose-200'
+                    )}
+                  >
+                    {item.badge}
+                  </span>
+                )}
+              </NavLink>
+            );
+          })}
         </nav>
 
         {/* User Info on Mobile */}
