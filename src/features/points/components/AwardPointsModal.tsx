@@ -30,11 +30,23 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
   onCategoryAdded,
 }) => {
   const [targetType, setTargetType] = useState<'student' | 'students' | 'group' | 'class'>('student');
-  const [selectedStudentId, setSelectedStudentId] = useState<string>('');
+  const [selectedStudentId, setSelectedStudentId] = useState<string>(students[0]?.id || '');
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
   const [studentSearchKeyword, setStudentSearchKeyword] = useState<string>('');
   const [studentGroupFilter, setStudentGroupFilter] = useState<string>('all');
-  const [selectedGroupId, setSelectedGroupId] = useState<string>('');
+  const [selectedGroupId, setSelectedGroupId] = useState<string>(groups[0]?.id || '');
+
+  useEffect(() => {
+    if (!selectedStudentId && students.length > 0) {
+      setSelectedStudentId(students[0].id);
+    }
+  }, [students, selectedStudentId]);
+
+  useEffect(() => {
+    if (!selectedGroupId && groups.length > 0) {
+      setSelectedGroupId(groups[0].id);
+    }
+  }, [groups, selectedGroupId]);
 
   // Quản lý danh mục tiêu chí nội bộ (hỗ trợ bổ sung tiêu chí mới tại chỗ)
   const [localCategories, setLocalCategories] = useState<PointCategory[]>(categories);
@@ -463,6 +475,13 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const effectiveStudentId = selectedStudentId || students[0]?.id;
+    const effectiveGroupId = selectedGroupId || groups[0]?.id;
+
+    if (targetType === 'student' && !effectiveStudentId) {
+      setErrorMessage('Vui lòng đợi danh sách học sinh tải xong hoặc chọn học sinh.');
+      return;
+    }
     if (targetType === 'students' && selectedStudentIds.length === 0) {
       setErrorMessage('Vui lòng chọn ít nhất 1 học sinh trong danh sách.');
       return;
@@ -489,9 +508,9 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
           pointsService.createTransaction({
             classId,
             targetType,
-            studentId: targetType === 'student' ? selectedStudentId : undefined,
+            studentId: targetType === 'student' ? effectiveStudentId : undefined,
             studentIds: targetType === 'students' ? selectedStudentIds : undefined,
-            groupId: targetType === 'group' ? selectedGroupId : undefined,
+            groupId: targetType === 'group' ? effectiveGroupId : undefined,
             categoryId: selectedAddCats[0].id,
             points: addPts,
             stars: addStrs,
@@ -501,9 +520,9 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
           pointsService.createTransaction({
             classId,
             targetType,
-            studentId: targetType === 'student' ? selectedStudentId : undefined,
+            studentId: targetType === 'student' ? effectiveStudentId : undefined,
             studentIds: targetType === 'students' ? selectedStudentIds : undefined,
-            groupId: targetType === 'group' ? selectedGroupId : undefined,
+            groupId: targetType === 'group' ? effectiveGroupId : undefined,
             categoryId: selectedSubCats[0].id,
             points: -subPts,
             stars: 0,
@@ -520,9 +539,9 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
         await pointsService.createTransaction({
           classId,
           targetType,
-          studentId: targetType === 'student' ? selectedStudentId : undefined,
+          studentId: targetType === 'student' ? effectiveStudentId : undefined,
           studentIds: targetType === 'students' ? selectedStudentIds : undefined,
-          groupId: targetType === 'group' ? selectedGroupId : undefined,
+          groupId: targetType === 'group' ? effectiveGroupId : undefined,
           categoryId: primaryCatId,
           points: finalPoints,
           stars: finalStars,
