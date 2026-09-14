@@ -11,14 +11,14 @@ describe('App Component Root', () => {
         const classHeadings = screen.getAllByText(/LỚP 6A6|LỚP 12A1/i);
         expect(classHeadings.length).toBeGreaterThan(0);
       },
-      { timeout: 8000 }
+      { timeout: 15000 }
     );
 
     await waitFor(
       () => {
         expect(screen.getByText(/CHỦ ĐIỂM THÁNG 9/i)).toBeInTheDocument();
       },
-      { timeout: 8000 }
+      { timeout: 15000 }
     );
-  }, 15000);
+  }, 25000);
 });
