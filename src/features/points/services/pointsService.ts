@@ -128,7 +128,7 @@ export const pointsService = {
   /**
    * Lấy lịch sử các giao dịch cộng/trừ điểm thi đua gần nhất
    */
-  async getRecentTransactions(classId: string, limit = 20): Promise<PointTransaction[]> {
+  async getRecentTransactions(classId: string, limit = 50): Promise<PointTransaction[]> {
     const { data, error } = await supabase
       .from('point_transactions')
       .select(`
@@ -162,6 +162,7 @@ export const pointsService = {
       id: tx.id,
       studentId: tx.student_id,
       studentName: tx.student?.full_name || 'Học sinh',
+      groupName: tx.student?.group?.name || undefined,
       points: tx.points,
       stars: tx.stars,
       reason: tx.reason,

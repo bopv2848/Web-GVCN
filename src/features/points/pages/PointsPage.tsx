@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
 import { pointsService, type GroupPointsSummary } from '../services/pointsService';
@@ -7,6 +7,7 @@ import { AwardPointsModal } from '../components/AwardPointsModal';
 import type { PointCategory, PointTransaction } from '../../../types/points';
 import type { Student, Group } from '../../../types/student';
 import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
+import { cn } from '../../../utils/cn';
 
 export const PointsPage: React.FC = () => {
   const { currentClass, user } = useAuth();
@@ -22,6 +23,12 @@ export const PointsPage: React.FC = () => {
   const [isRealtimeActive, setIsRealtimeActive] = useState<boolean>(false);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [highlightedTxId, setHighlightedTxId] = useState<string | null>(null);
+
+  // Bộ lọc lịch sử sổ cái
+  const [filterWeek, setFilterWeek] = useState<'all' | 'this_week' | 'last_week' | 'today'>('this_week');
+  const [filterGroup, setFilterGroup] = useState<string>('all');
+  const [filterType, setFilterType] = useState<'all' | 'add' | 'subtract' | 'reversal'>('all');
+  const [searchKeyword, setSearchKeyword] = useState<string>('');
 
   const highlightTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -53,7 +60,7 @@ export const PointsPage: React.FC = () => {
     try {
       const [sumData, txData, catData, stdData, grpData] = await Promise.all([
         pointsService.getGroupPointsSummary(classId),
-        pointsService.getRecentTransactions(classId, 25),
+        pointsService.getRecentTransactions(classId, 100),
         pointsService.getCategories(classId),
         studentService.getStudents(classId),
         studentService.getGroups(classId),
@@ -89,6 +96,7 @@ export const PointsPage: React.FC = () => {
           id: newRow.id,
           studentId: newRow.student_id,
           studentName: studentInfo?.fullName || 'Học sinh',
+          groupName: studentInfo?.groupName || undefined,
           points: newRow.points,
           stars: newRow.stars,
           reason: newRow.reason,
@@ -120,6 +128,84 @@ export const PointsPage: React.FC = () => {
       if (highlightTimeoutRef.current) clearTimeout(highlightTimeoutRef.current);
     };
   }, [classId, students]);
+
+  // Xác định khoảng thời gian theo bộ lọc tuần
+  const getFilterDateRange = useCallback((filter: 'all' | 'this_week' | 'last_week' | 'today') => {
+    if (filter === 'all') return null;
+
+    const now = new Date();
+    if (filter === 'today') {
+      const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+      const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      return { start, end };
+    }
+
+    const offset = filter === 'last_week' ? 1 : 0;
+    const dayOfWeek = now.getDay(); // 0 là Chủ Nhật, 1 là Thứ Hai...
+    const distanceToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+
+    const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - distanceToMonday - offset * 7, 0, 0, 0, 0);
+    const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6, 23, 59, 59, 999);
+
+    return { start: monday, end: sunday };
+  }, []);
+
+  // Danh sách giao dịch sau khi áp dụng bộ lọc (Tuần, Tổ, Loại điểm, Từ khóa)
+  const filteredTransactions = useMemo(() => {
+    const range = getFilterDateRange(filterWeek);
+    const kw = searchKeyword.trim().toLowerCase();
+
+    return transactions.filter((tx) => {
+      // 1. Lọc theo thời gian (Tuần / Hôm nay)
+      if (range) {
+        const txDate = new Date(tx.occurredAt);
+        if (txDate < range.start || txDate > range.end) {
+          return false;
+        }
+      }
+
+      // 2. Lọc theo Tổ
+      if (filterGroup !== 'all') {
+        const std = students.find((s) => s.id === tx.studentId);
+        const matchesGroup =
+          std?.groupId === filterGroup ||
+          std?.groupName === filterGroup ||
+          tx.groupName === filterGroup;
+        if (!matchesGroup) return false;
+      }
+
+      // 3. Lọc theo Loại điểm
+      const isReversal = Boolean(tx.reversalOfId) || tx.reason.includes('[HOÀN TÁC]');
+      if (filterType === 'reversal') {
+        if (!isReversal) return false;
+      } else if (filterType === 'add') {
+        if (isReversal || tx.points <= 0) return false;
+      } else if (filterType === 'subtract') {
+        if (isReversal || tx.points >= 0) return false;
+      }
+
+      // 4. Tìm kiếm từ khóa (Tên học sinh, lý do, ghi chú)
+      if (kw) {
+        const nameMatch = (tx.studentName || '').toLowerCase().includes(kw);
+        const reasonMatch = (tx.reason || '').toLowerCase().includes(kw);
+        const noteMatch = (tx.note || '').toLowerCase().includes(kw);
+        if (!nameMatch && !reasonMatch && !noteMatch) return false;
+      }
+
+      return true;
+    });
+  }, [transactions, filterWeek, filterGroup, filterType, searchKeyword, getFilterDateRange, students]);
+
+  // Tổng điểm của các giao dịch đang hiển thị theo bộ lọc
+  const totalFilteredPoints = useMemo(() => {
+    return filteredTransactions.reduce((acc, tx) => acc + tx.points, 0);
+  }, [filteredTransactions]);
+
+  const isFilterActive =
+    filterWeek !== 'this_week' ||
+    filterGroup !== 'all' ||
+    filterType !== 'all' ||
+    Boolean(searchKeyword.trim());
 
   // 3. Hoàn tác giao dịch
   const handleReverse = async (tx: PointTransaction) => {
@@ -213,7 +299,7 @@ export const PointsPage: React.FC = () => {
 
       {/* Dòng Nhật Ký Sổ Cái Thời Gian Thực */}
       <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-5 md:p-6 space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-100 pb-3">
           <div>
             <h3 className="text-sm font-black text-slate-850 uppercase tracking-wider">
               📜 Nhật Ký Giao Dịch Sổ Cái Thời Gian Thực (Append-only Ledger)
@@ -227,6 +313,122 @@ export const PointsPage: React.FC = () => {
           </span>
         </div>
 
+        {/* Thanh công cụ lọc đa năng (Tuần, Tổ, Loại điểm, Tìm kiếm) */}
+        <div className="bg-slate-50/80 p-3.5 md:p-4 rounded-2xl border border-slate-200/80 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            {/* Lọc theo thời gian (Tuần / Hôm nay) */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+              <span className="text-xs font-bold text-slate-500 shrink-0">
+                ⏱️ Thời gian:
+              </span>
+              {[
+                { id: 'this_week', label: '📅 Tuần này' },
+                { id: 'last_week', label: '🗓️ Tuần trước' },
+                { id: 'today', label: '⚡ Hôm nay' },
+                { id: 'all', label: '🌐 Tất cả' },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setFilterWeek(tab.id as 'all' | 'this_week' | 'last_week' | 'today')}
+                  className={cn(
+                    'px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap',
+                    filterWeek === tab.id
+                      ? 'bg-primary text-white shadow-xs font-black'
+                      : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80'
+                  )}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Ô tìm kiếm học sinh / lý do */}
+            <div className="relative w-full sm:w-64">
+              <input
+                type="text"
+                placeholder="🔍 Tìm tên học sinh, lý do..."
+                value={searchKeyword}
+                onChange={(e) => setSearchKeyword(e.target.value)}
+                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 pr-7 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-accent font-medium"
+              />
+              {searchKeyword && (
+                <button
+                  onClick={() => setSearchKeyword('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold cursor-pointer"
+                  title="Xóa tìm kiếm"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 pt-2.5 border-t border-slate-200/70">
+            {/* Lọc theo Tổ */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-500">
+                👥 Tổ:
+              </span>
+              <select
+                value={filterGroup}
+                onChange={(e) => setFilterGroup(e.target.value)}
+                className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-accent cursor-pointer"
+              >
+                <option value="all">Tất cả các tổ</option>
+                {groups.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Lọc theo Loại điểm */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-500">
+                🏷️ Loại điểm:
+              </span>
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value as 'all' | 'add' | 'subtract' | 'reversal')}
+                className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-accent cursor-pointer"
+              >
+                <option value="all">Tất cả điểm</option>
+                <option value="add">➕ Chỉ điểm cộng (+)</option>
+                <option value="subtract">➖ Chỉ điểm trừ (-)</option>
+                <option value="reversal">↩️ Chỉ hoàn tác</option>
+              </select>
+            </div>
+
+            {/* Thống kê kết quả & Nút đặt lại */}
+            <div className="ml-auto flex items-center gap-2 text-xs font-bold">
+              <span className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200/80">
+                Hiển thị: <strong className="text-slate-900">{filteredTransactions.length}</strong> giao dịch
+                {filteredTransactions.length > 0 && (
+                  <span className="ml-1.5 text-slate-600 font-semibold">
+                    (Tổng: {totalFilteredPoints > 0 ? `+${totalFilteredPoints}` : totalFilteredPoints}đ)
+                  </span>
+                )}
+              </span>
+
+              {isFilterActive && (
+                <button
+                  onClick={() => {
+                    setFilterWeek('this_week');
+                    setFilterGroup('all');
+                    setFilterType('all');
+                    setSearchKeyword('');
+                  }}
+                  className="px-2.5 py-1 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer border border-transparent hover:border-rose-200"
+                  title="Đặt lại toàn bộ bộ lọc"
+                >
+                  🔄 Đặt lại
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
         {isLoading ? (
           <div className="py-12 text-center">
             <LoadingSpinner size="md" text="Đang đồng bộ sổ cái thi đua từ Supabase..." />
@@ -234,14 +436,33 @@ export const PointsPage: React.FC = () => {
         ) : transactions.length === 0 ? (
           <div className="py-12 text-center text-slate-400 text-xs">
             <span className="text-3xl block mb-2">⭐</span>
-            Chưa có giao dịch thi đua nào. Thầy/Cô hãy bấm "+ Chấm điểm thi đua" để bắt đầu!
+            Chưa có giao dịch thi đua nào. Thầy hãy bấm nút "⭐ Chấm điểm thi đua" ở menu để bắt đầu!
+          </div>
+        ) : filteredTransactions.length === 0 ? (
+          <div className="py-10 text-center text-slate-500 text-xs bg-slate-50 rounded-2xl border border-dashed border-slate-200 p-6">
+            <span className="text-3xl block mb-2">🔍</span>
+            <p className="font-bold text-slate-700 mb-1">Không tìm thấy giao dịch nào phù hợp với bộ lọc</p>
+            <p className="text-slate-400 mb-3">Thầy thử thay đổi tuần, tổ hoặc từ khóa tìm kiếm</p>
+            <button
+              onClick={() => {
+                setFilterWeek('all');
+                setFilterGroup('all');
+                setFilterType('all');
+                setSearchKeyword('');
+              }}
+              className="px-3 py-1.5 bg-white border border-slate-300 rounded-xl font-bold text-xs hover:bg-slate-100 cursor-pointer shadow-2xs"
+            >
+              Xem tất cả giao dịch
+            </button>
           </div>
         ) : (
           <div className="divide-y divide-slate-100">
-            {transactions.map((tx) => {
+            {filteredTransactions.map((tx) => {
               const isHighlight = highlightedTxId === tx.id;
               const isPositive = tx.points >= 0;
               const isReversal = Boolean(tx.reversalOfId) || tx.reason.includes('[HOÀN TÁC]');
+              const studentInfo = students.find((s) => s.id === tx.studentId);
+              const groupName = tx.groupName || studentInfo?.groupName;
 
               return (
                 <div
@@ -266,10 +487,15 @@ export const PointsPage: React.FC = () => {
                     </div>
 
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-bold text-xs sm:text-sm text-slate-850">
                           {tx.studentName}
                         </span>
+                        {groupName && (
+                          <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200">
+                            {groupName}
+                          </span>
+                        )}
                         <span className="text-[10px] sm:text-xs text-slate-400">
                           {new Date(tx.occurredAt).toLocaleTimeString('vi-VN', {
                             hour: '2-digit',
