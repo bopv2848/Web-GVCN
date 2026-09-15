@@ -3,6 +3,7 @@ import type { Student, Group } from '../../../types/student';
 import type { StudentFormData } from '../schemas/studentSchema';
 import { DEFAULT_CLASS_6A6_STUDENTS, DEFAULT_GROUPS_6A6 } from '../constants/defaultClass6A6Students';
 import { sortVietnameseList } from '../../../utils/vietnameseNameSort';
+import { sandboxService } from '../../sandbox/services/sandboxService';
 
 export interface BatchImportStudentItem {
   fullName: string;
@@ -28,6 +29,9 @@ export const studentService = {
    * Lấy danh sách học sinh của lớp kèm thông tin tổ và điểm thi đua
    */
   async getStudents(classId: string): Promise<Student[]> {
+    if (sandboxService.isSandboxActive()) {
+      return sortVietnameseList(sandboxService.getStudents(), (s) => s.fullName);
+    }
     try {
       const { data, error } = await supabase
         .from('students')
@@ -115,6 +119,9 @@ export const studentService = {
    * Lấy danh sách các Tổ trong lớp
    */
   async getGroups(classId: string): Promise<Group[]> {
+    if (sandboxService.isSandboxActive()) {
+      return sandboxService.getGroups();
+    }
     try {
       const { data, error } = await supabase
         .from('groups')
@@ -148,6 +155,20 @@ export const studentService = {
     classId: string,
     formData: Partial<StudentFormData> & { fullName: string; gender: 'Nam' | 'Nữ' }
   ) {
+    if (sandboxService.isSandboxActive()) {
+      return sandboxService.addStudent({
+        fullName: formData.fullName.trim(),
+        gender: formData.gender,
+        birthDate: formData.birthDate || undefined,
+        groupId: formData.groupId || undefined,
+        classRole: formData.classRole || 'Thành viên',
+        boardingType: formData.boardingType || 'Bán trú',
+        goals: formData.goals || undefined,
+        talents: formData.talents || undefined,
+        avatarUrl: formData.avatarUrl || undefined,
+        code: formData.code || undefined,
+      });
+    }
     const { data: newStudent, error: insertError } = await supabase
       .from('students')
       .insert({
@@ -189,6 +210,20 @@ export const studentService = {
    * Cập nhật thông tin học sinh
    */
   async updateStudent(studentId: string, formData: Partial<StudentFormData>) {
+    if (sandboxService.isSandboxActive()) {
+      return sandboxService.updateStudent(studentId, {
+        fullName: formData.fullName?.trim(),
+        gender: formData.gender,
+        birthDate: formData.birthDate || undefined,
+        groupId: formData.groupId || undefined,
+        classRole: formData.classRole,
+        boardingType: formData.boardingType,
+        goals: formData.goals || undefined,
+        talents: formData.talents || undefined,
+        avatarUrl: formData.avatarUrl || undefined,
+        code: formData.code || undefined,
+      });
+    }
     const { data, error } = await supabase
       .from('students')
       .update({
@@ -215,6 +250,10 @@ export const studentService = {
    * Xóa mềm học sinh (Soft Delete)
    */
   async softDeleteStudent(studentId: string) {
+    if (sandboxService.isSandboxActive()) {
+      sandboxService.deleteStudent(studentId);
+      return { id: studentId };
+    }
     const { data, error } = await supabase
       .from('students')
       .update({ deleted_at: new Date().toISOString() })

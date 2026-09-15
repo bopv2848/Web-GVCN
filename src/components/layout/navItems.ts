@@ -2,7 +2,7 @@ import type { MenuItem } from '../../types';
 
 export const allNavItems: MenuItem[] = [
   { id: 'dashboard', path: '/', label: 'Tổng quan', iconName: '🏠', roles: ['gvcn', 'bancansu', 'bgh', 'admin'] },
-  { id: 'students', path: '/students', label: 'Học sinh & Tổ', iconName: '👥', roles: ['gvcn', 'bancansu', 'bgh', 'admin'] },
+  { id: 'students', path: '/students', label: 'Tổ chức lớp học', iconName: '👥', roles: ['gvcn', 'bancansu', 'bgh', 'admin'] },
   { id: 'points-award', path: '/points?action=award', label: 'Chấm điểm thi đua', iconName: '⭐', roles: ['gvcn', 'bancansu', 'admin'], badge: 'Tác vụ' },
   { id: 'points-ledger', path: '/points', label: 'Tích điểm & Sổ cái thi đua', iconName: '📜', roles: ['gvcn', 'bancansu', 'admin'] },
   { id: 'rewards', path: '/rewards', label: 'Shop Đổi quà', iconName: '🎁', roles: ['gvcn', 'bancansu', 'student', 'parent', 'admin'] },

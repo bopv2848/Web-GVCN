@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { getUserInitial } from '../../utils/userUtils';
 import type { UserRole } from '../../types/auth';
+import { SandboxBadgeButton } from '../../features/sandbox';
 
 interface HeaderProps {
   onOpenMobileDrawer: () => void;
@@ -70,6 +71,9 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileDrawer }) => {
 
       {/* Right: User Profile & Logout */}
       <div className="flex items-center gap-2 md:gap-4 relative">
+        {/* Nút huy hiệu Chế độ Thử nghiệm Sandbox */}
+        <SandboxBadgeButton />
+
         {/* User Badge with Dropdown */}
         <div className="relative">
           <button

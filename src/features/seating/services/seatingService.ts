@@ -7,12 +7,17 @@ import type {
   InfectionCluster,
   SeatingMedicalAnalysis,
 } from '../../../types/seating';
+import { sandboxService } from '../../sandbox/services/sandboxService';
 
 export const seatingService = {
   /**
    * Lấy hoặc tạo mới Sơ đồ Chỗ ngồi chính cho lớp (6 Hàng x 8 Cột = 48 chỗ cho 47 học sinh)
    */
   async getOrCreateClassLayout(classId: string): Promise<SeatLayout> {
+    if (sandboxService.isSandboxActive()) {
+      const { layout } = sandboxService.getSeating();
+      if (layout) return layout;
+    }
     try {
       const { data: existing, error } = await supabase
         .from('seat_layouts')
@@ -78,6 +83,22 @@ export const seatingService = {
     layoutId: string,
     classId: string
   ): Promise<SeatAssignmentWithStudent[]> {
+    if (sandboxService.isSandboxActive()) {
+      const { assignments } = sandboxService.getSeating();
+      const students = sandboxService.getStudents();
+      const studentMap = new Map<string, Student>(students.map((s) => [s.id, s]));
+
+      return (assignments || []).map((a) => ({
+        id: a.id,
+        layoutId: a.layoutId,
+        studentId: a.studentId,
+        rowIndex: a.rowIndex,
+        colIndex: a.colIndex,
+        isHidden: a.isHidden,
+        createdAt: a.createdAt,
+        student: studentMap.get(a.studentId),
+      }));
+    }
     try {
       // 1. Lấy assignments
       const { data: assignments, error: assignError } = await supabase
@@ -212,6 +233,21 @@ export const seatingService = {
     targetCol: number,
     targetAssignment?: SeatAssignmentWithStudent
   ): Promise<void> {
+    if (sandboxService.isSandboxActive()) {
+      const { assignments } = sandboxService.getSeating();
+      const next = assignments.map((a) => {
+        if (a.id === sourceAssignment.id) {
+          return { ...a, rowIndex: targetRow, colIndex: targetCol };
+        }
+        if (targetAssignment && a.id === targetAssignment.id) {
+          return { ...a, rowIndex: sourceAssignment.rowIndex, colIndex: sourceAssignment.colIndex };
+        }
+        return a;
+      });
+      sandboxService.saveSeatingAssignments(next);
+      return;
+    }
+
     if (targetAssignment && targetAssignment.studentId) {
       // Trường hợp 1: Hoán đổi chỗ ngồi giữa 2 học sinh (Swap)
       // Bước 1: Đưa source về vị trí đệm an toàn (-1, -1)

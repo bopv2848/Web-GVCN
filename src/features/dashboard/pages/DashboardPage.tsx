@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { dashboardService } from '../services/dashboardService';
 import type { DashboardStats } from '../../../types/dashboard';
+import { RealtimeClockBar } from '../components/RealtimeClockBar';
 import { DashboardKpiCards } from '../components/DashboardKpiCards';
 import { WeeklyProgressChart } from '../components/WeeklyProgressChart';
 import { QuickRankingsAndActivities } from '../components/QuickRankingsAndActivities';
@@ -48,7 +49,10 @@ export const DashboardPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-5">
+      {/* 0. Thanh thời gian thực: Thứ, ngày, tháng, năm */}
+      <RealtimeClockBar />
+
       {/* 1. Banner Chào Mừng & Nhận Diện Lớp */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-primary via-indigo-900 to-secondary p-6 md:p-8 text-white shadow-xl">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">

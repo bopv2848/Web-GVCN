@@ -1,5 +1,8 @@
 import { supabase } from '../../../services/supabaseClient';
 import type { DashboardStats } from '../../../types/dashboard';
+import { DEFAULT_CLASS_6A6_STUDENTS, DEFAULT_GROUPS_6A6 } from '../../students/constants/defaultClass6A6Students';
+import { sandboxService } from '../../sandbox/services/sandboxService';
+import { buildSandboxDashboardStats } from '../../sandbox/utils/sandboxDashboardHelper';
 
 interface RawTransaction {
   id: string;
@@ -25,14 +28,27 @@ export const dashboardService = {
    * Lấy toàn bộ dữ liệu thực tế cho màn hình Dashboard Tổng quan
    */
   async getDashboardData(classId: string): Promise<DashboardStats> {
+    if (sandboxService.isSandboxActive()) {
+      return buildSandboxDashboardStats();
+    }
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0];
 
-    // 1. Tải danh sách học sinh và 4 Tổ
+    // 1. Tải danh sách học sinh và 4 Tổ (kèm quan hệ người giám hộ)
     const [studentsRes, groupsRes] = await Promise.all([
       supabase
         .from('students')
-        .select('id, full_name, gender, boarding_type, group_id, guardian_status')
+        .select(`
+          id,
+          full_name,
+          gender,
+          boarding_type,
+          group_id,
+          student_guardians (
+            id,
+            status
+          )
+        `)
         .eq('class_id', classId)
         .is('deleted_at', null),
       supabase
@@ -42,14 +58,54 @@ export const dashboardService = {
         .order('order_index', { ascending: true }),
     ]);
 
-    const students = studentsRes.data || [];
-    const groups = groupsRes.data || [];
+    let students: Array<{
+      id: string;
+      fullName: string;
+      gender: string;
+      boardingType: string;
+      groupId?: string | null;
+      guardianActive: boolean;
+    }> = [];
+
+    if (studentsRes.data && studentsRes.data.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      students = studentsRes.data.map((s: any) => ({
+        id: s.id,
+        fullName: s.full_name,
+        gender: s.gender,
+        boardingType: s.boarding_type,
+        groupId: s.group_id,
+        guardianActive: Array.isArray(s.student_guardians)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          ? s.student_guardians.some((g: any) => g.status === 'active')
+          : false,
+      }));
+    } else {
+      students = DEFAULT_CLASS_6A6_STUDENTS.map((s) => ({
+        id: s.id,
+        fullName: s.fullName,
+        gender: s.gender,
+        boardingType: s.boardingType || 'Bán trú',
+        groupId: s.groupId,
+        guardianActive: s.guardianStatus === 'active',
+      }));
+    }
+
+    const groups =
+      groupsRes.data && groupsRes.data.length > 0
+        ? groupsRes.data
+        : DEFAULT_GROUPS_6A6.map((g) => ({
+            id: g.id,
+            name: g.name,
+            color_class: g.colorClass,
+            order_index: g.orderIndex,
+          }));
 
     const totalStudents = students.length;
     const maleCount = students.filter((s) => s.gender === 'Nam').length;
     const femaleCount = students.filter((s) => s.gender === 'Nữ').length;
-    const boardingCount = students.filter((s) => s.boarding_type === 'Bán trú').length;
-    const guardianLinkedCount = students.filter((s) => s.guardian_status === 'active').length;
+    const boardingCount = students.filter((s) => s.boardingType === 'Bán trú').length;
+    const guardianLinkedCount = students.filter((s) => s.guardianActive).length;
 
     // 2. Tải phiên điểm danh hôm nay
     const { data: todaySessions } = await supabase

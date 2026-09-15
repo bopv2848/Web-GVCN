@@ -2,6 +2,7 @@ import { supabase } from '../../../services/supabaseClient';
 import { studentService } from '../../students/services/studentService';
 import { CLASS_6A6_ID, DEFAULT_CLASS_6A6_STUDENTS, DEFAULT_GROUPS_6A6 } from '../../students/constants/defaultClass6A6Students';
 import { sortVietnameseList } from '../../../utils/vietnameseNameSort';
+import { sandboxService } from '../../sandbox/services/sandboxService';
 import type {
   AttendanceSession,
   AttendanceRecord,
@@ -27,6 +28,24 @@ export const attendanceService = {
     type: SessionType = 'morning'
   ): Promise<AttendanceSession> {
     const targetClassId = classId || CLASS_6A6_ID;
+
+    if (sandboxService.isSandboxActive()) {
+      const sessions = sandboxService.getAttendanceSessions();
+      const existing = sessions.find((s) => s.sessionDate === date && s.sessionType === type);
+      if (existing) {
+        return existing;
+      }
+      const newSession: AttendanceSession = {
+        id: `att-mock-session-${date}-${type}`,
+        classId: targetClassId,
+        sessionDate: date,
+        sessionType: type,
+        isLocked: false,
+        createdBy: 'Thầy Phan Văn Bộ (GVCN)',
+        createdAt: new Date().toISOString(),
+      };
+      return newSession;
+    }
 
     // 1. Kiểm tra phiên đã có trên Supabase chưa
     try {
@@ -165,6 +184,12 @@ export const attendanceService = {
    */
   async getSessionRecords(sessionId: string, classId?: string): Promise<AttendanceRecord[]> {
     const targetClassId = classId || CLASS_6A6_ID;
+    if (sandboxService.isSandboxActive()) {
+      const records = sandboxService.getAttendanceRecords(sessionId);
+      if (records.length > 0) {
+        return sortVietnameseList(records, (r) => r.studentName);
+      }
+    }
     let dbRecords: AttendanceRecord[] = [];
 
     try {
@@ -256,6 +281,37 @@ export const attendanceService = {
    * Cập nhật trạng thái điểm danh cho 1 học sinh
    */
   async updateRecordStatus(recordId: string, status: AttendanceStatus, note?: string) {
+    if (sandboxService.isSandboxActive()) {
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (key.startsWith('gvcn_attendance_records_') || key === 'gvcn_sandbox_att_records')) {
+            const raw = localStorage.getItem(key);
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              if (Array.isArray(parsed)) {
+                const next = parsed.map((item: AttendanceRecord) =>
+                  item.id === recordId ? { ...item, status, note: note !== undefined ? note : item.note, updatedAt: new Date().toISOString() } : item
+                );
+                localStorage.setItem(key, JSON.stringify(next));
+              } else if (typeof parsed === 'object') {
+                Object.keys(parsed).forEach((sId) => {
+                  if (Array.isArray(parsed[sId])) {
+                    parsed[sId] = parsed[sId].map((item: AttendanceRecord) =>
+                      item.id === recordId ? { ...item, status, note: note !== undefined ? note : item.note, updatedAt: new Date().toISOString() } : item
+                    );
+                  }
+                });
+                localStorage.setItem(key, JSON.stringify(parsed));
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Lỗi cập nhật điểm danh sandbox:', e);
+      }
+      return;
+    }
     try {
       const { data: { user } } = await supabase.auth.getUser();
       await supabase

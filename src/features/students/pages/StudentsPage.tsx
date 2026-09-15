@@ -11,6 +11,7 @@ import { StudentFormModal } from '../components/StudentFormModal';
 import { DeleteStudentModal } from '../components/DeleteStudentModal';
 import { ImportExportModal } from '../components/ImportExportModal';
 import { InviteTokenModal } from '../components/InviteTokenModal';
+import { ClassOfficerOrgChart } from '../components/ClassOfficerOrgChart';
 import { Button } from '../../../components/common/Button';
 import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
 
@@ -23,6 +24,7 @@ export const StudentsPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   // Filters & View Mode
+  const [activeTab, setActiveTab] = useState<'students' | 'officers'>('students');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGroup, setSelectedGroup] = useState<string>('all');
   const [selectedGender, setSelectedGender] = useState<string>('all');
@@ -110,10 +112,10 @@ export const StudentsPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-5 md:p-6 rounded-3xl border border-slate-200/80 shadow-xs">
         <div>
           <h2 className="text-xl md:text-2xl font-black text-slate-850 tracking-tight">
-            Quản Lý Học Sinh & Tổ Thi Đua
+            Tổ Chức Lớp Học & Phân Tổ
           </h2>
           <p className="text-xs text-slate-500 font-semibold mt-1">
-            Danh sách học sinh, phân tổ, hồ sơ cá nhân và mã liên kết phụ huynh
+            Quản lý danh sách học sinh, cơ cấu ban cán sự, phân chia 4 tổ và liên kết phụ huynh
           </p>
         </div>
 
@@ -162,7 +164,54 @@ export const StudentsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Filter Toolbar */}
+      {/* Tab Switcher: Danh Sách Học Sinh VS Cơ Cấu Ban Cán Sự */}
+      <div className="flex items-center gap-2 border-b border-slate-200/80 pb-2">
+        <button
+          onClick={() => setActiveTab('students')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black transition-all ${
+            activeTab === 'students'
+              ? 'bg-primary text-white shadow-xs'
+              : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+          }`}
+        >
+          <span>📋 Danh Sách & Phân Tổ</span>
+          <span
+            className={`text-[10px] px-2 py-0.5 rounded-full ${
+              activeTab === 'students' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+            }`}
+          >
+            {stats.total}
+          </span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('officers')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black transition-all ${
+            activeTab === 'officers'
+              ? 'bg-primary text-white shadow-xs'
+              : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+          }`}
+        >
+          <span>🏛️ Cơ Cấu Ban Cán Sự</span>
+          <span
+            className={`text-[10px] px-2 py-0.5 rounded-full ${
+              activeTab === 'officers' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-800'
+            }`}
+          >
+            {officerCount} cán bộ
+          </span>
+        </button>
+      </div>
+
+      {activeTab === 'officers' ? (
+        <ClassOfficerOrgChart
+          students={students}
+          groups={groups}
+          onSelectOfficer={(stu) => setTaskStudent(stu)}
+        />
+      ) : (
+        <>
+          {/* Filter Toolbar */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
         {/* Search */}
         <div className="relative flex-1">
@@ -361,6 +410,8 @@ export const StudentsPage: React.FC = () => {
             </table>
           </div>
         </div>
+      )}
+        </>
       )}
 
       {/* Modals */}

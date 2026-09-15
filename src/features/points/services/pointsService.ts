@@ -1,5 +1,6 @@
 import { supabase } from '../../../services/supabaseClient';
 import type { PointCategory, PointTransaction } from '../../../types/points';
+import { sandboxService } from '../../sandbox/services/sandboxService';
 
 export interface GroupPointsSummary {
   id: string;
@@ -63,6 +64,9 @@ export const pointsService = {
    * Lấy danh sách tiêu chí điểm thi đua chuẩn (kèm khử trùng lặp)
    */
   async getCategories(classId: string): Promise<PointCategory[]> {
+    if (sandboxService.isSandboxActive()) {
+      return sandboxService.getCategories();
+    }
     const { data, error } = await supabase
       .from('point_categories')
       .select('*')
@@ -190,6 +194,9 @@ export const pointsService = {
    * Lấy lịch sử các giao dịch cộng/trừ điểm thi đua gần nhất
    */
   async getRecentTransactions(classId: string, limit = 50): Promise<PointTransaction[]> {
+    if (sandboxService.isSandboxActive()) {
+      return sandboxService.getTransactions().slice(0, limit);
+    }
     const localTxs = getLocalTransactions(classId);
     try {
       const { data, error } = await supabase
@@ -247,6 +254,49 @@ export const pointsService = {
    * Tính tổng điểm và xếp hạng thi đua cho 4 Tổ trong lớp
    */
   async getGroupPointsSummary(classId: string): Promise<GroupPointsSummary[]> {
+    if (sandboxService.isSandboxActive()) {
+      const groups = sandboxService.getGroups();
+      const students = sandboxService.getStudents();
+      const txs = sandboxService.getTransactions();
+
+      const studentToGroupMap = new Map<string, string>();
+      students.forEach((s) => {
+        if (s.groupId) studentToGroupMap.set(s.id, s.groupId);
+      });
+
+      const summaries: GroupPointsSummary[] = groups.map((g) => ({
+        id: g.id,
+        name: g.name,
+        colorClass: g.colorClass,
+        totalPoints: 0,
+        totalStars: 0,
+        rank: 1,
+      }));
+
+      const groupSummaryMap = new Map<string, GroupPointsSummary>();
+      summaries.forEach((s) => groupSummaryMap.set(s.id, s));
+
+      txs.forEach((tx) => {
+        const gId = studentToGroupMap.get(tx.studentId);
+        if (gId && groupSummaryMap.has(gId)) {
+          const item = groupSummaryMap.get(gId)!;
+          item.totalPoints += tx.points;
+          item.totalStars += tx.stars || 0;
+        }
+      });
+
+      summaries.sort((a, b) => {
+        if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
+        return b.totalStars - a.totalStars;
+      });
+
+      summaries.forEach((item, index) => {
+        item.rank = index + 1;
+      });
+
+      return summaries;
+    }
+
     // 1. Lấy danh sách tổ
     const { data: groups, error: groupErr } = await supabase
       .from('groups')
@@ -322,6 +372,43 @@ export const pointsService = {
    * Ghi nhận giao dịch điểm mới (Append-only) cho Cá nhân, Tổ hoặc Cả lớp
    */
   async createTransaction(params: CreateTransactionParams) {
+    if (sandboxService.isSandboxActive()) {
+      const mockStudents = sandboxService.getStudents();
+      let targetStudentIds: string[] = [];
+
+      if (params.targetType === 'student' || params.targetType === 'students') {
+        if (params.studentIds && params.studentIds.length > 0) {
+          targetStudentIds = params.studentIds;
+        } else if (params.studentId) {
+          targetStudentIds = [params.studentId];
+        }
+      } else if (params.targetType === 'group') {
+        targetStudentIds = mockStudents.filter((s) => s.groupId === params.groupId).map((s) => s.id);
+      } else if (params.targetType === 'class') {
+        targetStudentIds = mockStudents.map((s) => s.id);
+      }
+
+      const results = targetStudentIds.map((sid) => {
+        const student = mockStudents.find((s) => s.id === sid);
+        const tx: PointTransaction = {
+          id: `tx-mock-${Date.now()}-${sid}`,
+          studentId: sid,
+          studentName: student?.fullName || 'Học sinh',
+          groupName: student?.groupName,
+          points: params.points,
+          stars: params.stars || 0,
+          reason: params.reason,
+          note: params.note,
+          occurredAt: new Date().toISOString(),
+          createdBy: 'Thầy Phan Văn Bộ (GVCN)',
+        };
+        sandboxService.addTransaction(tx);
+        return tx;
+      });
+
+      return results;
+    }
+
     let userId = 'dev-gvcn-001';
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -416,6 +503,10 @@ export const pointsService = {
    * Hoàn tác giao dịch điểm thi đua (Tạo bản ghi đảo ngược Reversal)
    */
   async reverseTransaction(transactionId: string, reason: string) {
+    if (sandboxService.isSandboxActive()) {
+      sandboxService.deleteTransaction(transactionId);
+      return { id: `rev-${transactionId}`, success: true };
+    }
     let userId = 'dev-gvcn-001';
     try {
       const { data: { user } } = await supabase.auth.getUser();
