@@ -1,6 +1,7 @@
 import { supabase } from '../../../services/supabaseClient';
 import type { PointCategory, PointTransaction } from '../../../types/points';
 import { sandboxService } from '../../sandbox/services/sandboxService';
+import { MOCK_POINT_CATEGORIES } from '../../sandbox/constants/mockClassData';
 
 export interface GroupPointsSummary {
   id: string;
@@ -73,9 +74,9 @@ export const pointsService = {
       .eq('class_id', classId)
       .order('category_group', { ascending: true });
 
-    if (error || !data) {
-      console.warn('Lỗi tải tiêu chí thi đua:', error);
-      return [];
+    if (error || !data || data.length === 0) {
+      console.warn('Lỗi tải tiêu chí thi đua hoặc CSDL trống, sử dụng danh mục mẫu chuẩn:', error);
+      return MOCK_POINT_CATEGORIES;
     }
 
     const seen = new Set<string>();
