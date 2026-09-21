@@ -183,6 +183,7 @@ export const DeskCell: React.FC<DeskCellProps> = ({
 
   return (
     <div
+      data-testid="student-desk-card"
       draggable={true}
       onDragStart={onDragStart}
       onDragOver={onDragOver}

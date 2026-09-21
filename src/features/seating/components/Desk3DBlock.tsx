@@ -268,6 +268,7 @@ export const Desk3DBlock: React.FC<Desk3DBlockProps> = ({
 
     return (
       <div
+        data-testid="student-desk-card"
         draggable={true}
         onDragStart={(e) => onDragStart(e, assignment, rowIndex, colIndex)}
         onDragOver={(e) => onDragOver(e, rowIndex, colIndex)}

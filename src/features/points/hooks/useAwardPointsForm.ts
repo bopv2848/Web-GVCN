@@ -68,6 +68,13 @@ export const useAwardPointsForm = ({
   const [errorMessage, setErrorMessage] = useState<string>('');
 
   const reasonInputRef = useRef<HTMLInputElement | null>(null);
+  const categoryMsgTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (categoryMsgTimeoutRef.current) clearTimeout(categoryMsgTimeoutRef.current);
+    };
+  }, []);
 
   // Tách 2 danh mục tiêu chí riêng biệt: Điểm cộng và Điểm trừ (kèm khử trùng lặp hiển thị)
   const addCategories = useMemo(() => {
@@ -154,7 +161,8 @@ export const useAwardPointsForm = ({
           newCategory.type === 'add' ? 'Điểm Cộng' : 'Điểm Trừ'
         } thành công!`
       );
-      setTimeout(() => {
+      if (categoryMsgTimeoutRef.current) clearTimeout(categoryMsgTimeoutRef.current);
+      categoryMsgTimeoutRef.current = setTimeout(() => {
         setCategorySuccessMessage('');
       }, 4000);
     },
@@ -200,7 +208,8 @@ export const useAwardPointsForm = ({
           updatedCat.type === 'add' ? `+${updatedCat.defaultPoints}` : `-${updatedCat.defaultPoints}`
         }đ${updatedCat.type === 'add' && updatedCat.defaultStars > 0 ? `, ⭐+${updatedCat.defaultStars}` : ''}) thành công!`
       );
-      setTimeout(() => {
+      if (categoryMsgTimeoutRef.current) clearTimeout(categoryMsgTimeoutRef.current);
+      categoryMsgTimeoutRef.current = setTimeout(() => {
         setCategorySuccessMessage('');
       }, 4000);
     },
@@ -313,9 +322,10 @@ export const useAwardPointsForm = ({
     setSelectedStudentIds([]);
   }, []);
 
-  // Reset khi mở modal
+  // Reset khi mở modal (Chỉ reset toàn bộ khi modal chuyển từ đóng sang mở)
+  const prevIsOpenRef = useRef(false);
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !prevIsOpenRef.current) {
       setErrorMessage('');
       setSelectedAddCategoryIds([]);
       setSelectedSubCategoryIds([]);
@@ -327,6 +337,19 @@ export const useAwardPointsForm = ({
       setStars(5);
       setReason('');
       setNote('');
+      if (students.length > 0) {
+        setSelectedStudentId(students[0].id);
+      }
+      if (groups.length > 0) {
+        setSelectedGroupId(groups[0].id);
+      }
+    }
+    prevIsOpenRef.current = isOpen;
+  }, [isOpen, students, groups]);
+
+  // Tự động gán học sinh hoặc tổ mặc định khi danh sách nạp sau mà không xóa dữ liệu người dùng đang nhập
+  useEffect(() => {
+    if (isOpen) {
       if (students.length > 0 && !selectedStudentId) {
         setSelectedStudentId(students[0].id);
       }

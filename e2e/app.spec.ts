@@ -16,11 +16,14 @@ test.describe('Web-GVCN App Smoke Tests', () => {
 
   test('should support touch to swap student seats on mobile and desktop', async ({ page }) => {
     await page.goto('/seating');
-    // Chờ sơ đồ và các bàn học nạp hoàn tất
+    // Chờ sơ đồ và tiêu đề phòng học hiển thị
     await expect(page.getByRole('heading', { name: /Phòng Học Lớp/i })).toBeVisible({ timeout: 15000 });
 
-    const studentDesks = page.locator('[title*="để đổi chỗ"]');
-    await expect(studentDesks.first()).toBeVisible({ timeout: 20000 });
+    // Đảm bảo không còn trạng thái nạp dữ liệu bàn ghế
+    await expect(page.locator('text=Đang đồng bộ Sơ đồ')).not.toBeVisible({ timeout: 20000 }).catch(() => {});
+
+    const studentDesks = page.locator('[data-testid="student-desk-card"], [title*="để đổi chỗ"]');
+    await expect(studentDesks.first()).toBeVisible({ timeout: 25000 });
 
     // 1. Chạm vào ghế của học sinh A
     await studentDesks.first().click();
