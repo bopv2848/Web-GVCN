@@ -65,7 +65,7 @@ test.describe('Web-GVCN App Smoke Tests', () => {
     await submitBtn.click();
 
     // 6. Kiểm tra modal đóng lại sau khi lưu
-    await expect(page.getByRole('heading', { name: /Chấm Điểm Nề Nếp & Thi Đua/i })).not.toBeVisible({ timeout: 20000 });
+    await expect(page.getByRole('heading', { name: /Chấm Điểm Nề Nếp & Thi Đua/i })).not.toBeVisible({ timeout: 15000 });
 
     // 7. Kiểm tra giao dịch hiển thị ngay trên dòng nhật ký sổ cái
     await expect(page.locator('text=Phát biểu xây dựng bài sôi nổi').first()).toBeVisible({ timeout: 15000 });

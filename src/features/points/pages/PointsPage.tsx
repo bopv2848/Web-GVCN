@@ -90,17 +90,10 @@ export const PointsPage: React.FC = () => {
 
   const highlightTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Tự động mở modal khi có query param ?action=award
+  // Tự động mở modal khi có query param ?action=award và dọn dẹp param ngay để tránh race condition
   useEffect(() => {
     if (searchParams.get('action') === 'award') {
       setIsModalOpen(true);
-    }
-  }, [searchParams]);
-
-  // Đóng modal và dọn dẹp param trên URL
-  const handleCloseModal = useCallback(() => {
-    setIsModalOpen(false);
-    if (searchParams.get('action') === 'award') {
       setSearchParams(
         (prev) => {
           const next = new URLSearchParams(prev);
@@ -111,6 +104,11 @@ export const PointsPage: React.FC = () => {
       );
     }
   }, [searchParams, setSearchParams]);
+
+  // Đóng modal
+  const handleCloseModal = useCallback(() => {
+    setIsModalOpen(false);
+  }, []);
 
   // Cập nhật studentsRef mỗi khi students thay đổi
   useEffect(() => {
@@ -893,7 +891,6 @@ export const PointsPage: React.FC = () => {
         classId={classId}
         onSuccess={() => {
           loadInitialData();
-          handleCloseModal();
         }}
         onCategoryAdded={(newCat) => {
           setCategories((prev) => [...prev, newCat]);
