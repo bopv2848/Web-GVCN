@@ -42,12 +42,14 @@ test.describe('Web-GVCN App Smoke Tests', () => {
     // 1. Kiểm tra modal Chấm Điểm Nề Nếp & Thi Đua hiển thị
     await expect(page.getByRole('heading', { name: /Chấm Điểm Nề Nếp & Thi Đua/i })).toBeVisible({ timeout: 15000 });
 
-    // 2. Chờ danh sách học sinh nạp hoàn tất và chọn học sinh
+    // 2. Chờ danh sách học sinh nạp hoàn tất và chọn học sinh theo ID cụ thể
     const studentSelect = page.locator('form select').first();
     await expect(studentSelect).toBeVisible({ timeout: 15000 });
     const studentOptions = studentSelect.locator('option:not([value=""])');
     await expect(studentOptions.first()).toBeAttached({ timeout: 20000 });
-    await studentSelect.selectOption({ index: 0 });
+    const studentId = await studentOptions.first().getAttribute('value');
+    expect(studentId).toBeTruthy();
+    await studentSelect.selectOption(studentId!);
 
     // 3. Nhập lý do khen thưởng / cộng điểm
     const reasonInput = page.locator('input[placeholder*="Giúp đỡ bạn"]').first();
