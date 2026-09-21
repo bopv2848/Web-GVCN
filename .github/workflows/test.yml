@@ -65,6 +65,10 @@ jobs:
     needs: [test-and-build]
     if: github.ref == 'refs/heads/master' && github.event_name == 'push'
     runs-on: ubuntu-latest
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+      NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
 
     steps:
       - name: 📥 Tải mã nguồn (Checkout)
@@ -77,7 +81,7 @@ jobs:
           path: dist/
 
       - name: 🚀 Triển khai lên Vercel (Nếu cấu hình VERCEL_TOKEN)
-        if: "${{ secrets.VERCEL_TOKEN != '' }}"
+        if: env.VERCEL_TOKEN != ''
         uses: amondnet/vercel-action@v25
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
@@ -86,7 +90,7 @@ jobs:
           vercel-args: '--prod'
 
       - name: 🌐 Triển khai lên Netlify (Nếu cấu hình NETLIFY_AUTH_TOKEN)
-        if: "${{ secrets.NETLIFY_AUTH_TOKEN != '' }}"
+        if: env.NETLIFY_AUTH_TOKEN != ''
         uses: nwtgck/actions-netlify@v3.0
         with:
           publish-dir: './dist'
