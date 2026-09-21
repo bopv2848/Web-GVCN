@@ -490,7 +490,11 @@ export const attendanceService = {
     // Đồng bộ localStorage
     try {
       const cacheKey = `gvcn_attendance_records_${sessionId}`;
-      const raw = localStorage.getItem(cacheKey);
+      let raw = localStorage.getItem(cacheKey);
+      if (!raw) {
+        await this.getSessionRecords(sessionId, CLASS_6A6_ID);
+        raw = localStorage.getItem(cacheKey);
+      }
       if (raw) {
         const list = JSON.parse(raw);
         if (Array.isArray(list)) {
@@ -563,7 +567,11 @@ export const attendanceService = {
     // Đồng bộ localStorage
     try {
       const cacheKey = `gvcn_attendance_records_${sessionId}`;
-      const raw = localStorage.getItem(cacheKey);
+      let raw = localStorage.getItem(cacheKey);
+      if (!raw) {
+        await this.getSessionRecords(sessionId, CLASS_6A6_ID);
+        raw = localStorage.getItem(cacheKey);
+      }
       if (raw) {
         const list = JSON.parse(raw);
         if (Array.isArray(list)) {

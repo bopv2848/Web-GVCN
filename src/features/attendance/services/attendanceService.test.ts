@@ -2,6 +2,41 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { attendanceService } from './attendanceService';
 import { CLASS_6A6_ID } from '../../students/constants/defaultClass6A6Students';
 
+const createQueryBuilder = () => {
+  const builder: any = {
+    select: vi.fn(() => builder),
+    insert: vi.fn(() => builder),
+    update: vi.fn(() => builder),
+    delete: vi.fn(() => builder),
+    eq: vi.fn(() => builder),
+    neq: vi.fn(() => builder),
+    in: vi.fn(() => builder),
+    is: vi.fn(() => builder),
+    gte: vi.fn(() => builder),
+    lte: vi.fn(() => builder),
+    gt: vi.fn(() => builder),
+    lt: vi.fn(() => builder),
+    like: vi.fn(() => builder),
+    ilike: vi.fn(() => builder),
+    order: vi.fn(() => builder),
+    limit: vi.fn(() => builder),
+    range: vi.fn(() => builder),
+    maybeSingle: vi.fn().mockResolvedValue({ data: null, error: { message: 'offline' } }),
+    single: vi.fn().mockResolvedValue({ data: null, error: { message: 'offline' } }),
+    then: vi.fn((resolve) => resolve({ data: [], error: { message: 'offline' } })),
+  };
+  return builder;
+};
+
+vi.mock('../../../services/supabaseClient', () => ({
+  supabase: {
+    from: vi.fn(() => createQueryBuilder()),
+    auth: {
+      getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: null }),
+    },
+  },
+}));
+
 describe('attendanceService Unit Tests', () => {
   beforeEach(() => {
     localStorage.clear();
