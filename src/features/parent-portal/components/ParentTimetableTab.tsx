@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { ParentStudentPortalData } from '../types';
+import { getAcademicWeekInfo } from '../../../utils/academicWeekUtils';
 
 interface ParentTimetableTabProps {
   data: ParentStudentPortalData;
@@ -8,6 +9,7 @@ interface ParentTimetableTabProps {
 export const ParentTimetableTab: React.FC<ParentTimetableTabProps> = ({ data }) => {
   const { timetable } = data;
   const [selectedDay, setSelectedDay] = useState<number>(2); // Thứ 2 mặc định
+  const academicWeek = getAcademicWeekInfo();
 
   const days = [
     { day: 2, label: 'Thứ 2' },
@@ -22,13 +24,18 @@ export const ParentTimetableTab: React.FC<ParentTimetableTabProps> = ({ data }) 
 
   return (
     <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 md:p-6 space-y-5">
-      <div className="border-b border-slate-100 pb-3">
-        <h3 className="text-base font-black text-slate-850 tracking-tight flex items-center gap-2">
-          <span>🗓️</span> Thời Khóa Biểu Học Tập
-        </h3>
-        <p className="text-xs text-slate-500 font-medium">
-          Lịch học các môn trong tuần để phụ huynh đôn đốc con chuẩn bị sách vở
-        </p>
+      <div className="border-b border-slate-100 pb-3 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h3 className="text-base font-black text-slate-850 tracking-tight flex items-center gap-2">
+            <span>🗓️</span> Thời Khóa Biểu Học Tập — Tuần {academicWeek.weekNumber}
+          </h3>
+          <p className="text-xs text-slate-500 font-medium mt-0.5">
+            {academicWeek.fullAppliedText} (Thứ 2 đầu tuần) • Lịch học để phụ huynh đôn đốc con chuẩn bị sách vở
+          </p>
+        </div>
+        <span className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-amber-50 text-amber-900 border border-amber-200">
+          {academicWeek.fullAppliedText}
+        </span>
       </div>
 
       {/* Days buttons */}

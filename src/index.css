@@ -1,4 +1,4 @@
-﻿@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -39,4 +39,44 @@
 /* Touch action optimization */
 button, select, input, a {
   touch-action: manipulation;
+}
+
+/* Print Optimization for Classroom Seating & Reports */
+@media print {
+  @page {
+    size: landscape;
+    margin: 0; /* Triệt tiêu triệt để header/footer mặc định của trình duyệt (ngày giờ, tiêu đề) */
+  }
+
+  html, body, #root {
+    height: 100% !important;
+    min-height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Ẩn triệt để các cửa sổ modal và thanh công cụ khi in ấn */
+  [data-print-hidden="true"],
+  .print-hidden,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  .print-sheet {
+    font-family: 'Times New Roman', Times, Georgia, serif !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    height: 200mm !important;
+    max-height: 200mm !important;
+    box-sizing: border-box !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    margin: 0 auto !important;
+    padding: 9mm 6mm 4mm 6mm !important; /* Lề trên thụt xuống 0.5cm (9mm), 2 bên 6mm, đáy 4mm */
+  }
 }

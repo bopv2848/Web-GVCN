@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { seatingService } from './seatingService';
+import { sandboxService } from '../../sandbox/services/sandboxService';
 import type { SeatAssignmentWithStudent } from '../../../types/seating';
 import type { Student } from '../../../types/student';
 
@@ -188,5 +189,61 @@ describe('seatingService - rotateWeekLayout', () => {
     expect(weekInvalid.startDate).toBe('2026-09-01');
   });
 });
+
+describe('seatingService - clearClassAssignments & Tự động đặt lại Sơ đồ bàn học khi lớp rỗng', () => {
+  const testClassId = 'test-clear-seating-class';
+
+  it('xóa sạch cache LocalStorage và phân công chỗ ngồi khi gọi clearClassAssignments', async () => {
+    localStorage.setItem(`seating_assignments_${testClassId}`, JSON.stringify([{ id: 'asg-1', studentId: 'hs-1' }]));
+
+    await seatingService.clearClassAssignments(testClassId);
+
+    // Cache chỗ ngồi phải bị xóa sạch
+    expect(localStorage.getItem(`seating_assignments_${testClassId}`)).toBeNull();
+  });
+
+  it('lưu trữ an toàn danh sách phân công chỗ ngồi qua saveAllAssignments trong sandbox', async () => {
+    sandboxService.enableSandbox(true);
+    const assignments: SeatAssignmentWithStudent[] = [
+      {
+        id: 'test-asg-1',
+        layoutId: 'lay-test',
+        studentId: 'hs-1',
+        rowIndex: 1,
+        colIndex: 2,
+        isHidden: false,
+      },
+    ];
+
+    try {
+      await expect(seatingService.saveAllAssignments('lay-test', assignments)).resolves.not.toThrow();
+      const saved = sandboxService.getSeating().assignments;
+      expect(saved.length).toBe(1);
+      expect(saved[0].studentId).toBe('hs-1');
+    } finally {
+      sandboxService.disableSandbox();
+    }
+  });
+
+  it('xử lý an toàn khi lưu và lấy elements_config trong môi trường sandbox hoặc fallback', async () => {
+    sandboxService.enableSandbox(true);
+    try {
+      const config = {
+        teacherDeskPosition: 'left' as const,
+        doorPosition: 'left' as const,
+        doorAngle: 90,
+      };
+
+      const saveResult = await seatingService.saveClassroomElementsConfig('test-class-id', config);
+      expect(saveResult).toBe(true);
+
+      const fetched = await seatingService.getClassroomElementsConfig('test-class-id');
+      expect(fetched).toBeNull(); // Trong sandbox fallback về local storage
+    } finally {
+      sandboxService.disableSandbox();
+    }
+  });
+});
+
 
 

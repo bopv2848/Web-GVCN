@@ -52,7 +52,7 @@ export const SchoolYearStartModal: React.FC<SchoolYearStartModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn print:hidden"
       onClick={onClose}
     >
       <div

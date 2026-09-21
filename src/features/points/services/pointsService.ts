@@ -223,6 +223,11 @@ export const pointsService = {
         .limit(limit);
 
       if (!error && data) {
+        const creatorMap: Record<string, string> = {
+          '601dce7f-13e4-4680-b2f9-f86ed1a17079': 'Thầy Phan Văn Bộ (GVCN)',
+          'dd877932-f537-412d-baf5-018ba482a1e3': 'Lê Ngọc Anh (Ban cán sự)',
+        };
+
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const remoteTxs: PointTransaction[] = data.map((tx: any) => ({
           id: tx.id,
@@ -234,7 +239,7 @@ export const pointsService = {
           reason: tx.reason,
           note: tx.note,
           occurredAt: tx.occurred_at,
-          createdBy: tx.created_by,
+          createdBy: creatorMap[tx.created_by] || tx.created_by || 'Thầy Phan Văn Bộ (GVCN)',
           reversalOfId: tx.reversal_of_id,
         }));
 
@@ -409,7 +414,7 @@ export const pointsService = {
       return results;
     }
 
-    let userId = 'dev-gvcn-001';
+    let userId: string | undefined = undefined;
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user?.id) userId = user.id;
@@ -464,7 +469,7 @@ export const pointsService = {
       stars: params.stars,
       reason: params.reason,
       note: params.note || null,
-      created_by: userId,
+      ...(userId ? { created_by: userId } : {}),
     }));
 
     try {
@@ -490,7 +495,7 @@ export const pointsService = {
         reason: r.reason,
         note: r.note || undefined,
         occurredAt: new Date().toISOString(),
-        createdBy: userId,
+        createdBy: userId || 'Thầy Phan Văn Bộ (GVCN)',
       };
       saveLocalTransaction(params.classId, tx);
       return tx;
@@ -507,7 +512,7 @@ export const pointsService = {
       sandboxService.deleteTransaction(transactionId);
       return { id: `rev-${transactionId}`, success: true };
     }
-    let userId = 'dev-gvcn-001';
+    let userId: string | undefined = undefined;
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user?.id) userId = user.id;
@@ -532,8 +537,9 @@ export const pointsService = {
             category_id: orig.category_id,
             points: -orig.points,
             stars: -orig.stars,
-            reason: `[HOÀN TÁC] ${reason} (Cho GD: ${orig.reason})`,
-            created_by: userId,
+            reason: `[HOÀN TÁC] ${reason} (Giao dịch gốc: ${orig.reason})`,
+            note: reason,
+            ...(userId ? { created_by: userId } : {}),
             reversal_of_id: orig.id,
           })
           .select()
@@ -550,30 +556,54 @@ export const pointsService = {
   },
 
   /**
-   * Lắng nghe biến động điểm thi đua Realtime WebSockets
+   * Lấy danh mục tên người dùng (GVCN, Ban cán sự) để hiển thị tên thay vì mã UUID
+   */
+  async getProfilesMap(): Promise<Record<string, string>> {
+    const defaultMap: Record<string, string> = {
+      '601dce7f-13e4-4680-b2f9-f86ed1a17079': 'Thầy Phan Văn Bộ (GVCN)',
+      'dd877932-f537-412d-baf5-018ba482a1e3': 'Lê Ngọc Anh (Lớp trưởng)',
+    };
+    try {
+      const { data, error } = await supabase.from('profiles').select('id, full_name, system_role');
+      if (!error && data) {
+        data.forEach((p) => {
+          defaultMap[p.id] = p.full_name;
+        });
+      }
+    } catch {
+      // Offline fallback
+    }
+    return defaultMap;
+  },
+
+  /**
+   * Lắng nghe biến động điểm thi đua Realtime WebSockets 2 chiều (INSERT, UPDATE, DELETE)
    */
   subscribeToPoints(
     classId: string,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    onNewTransaction: (payload: any) => void
+    onTransactionChange: (payload: any) => void,
+    onStatusChange?: (status: string) => void
   ) {
-    const channelName = `realtime-points-${classId}`;
+    const channelName = `realtime-points-${classId}-${Date.now()}`;
 
     const channel = supabase
       .channel(channelName)
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
           table: 'point_transactions',
           filter: `class_id=eq.${classId}`,
         },
         (payload) => {
-          onNewTransaction(payload);
+          onTransactionChange(payload);
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        onStatusChange?.(status);
+      });
 
     return () => {
       supabase.removeChannel(channel);

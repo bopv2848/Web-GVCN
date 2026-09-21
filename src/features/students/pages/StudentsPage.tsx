@@ -3,25 +3,35 @@ import type { Student, Group } from '../../../types/student';
 import { studentService } from '../services/studentService';
 import type { StudentFormData } from '../schemas/studentSchema';
 import { useAuth } from '../../../hooks/useAuth';
+import { canDeleteAllStudents } from '../../../utils/permissionUtils';
 
 import { StudentCard } from '../components/StudentCard';
 import { RoleBadge } from '../components/RoleBadge';
 import { OfficerTaskModal } from '../components/OfficerTaskModal';
 import { StudentFormModal } from '../components/StudentFormModal';
 import { DeleteStudentModal } from '../components/DeleteStudentModal';
+import { DeleteAllStudentsModal } from '../components/DeleteAllStudentsModal';
 import { ImportExportModal } from '../components/ImportExportModal';
 import { InviteTokenModal } from '../components/InviteTokenModal';
 import { ClassOfficerOrgChart } from '../components/ClassOfficerOrgChart';
+import { customRolesService } from '../services/customRolesService';
 import { Button } from '../../../components/common/Button';
 import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
 
 export const StudentsPage: React.FC = () => {
-  const { currentClass } = useAuth();
+  const { currentClass, user, membership } = useAuth();
   const classId = currentClass?.id || '66666666-6666-6666-6666-666666666666';
+  const canDeleteAll = canDeleteAllStudents(user, membership);
 
   const [students, setStudents] = useState<Student[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
 
   // Filters & View Mode
   const [activeTab, setActiveTab] = useState<'students' | 'officers'>('students');
@@ -34,6 +44,7 @@ export const StudentsPage: React.FC = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [deletingStudent, setDeletingStudent] = useState<Student | null>(null);
+  const [isDeleteAllOpen, setIsDeleteAllOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [inviteStudent, setInviteStudent] = useState<Student | null>(null);
   const [taskStudent, setTaskStudent] = useState<Student | null>(null);
@@ -106,8 +117,71 @@ export const StudentsPage: React.FC = () => {
     await loadData();
   };
 
+  const handleDeleteAllStudents = async () => {
+    if (!canDeleteAll) {
+      showToast('Thao tác bị từ chối: Chỉ GVCN chính thức mới có quyền xóa toàn bộ học sinh!');
+      return;
+    }
+    const res = await studentService.deleteAllStudents(classId, {
+      role: user?.role,
+      membershipRole: membership?.role,
+    });
+    showToast(`Đã xóa sạch toàn bộ ${res.count} học sinh. Thầy/Cô có thể nạp danh sách mới ngay bây giờ!`);
+    await loadData();
+  };
+
+  const handleAssignOfficer = async (
+    studentId: string | null,
+    roleTitle: string,
+    customRoleId?: string
+  ) => {
+    try {
+      if (!studentId) {
+        // Gỡ phân công học sinh đang giữ vai trò này
+        const currentHolder = students.find((s) => s.classRole?.toLowerCase() === roleTitle.toLowerCase());
+        if (currentHolder) {
+          await studentService.updateStudentRole(classId, currentHolder.id, 'Thành viên');
+          showToast(`Đã hủy phân công chức vụ "${roleTitle}" của em ${currentHolder.fullName}`);
+        }
+        if (customRoleId) {
+          customRolesService.updateCustomRoleStudent(classId, customRoleId, null);
+        }
+      } else {
+        // Chuyển người giữ chức vụ cũ về Thành viên (nếu có và khác studentId mới)
+        const currentHolder = students.find(
+          (s) => s.classRole?.toLowerCase() === roleTitle.toLowerCase() && s.id !== studentId
+        );
+        if (currentHolder) {
+          await studentService.updateStudentRole(classId, currentHolder.id, 'Thành viên');
+        }
+
+        await studentService.updateStudentRole(classId, studentId, roleTitle);
+        const assignedStudent = students.find((s) => s.id === studentId);
+        showToast(
+          `Đã phân công em ${assignedStudent?.fullName || 'học sinh'} làm "${roleTitle}" thành công!`
+        );
+
+        if (customRoleId) {
+          customRolesService.updateCustomRoleStudent(classId, customRoleId, studentId);
+        }
+      }
+      await loadData();
+    } catch (err) {
+      console.error('Lỗi khi phân công cán sự:', err);
+      showToast('Có lỗi xảy ra khi phân công. Vui lòng thử lại!');
+    }
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
+      {/* Toast thông báo phân công thành công */}
+      {toastMessage && (
+        <div className="fixed top-6 right-6 z-50 bg-slate-900/95 text-white px-5 py-3 rounded-2xl shadow-2xl text-xs font-black flex items-center gap-2 border border-slate-700 backdrop-blur-md animate-bounce">
+          <span>✨</span>
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
       {/* Top Header & Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-5 md:p-6 rounded-3xl border border-slate-200/80 shadow-xs">
         <div>
@@ -120,6 +194,18 @@ export const StudentsPage: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {canDeleteAll && students.length > 0 && (
+            <Button
+              type="button"
+              onClick={() => setIsDeleteAllOpen(true)}
+              variant="outline"
+              size="md"
+              className="flex-1 sm:flex-initial text-xs font-bold border-rose-200 text-rose-600 hover:bg-rose-50 hover:border-rose-300 transition-all"
+              title="Xóa toàn bộ danh sách học sinh để nạp danh sách mới"
+            >
+              🗑️ Xóa tất cả ({students.length})
+            </Button>
+          )}
           <Button
             onClick={() => setIsImportOpen(true)}
             variant="outline"
@@ -207,7 +293,9 @@ export const StudentsPage: React.FC = () => {
         <ClassOfficerOrgChart
           students={students}
           groups={groups}
+          classId={classId}
           onSelectOfficer={(stu) => setTaskStudent(stu)}
+          onAssignOfficer={handleAssignOfficer}
         />
       ) : (
         <>
@@ -310,12 +398,45 @@ export const StudentsPage: React.FC = () => {
         <div className="p-12 text-center bg-white rounded-3xl border border-slate-200">
           <LoadingSpinner size="lg" text="Đang tải danh sách học sinh..." />
         </div>
+      ) : students.length === 0 ? (
+        <div className="p-10 md:p-14 text-center bg-white rounded-3xl border-2 border-dashed border-slate-200 shadow-xs max-w-xl mx-auto my-6 animate-fade-in">
+          <div className="w-16 h-16 rounded-3xl bg-amber-50 text-amber-600 mx-auto flex items-center justify-center text-3xl mb-3 border border-amber-200/60 shadow-inner">
+            📋
+          </div>
+          <h3 className="text-lg font-black text-slate-850">Danh Sách Học Sinh Đang Trống</h3>
+          <p className="text-xs text-slate-500 max-w-md mx-auto mt-1 leading-relaxed font-medium">
+            Lớp học hiện chưa có học sinh nào. Thầy/Cô hãy tải lên tệp Excel danh sách học sinh mới hoặc thêm từng em thủ công để bắt đầu năm học.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-6">
+            <Button
+              type="button"
+              onClick={() => setIsImportOpen(true)}
+              variant="primary"
+              size="md"
+              className="w-full sm:w-auto font-black text-xs px-6 shadow-md shadow-primary/25"
+            >
+              📊 Nhập Danh Sách Từ Excel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                setEditingStudent(null);
+                setIsFormOpen(true);
+              }}
+              variant="outline"
+              size="md"
+              className="w-full sm:w-auto font-bold text-xs px-6"
+            >
+              + Thêm Học Sinh Thủ Công
+            </Button>
+          </div>
+        </div>
       ) : filteredStudents.length === 0 ? (
         <div className="p-12 text-center bg-white rounded-3xl border border-slate-200">
           <span className="text-4xl block mb-2">🔍</span>
           <h3 className="text-base font-black text-slate-800">Không tìm thấy học sinh nào</h3>
           <p className="text-xs text-slate-400 mt-1">
-            {searchQuery ? `Không có kết quả khớp với từ khóa "${searchQuery}"` : 'Lớp chưa có học sinh nào. Thầy/Cô hãy thêm học sinh mới!'}
+            {searchQuery ? `Không có kết quả khớp với từ khóa "${searchQuery}"` : 'Không có học sinh trong bộ lọc này.'}
           </p>
         </div>
       ) : viewMode === 'grid' ? (
@@ -437,6 +558,19 @@ export const StudentsPage: React.FC = () => {
         onSuccess={loadData}
         students={students}
         classId={classId}
+        className={currentClass?.name || '6A6'}
+        onOpenDeleteAll={canDeleteAll ? () => setIsDeleteAllOpen(true) : undefined}
+        canDeleteAll={canDeleteAll}
+      />
+
+      <DeleteAllStudentsModal
+        isOpen={isDeleteAllOpen}
+        onClose={() => setIsDeleteAllOpen(false)}
+        onConfirm={handleDeleteAllStudents}
+        students={students}
+        className={currentClass?.name || '6A6'}
+        onOpenImport={() => setIsImportOpen(true)}
+        canDeleteAll={canDeleteAll}
       />
 
       <InviteTokenModal

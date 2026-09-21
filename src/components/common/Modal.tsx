@@ -6,6 +6,8 @@ interface ModalProps {
   title: string;
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
   children: React.ReactNode;
+  hideOnPrint?: boolean;
+  className?: string;
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -14,6 +16,8 @@ export const Modal: React.FC<ModalProps> = ({
   title,
   size = 'md',
   children,
+  hideOnPrint = false,
+  className = '',
 }) => {
   const touchStartY = useRef<number | null>(null);
 
@@ -59,7 +63,10 @@ export const Modal: React.FC<ModalProps> = ({
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 bg-slate-950/70 backdrop-blur-xs animate-fade-in overflow-y-auto"
+      data-print-hidden={hideOnPrint ? 'true' : undefined}
+      className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 bg-slate-950/70 backdrop-blur-xs animate-fade-in overflow-y-auto ${
+        hideOnPrint ? 'print:!hidden print:hidden' : ''
+      } ${className}`}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}

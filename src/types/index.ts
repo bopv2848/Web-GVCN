@@ -12,6 +12,7 @@ export interface MenuItem {
   path: string;
   label: string;
   iconName: string;
+  iconUrl?: string;
   roles: UserRole[];
   badge?: string | number;
 }

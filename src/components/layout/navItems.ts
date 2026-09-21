@@ -7,7 +7,7 @@ export const allNavItems: MenuItem[] = [
   { id: 'points-ledger', path: '/points', label: 'Tích điểm & Sổ cái thi đua', iconName: '📜', roles: ['gvcn', 'bancansu', 'admin'] },
   { id: 'rewards', path: '/rewards', label: 'Shop Đổi quà', iconName: '🎁', roles: ['gvcn', 'bancansu', 'student', 'parent', 'admin'] },
   { id: 'attendance', path: '/attendance', label: 'Điểm danh', iconName: '📅', roles: ['gvcn', 'bancansu', 'bgh', 'admin'] },
-  { id: 'seating', path: '/seating', label: 'Sơ đồ chỗ ngồi', iconName: '🪑', roles: ['gvcn', 'bancansu', 'bgh', 'admin'] },
+  { id: 'seating', path: '/seating', label: 'PHÒNG HỌC', iconName: '🏫', iconUrl: '/icon-phong-hoc.webp', roles: ['gvcn', 'bancansu', 'bgh', 'admin'] },
   { id: 'timetable', path: '/timetable', label: 'Thời khóa biểu', iconName: '🗓️', roles: ['gvcn', 'bancansu', 'bgh', 'student', 'parent', 'admin'] },
   { id: 'teaching-plan', path: '/teaching-plan', label: 'Lịch báo giảng', iconName: '📖', roles: ['gvcn', 'bgh', 'admin'] },
   { id: 'classroom-tools', path: '/classroom-tools', label: 'Vòng quay & Công cụ', iconName: '🎲', roles: ['gvcn', 'bancansu', 'admin'] },

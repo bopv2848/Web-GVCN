@@ -1,28 +1,61 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import type { Student, Group } from '../../../types/student';
 import { getUserInitial } from '../../../utils/userUtils';
+import { AssignOfficerModal } from './AssignOfficerModal';
+import { AddCustomRoleModal } from './AddCustomRoleModal';
+import { customRolesService, type CustomOfficerRole } from '../services/customRolesService';
+import { studentService } from '../services/studentService';
 
 interface ClassOfficerOrgChartProps {
   students: Student[];
   groups: Group[];
   onSelectOfficer: (student: Student) => void;
+  onAssignOfficer?: (
+    studentId: string | null,
+    roleTitle: string,
+    customRoleId?: string
+  ) => Promise<void> | void;
+  classId?: string;
 }
 
 export const ClassOfficerOrgChart: React.FC<ClassOfficerOrgChartProps> = ({
   students,
   groups,
   onSelectOfficer,
+  onAssignOfficer,
+  classId = '66666666-6666-6666-6666-666666666666',
 }) => {
-  // Phân loại các chức danh trong ban cán sự
+  // State quản lý Modal Phân công cán sự trực tiếp
+  const [assigningRole, setAssigningRole] = useState<{
+    roleTitle: string;
+    roleIcon: string;
+    currentStudent?: Student | null;
+    customRoleId?: string;
+  } | null>(null);
+
+  // State quản lý Modal Thêm nhiệm vụ mới
+  const [isAddRoleModalOpen, setIsAddRoleModalOpen] = useState(false);
+
+  // Danh sách các nhiệm vụ/chức danh tùy chỉnh
+  const [customRoles, setCustomRoles] = useState<CustomOfficerRole[]>([]);
+
+  // Tải danh sách nhiệm vụ tùy chỉnh khi mở trang
+  useEffect(() => {
+    setCustomRoles(customRolesService.getCustomRoles(classId));
+  }, [classId]);
+
+  // Phân loại các chức danh chuẩn trong Ban Điều Hành & Chuyên Trách
   const lopTruong = students.find((s) => s.classRole?.toLowerCase().includes('lớp trưởng'));
-  
   const phoHocTap = students.find((s) => s.classRole?.toLowerCase().includes('học tập'));
   const phoLaoDong = students.find(
     (s) => s.classRole?.toLowerCase().includes('lao động') || s.classRole?.toLowerCase().includes('kỷ luật')
   );
   const phoVanThe = students.find((s) => s.classRole?.toLowerCase().includes('văn thể'));
-  const banSuVu = students.filter(
-    (s) => s.classRole?.toLowerCase().includes('thủ quỹ') || s.classRole?.toLowerCase().includes('sao đỏ')
+  
+  // TÁCH THỦ QUỸ VÀ SAO ĐỎ THÀNH 2 VAI TRÒ RIÊNG BIỆT
+  const thuQuy = students.find((s) => s.classRole?.toLowerCase().includes('thủ quỹ'));
+  const saoDo = students.find(
+    (s) => s.classRole?.toLowerCase().includes('sao đỏ') || s.classRole?.toLowerCase().includes('cờ đỏ')
   );
 
   // Phân cán bộ theo 4 tổ
@@ -37,23 +70,129 @@ export const ClassOfficerOrgChart: React.FC<ClassOfficerOrgChartProps> = ({
     return { group: g, toTruong, toPho, membersCount };
   });
 
+  // Mở modal phân công
+  const handleOpenAssignModal = (
+    roleTitle: string,
+    roleIcon: string,
+    currentStudent?: Student | null,
+    customRoleId?: string
+  ) => {
+    setAssigningRole({
+      roleTitle,
+      roleIcon,
+      currentStudent,
+      customRoleId,
+    });
+  };
+
+  // Thực hiện phân công cán sự trực tiếp
+  const handleAssign = async (studentId: string | null) => {
+    if (!assigningRole) return;
+    const { roleTitle, customRoleId } = assigningRole;
+
+    if (onAssignOfficer) {
+      await onAssignOfficer(studentId, roleTitle, customRoleId);
+    } else {
+      // Xử lý mặc định nếu không truyền callback
+      if (studentId) {
+        // Gỡ người giữ vai trò cũ nếu có
+        const currentHolder = students.find(
+          (s) => s.classRole?.toLowerCase() === roleTitle.toLowerCase() && s.id !== studentId
+        );
+        if (currentHolder) {
+          await studentService.updateStudentRole(classId, currentHolder.id, 'Thành viên');
+        }
+        await studentService.updateStudentRole(classId, studentId, roleTitle);
+      } else if (assigningRole.currentStudent) {
+        await studentService.updateStudentRole(classId, assigningRole.currentStudent.id, 'Thành viên');
+      }
+
+      if (customRoleId) {
+        customRolesService.updateCustomRoleStudent(classId, customRoleId, studentId);
+      }
+    }
+
+    setCustomRoles(customRolesService.getCustomRoles(classId));
+    setAssigningRole(null);
+  };
+
+  // Lưu nhiệm vụ tùy chỉnh mới
+  const handleSaveCustomRole = async (roleData: {
+    title: string;
+    icon: string;
+    description?: string;
+    studentId?: string;
+  }) => {
+    const newRole = customRolesService.saveCustomRole(classId, {
+      title: roleData.title,
+      icon: roleData.icon,
+      description: roleData.description,
+      studentId: roleData.studentId || null,
+    });
+
+    if (roleData.studentId) {
+      if (onAssignOfficer) {
+        await onAssignOfficer(roleData.studentId, roleData.title, newRole.id);
+      } else {
+        await studentService.updateStudentRole(classId, roleData.studentId, roleData.title);
+      }
+    }
+
+    setCustomRoles(customRolesService.getCustomRoles(classId));
+  };
+
+  // Xóa nhiệm vụ tùy chỉnh
+  const handleDeleteCustomRole = async (roleId: string, roleTitle: string) => {
+    if (window.confirm(`Thầy có chắc chắn muốn xóa nhiệm vụ "${roleTitle}" khỏi danh sách ban cán sự?`)) {
+      const assigned = students.find((s) => s.classRole?.toLowerCase() === roleTitle.toLowerCase());
+      if (assigned) {
+        if (onAssignOfficer) {
+          await onAssignOfficer(null, roleTitle, roleId);
+        } else {
+          await studentService.updateStudentRole(classId, assigned.id, 'Thành viên');
+        }
+      }
+      customRolesService.deleteCustomRole(classId, roleId);
+      setCustomRoles(customRolesService.getCustomRoles(classId));
+    }
+  };
+
+  // Hàm hiển thị Thẻ Cán Sự
   const renderOfficerCard = (
     student: Student | undefined,
     roleTitle: string,
     icon: string,
     borderColor = 'border-slate-200',
-    bgColor = 'bg-white'
+    bgColor = 'bg-white',
+    customRoleId?: string
   ) => {
+    // 1. Thẻ khi CHƯA PHÂN CÔNG
     if (!student) {
       return (
-        <div className={`p-4 rounded-2xl border border-dashed ${borderColor} ${bgColor} flex flex-col items-center justify-center text-center min-h-[130px]`}>
-          <span className="text-2xl mb-1 opacity-50">{icon}</span>
-          <span className="text-xs font-bold text-slate-400">{roleTitle}</span>
-          <span className="text-[11px] text-slate-400 mt-1 italic">Chưa phân công</span>
+        <div
+          onClick={() => handleOpenAssignModal(roleTitle, icon, undefined, customRoleId)}
+          className={`group p-4 rounded-2xl border-2 border-dashed ${borderColor} ${bgColor} hover:border-primary hover:bg-primary/5 transition-all duration-200 cursor-pointer flex flex-col items-center justify-center text-center min-h-[140px] relative shadow-2xs`}
+        >
+          <span className="text-3xl mb-1 group-hover:scale-110 transition-transform opacity-70">
+            {icon}
+          </span>
+          <span className="text-xs font-black text-slate-700 uppercase tracking-wide">
+            {roleTitle}
+          </span>
+          <span className="text-[11px] text-amber-700 font-bold mt-0.5 italic">
+            Chưa phân công
+          </span>
+          <button
+            type="button"
+            className="mt-2 px-3 py-1 bg-primary text-white rounded-xl text-[11px] font-black shadow-2xs group-hover:bg-primary-hover active:scale-95 transition-all cursor-pointer flex items-center gap-1"
+          >
+            <span>+</span> Phân công em này
+          </button>
         </div>
       );
     }
 
+    // 2. Thẻ khi ĐÃ CÓ HỌC SINH ĐẢM NHIỆM
     return (
       <div
         onClick={() => onSelectOfficer(student)}
@@ -87,15 +226,50 @@ export const ClassOfficerOrgChart: React.FC<ClassOfficerOrgChartProps> = ({
               {student.gender} • {student.code || 'HS'}
             </p>
           </div>
+
+          {/* Nút thao tác phân công lại trên góc thẻ */}
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpenAssignModal(roleTitle, icon, student, customRoleId);
+              }}
+              className="p-1.5 rounded-xl bg-slate-100 hover:bg-primary hover:text-white text-slate-600 transition-all text-xs cursor-pointer shadow-2xs"
+              title={`Đổi học sinh khác cho vị trí ${roleTitle}`}
+            >
+              🔄
+            </button>
+            {customRoleId && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteCustomRole(customRoleId, roleTitle);
+                }}
+                className="p-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 transition-all text-xs cursor-pointer shadow-2xs"
+                title="Xóa nhiệm vụ tùy chỉnh này"
+              >
+                🗑️
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
           <span className="text-slate-400 font-medium group-hover:text-primary flex items-center gap-1">
             📖 Nhiệm vụ tự quản
           </span>
-          <span className="text-primary font-bold opacity-0 group-hover:opacity-100 transition-opacity">
-            Chi tiết →
-          </span>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleOpenAssignModal(roleTitle, icon, student, customRoleId);
+            }}
+            className="text-primary font-black hover:underline cursor-pointer"
+          >
+            Đổi em khác →
+          </button>
         </div>
       </div>
     );
@@ -136,27 +310,80 @@ export const ClassOfficerOrgChart: React.FC<ClassOfficerOrgChartProps> = ({
         </div>
       </div>
 
-      {/* 2. CẤP LỚP PHÓ & BAN CHUYÊN TRÁCH */}
+      {/* 2. CẤP LỚP PHÓ & BAN CHUYÊN TRÁCH & SỰ VỤ */}
       <div>
-        <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-200">
-          <span className="text-base">💼</span>
-          <h3 className="text-sm font-black uppercase tracking-wider text-slate-700">
-            Ban Chỉ Đạo Chuyên Trách & Sự Vụ
-          </h3>
-          <span className="text-xs font-semibold text-slate-400">
-            (Học tập, Lao động, Văn thể mỹ, Sao đỏ, Thủ quỹ)
-          </span>
+        <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-200">
+          <div className="flex items-center gap-2">
+            <span className="text-base">💼</span>
+            <h3 className="text-sm font-black uppercase tracking-wider text-slate-700">
+              Ban Chỉ Đạo Chuyên Trách & Sự Vụ
+            </h3>
+            <span className="hidden sm:inline-block text-xs font-semibold text-slate-400">
+              (Học tập, Lao động, Văn thể mỹ, Thủ quỹ, Sao đỏ & Nhiệm vụ bổ sung)
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setIsAddRoleModalOpen(true)}
+            className="px-3 py-1.5 rounded-xl bg-primary/10 hover:bg-primary text-primary hover:text-white font-black text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
+          >
+            <span>➕</span>
+            <span>Thêm nhiệm vụ mới</span>
+          </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Lưới các thẻ chuyên trách: Đã tách Thủ Quỹ và Sao Đỏ riêng biệt + Các nhiệm vụ tùy chỉnh + Thẻ thêm mới */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {/* 1. Phó Học Tập */}
           {renderOfficerCard(phoHocTap, 'Phó Học Tập', '📘', 'border-blue-200 bg-blue-50/30')}
+
+          {/* 2. Phó Lao Động */}
           {renderOfficerCard(phoLaoDong, 'Phó Lao Động / Kỷ Luật', '🧹', 'border-emerald-200 bg-emerald-50/30')}
+
+          {/* 3. Phó Văn Thể Mỹ */}
           {renderOfficerCard(phoVanThe, 'Phó Văn Thể Mỹ', '🎨', 'border-purple-200 bg-purple-50/30')}
-          {banSuVu[0] ? (
-            renderOfficerCard(banSuVu[0], banSuVu[0].classRole || 'Thủ Quỹ', '⭐', 'border-amber-200 bg-amber-50/30')
-          ) : (
-            renderOfficerCard(undefined, 'Thủ Quỹ / Sao Đỏ', '⭐')
-          )}
+
+          {/* 4. THỦ QUỸ (TÁCH RIÊNG) */}
+          {renderOfficerCard(thuQuy, 'Thủ Quỹ', '💰', 'border-amber-200 bg-amber-50/30')}
+
+          {/* 5. SAO ĐỎ (TÁCH RIÊNG) */}
+          {renderOfficerCard(saoDo, 'Đội Sao Đỏ', '⭐', 'border-rose-200 bg-rose-50/30')}
+
+          {/* 6. Các nhiệm vụ tùy chỉnh đã tạo */}
+          {customRoles.map((cr) => {
+            const assignedStu = students.find(
+              (s) => s.id === cr.studentId || (s.classRole && s.classRole.toLowerCase() === cr.title.toLowerCase())
+            );
+            return (
+              <React.Fragment key={cr.id}>
+                {renderOfficerCard(
+                  assignedStu,
+                  cr.title,
+                  cr.icon || '📌',
+                  'border-indigo-200 bg-indigo-50/30',
+                  'bg-white',
+                  cr.id
+                )}
+              </React.Fragment>
+            );
+          })}
+
+          {/* 7. THẺ "THÊM NHIỆM VỤ MỚI" TRỰC QUAN */}
+          <div
+            onClick={() => setIsAddRoleModalOpen(true)}
+            className="p-4 rounded-2xl border-2 border-dashed border-primary/40 bg-primary/[0.03] hover:bg-primary/10 hover:border-primary transition-all duration-200 cursor-pointer flex flex-col items-center justify-center text-center min-h-[140px] group shadow-2xs"
+          >
+            <div className="w-10 h-10 rounded-2xl bg-primary/15 text-primary flex items-center justify-center text-xl mb-1.5 group-hover:scale-110 group-hover:bg-primary group-hover:text-white transition-all shadow-xs">
+              ➕
+            </div>
+            <span className="text-xs font-black text-primary uppercase tracking-wide">
+              Thêm Nhiệm Vụ Mới
+            </span>
+            <span className="text-[10px] text-slate-400 mt-0.5">
+              (Thủ thư, Kỹ thuật, Quản ca...)
+            </span>
+          </div>
         </div>
       </div>
 
@@ -189,20 +416,30 @@ export const ClassOfficerOrgChart: React.FC<ClassOfficerOrgChartProps> = ({
                 </span>
               </div>
 
-              {/* To Truong */}
+              {/* Tổ Trưởng */}
               <div>
                 <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1">
                   🚩 Tổ trưởng:
                 </span>
-                {renderOfficerCard(toTruong, 'Tổ Trưởng', '🚩', 'border-slate-200 bg-slate-50/40')}
+                {renderOfficerCard(
+                  toTruong,
+                  `Tổ Trưởng ${group.name}`,
+                  '🚩',
+                  'border-slate-200 bg-slate-50/40'
+                )}
               </div>
 
-              {/* To Pho */}
+              {/* Tổ Phó */}
               <div>
                 <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1">
                   🤝 Tổ phó:
                 </span>
-                {renderOfficerCard(toPho, 'Tổ Phó', '🤝', 'border-slate-200 bg-slate-50/40')}
+                {renderOfficerCard(
+                  toPho,
+                  `Tổ Phó ${group.name}`,
+                  '🤝',
+                  'border-slate-200 bg-slate-50/40'
+                )}
               </div>
             </div>
           ))}
@@ -250,6 +487,28 @@ export const ClassOfficerOrgChart: React.FC<ClassOfficerOrgChartProps> = ({
           </div>
         </div>
       </div>
+
+      {/* 5. MODALS */}
+      {/* 5.1. Modal phân công cán sự trực tiếp */}
+      {assigningRole && (
+        <AssignOfficerModal
+          isOpen={Boolean(assigningRole)}
+          onClose={() => setAssigningRole(null)}
+          roleTitle={assigningRole.roleTitle}
+          roleIcon={assigningRole.roleIcon}
+          currentStudent={assigningRole.currentStudent}
+          allStudents={students}
+          onAssign={handleAssign}
+        />
+      )}
+
+      {/* 5.2. Modal thêm nhiệm vụ mới */}
+      <AddCustomRoleModal
+        isOpen={isAddRoleModalOpen}
+        onClose={() => setIsAddRoleModalOpen(false)}
+        allStudents={students}
+        onSave={handleSaveCustomRole}
+      />
     </div>
   );
 };

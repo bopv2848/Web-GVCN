@@ -102,9 +102,17 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) =
                 )}
               >
                 <div className="flex items-center gap-3">
-                  <span className={cn('text-xl', isActionItem && !active && 'animate-pulse')}>
-                    {item.iconName}
-                  </span>
+                  {item.iconUrl ? (
+                    <img
+                      src={item.iconUrl}
+                      alt={item.label}
+                      className="w-6 h-6 rounded-md object-cover shadow-2xs border border-white/20 shrink-0"
+                    />
+                  ) : (
+                    <span className={cn('text-xl', isActionItem && !active && 'animate-pulse')}>
+                      {item.iconName}
+                    </span>
+                  )}
                   <span className={cn(isActionItem && 'font-black text-amber-100')}>
                     {item.label}
                   </span>

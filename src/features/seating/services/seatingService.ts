@@ -6,6 +6,9 @@ import type {
   SeatAssignmentWithStudent,
   InfectionCluster,
   SeatingMedicalAnalysis,
+  ClassroomElementsConfig,
+  TeacherDeskPosition,
+  DoorPosition,
 } from '../../../types/seating';
 import { sandboxService } from '../../sandbox/services/sandboxService';
 
@@ -27,6 +30,10 @@ export const seatingService = {
         .maybeSingle();
 
       if (existing && !error) {
+        localStorage.setItem(
+          `seating_layout_dimensions_${classId}`,
+          JSON.stringify({ rows: existing.rows, cols: existing.cols })
+        );
         return {
           id: existing.id,
           classId: existing.class_id,
@@ -38,14 +45,28 @@ export const seatingService = {
         };
       }
 
-      // Tạo sơ đồ chuẩn cho lớp 6A6: 6 hàng x 8 cột (4 Tổ thi đua)
+      // Kiểm tra xem có cấu hình kích thước đã lưu trước đó không
+      const localDim = localStorage.getItem(`seating_layout_dimensions_${classId}`);
+      let initRows = 6;
+      let initCols = 8;
+      if (localDim) {
+        try {
+          const parsed = JSON.parse(localDim);
+          if (parsed.rows) initRows = parsed.rows;
+          if (parsed.cols) initCols = parsed.cols;
+        } catch {
+          // ignore
+        }
+      }
+
+      // Tạo sơ đồ chuẩn cho lớp: mặc định 6 hàng x 8 cột (hoặc theo cấu hình đã lưu)
       const { data: created, error: createError } = await supabase
         .from('seat_layouts')
         .insert({
           class_id: classId,
-          layout_name: 'Sơ đồ Bàn học 4 Tổ 6A6',
-          rows: 6,
-          cols: 8,
+          layout_name: initCols === 6 ? `Sơ đồ Bàn học 3 Dãy (${initRows} bàn)` : `Sơ đồ Bàn học 4 Dãy (${initRows} bàn)`,
+          rows: initRows,
+          cols: initCols,
           is_current: true,
         })
         .select()
@@ -63,17 +84,102 @@ export const seatingService = {
         createdAt: created.created_at,
       };
     } catch (err) {
-      console.warn('Không thể nạp/tạo layout từ Supabase, dùng layout chuẩn lớp 6A6:', err);
+      console.warn('Không thể nạp/tạo layout từ Supabase, dùng layout dự phòng:', err);
+      const localDim = localStorage.getItem(`seating_layout_dimensions_${classId}`);
+      let fallbackRows = 6;
+      let fallbackCols = 8;
+      if (localDim) {
+        try {
+          const parsed = JSON.parse(localDim);
+          if (parsed.rows) fallbackRows = parsed.rows;
+          if (parsed.cols) fallbackCols = parsed.cols;
+        } catch {
+          // ignore
+        }
+      }
       return {
         id: '6a600000-0000-0000-0003-000000000001',
         classId: classId,
-        layoutName: 'Sơ đồ Bàn học 4 Tổ 6A6',
-        rows: 6,
-        cols: 8,
+        layoutName: fallbackCols === 6 ? `Sơ đồ Bàn học 3 Dãy (${fallbackRows} bàn)` : `Sơ đồ Bàn học 4 Dãy (${fallbackRows} bàn)`,
+        rows: fallbackRows,
+        cols: fallbackCols,
         isCurrent: true,
         createdAt: new Date().toISOString(),
       };
     }
+  },
+
+  /**
+   * Cập nhật kích thước phòng học (Số hàng/bàn và Số cột/dãy)
+   */
+  async updateClassLayout(
+    layoutId: string,
+    classId: string,
+    rows: number,
+    cols: number
+  ): Promise<SeatLayout> {
+    const layoutName =
+      cols === 6
+        ? `Sơ đồ Bàn học 3 Dãy (${rows} bàn)`
+        : `Sơ đồ Bàn học 4 Dãy (${rows} bàn)`;
+
+    localStorage.setItem(
+      `seating_layout_dimensions_${classId}`,
+      JSON.stringify({ rows, cols })
+    );
+
+    if (sandboxService.isSandboxActive()) {
+      const { layout } = sandboxService.getSeating();
+      if (layout) {
+        layout.rows = rows;
+        layout.cols = cols;
+        layout.layoutName = layoutName;
+        return layout;
+      }
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('seat_layouts')
+        .update({
+          rows,
+          cols,
+          layout_name: layoutName,
+        })
+        .eq('id', layoutId)
+        .select()
+        .single();
+
+      if (error) {
+        console.warn('Lỗi cập nhật seat_layouts trên Supabase:', error.message);
+      }
+
+      await this.syncToClassSettings(classId, { rows, cols });
+
+      if (data) {
+        return {
+          id: data.id,
+          classId: data.class_id,
+          layoutName: data.layout_name,
+          rows: data.rows,
+          cols: data.cols,
+          isCurrent: data.is_current,
+          createdAt: data.created_at,
+        };
+      }
+    } catch (err) {
+      console.warn('Không thể cập nhật seat_layouts trên Supabase:', err);
+    }
+
+    return {
+      id: layoutId,
+      classId,
+      layoutName,
+      rows,
+      cols,
+      isCurrent: true,
+      createdAt: new Date().toISOString(),
+    };
   },
 
   /**
@@ -86,21 +192,34 @@ export const seatingService = {
     if (sandboxService.isSandboxActive()) {
       const { assignments } = sandboxService.getSeating();
       const students = sandboxService.getStudents();
+      if (students.length === 0) {
+        return [];
+      }
       const studentMap = new Map<string, Student>(students.map((s) => [s.id, s]));
 
-      return (assignments || []).map((a) => ({
-        id: a.id,
-        layoutId: a.layoutId,
-        studentId: a.studentId,
-        rowIndex: a.rowIndex,
-        colIndex: a.colIndex,
-        isHidden: a.isHidden,
-        createdAt: a.createdAt,
-        student: studentMap.get(a.studentId),
-      }));
+      return (assignments || [])
+        .filter((a) => studentMap.has(a.studentId))
+        .map((a) => ({
+          id: a.id,
+          layoutId: a.layoutId,
+          studentId: a.studentId,
+          rowIndex: a.rowIndex,
+          colIndex: a.colIndex,
+          isHidden: a.isHidden,
+          createdAt: a.createdAt,
+          student: studentMap.get(a.studentId),
+        }));
     }
     try {
-      // 1. Lấy assignments
+      // 1. Lấy danh sách học sinh
+      const students = await studentService.getStudents(classId);
+      // Nếu danh sách học sinh rỗng (đã bị xóa sạch), trả về mảng rỗng để sơ đồ chỗ ngồi hoàn toàn trống
+      if (students.length === 0) {
+        return [];
+      }
+      const studentMap = new Map<string, Student>(students.map((s) => [s.id, s]));
+
+      // 2. Lấy assignments từ Supabase
       const { data: assignments, error: assignError } = await supabase
         .from('seat_assignments')
         .select('*')
@@ -110,11 +229,10 @@ export const seatingService = {
         console.warn('Lỗi truy vấn seat_assignments từ Supabase:', assignError.message);
       }
 
-      // 2. Lấy học sinh đầy đủ thông tin (Tổ, chức vụ, avatar...)
-      const students = await studentService.getStudents(classId);
-      const studentMap = new Map<string, Student>(students.map((s) => [s.id, s]));
+      // Chỉ giữ lại phân công của học sinh đang thực sự tồn tại trong danh sách lớp
+      const validAssignments = (assignments || []).filter((a) => studentMap.has(a.student_id));
 
-      return (assignments || []).map((a) => ({
+      return validAssignments.map((a) => ({
         id: a.id,
         layoutId: a.layout_id,
         studentId: a.student_id,
@@ -341,7 +459,14 @@ export const seatingService = {
    * - Tuần Lẻ:  Dãy 1 (Tổ 4: 0,1) | Dãy 2 (Tổ 3: 2,3) | Dãy 3 (Tổ 2: 4,5) | Dãy 4 (Tổ 1: 6,7)
    * - Tuần Chẵn: Dãy 1 (Tổ 3: 0,1) | Dãy 2 (Tổ 4: 2,3) | Dãy 3 (Tổ 1: 4,5) | Dãy 4 (Tổ 2: 6,7)
    */
-  rotateColIndex(colIndex: number): number {
+  rotateColIndex(colIndex: number, totalCols: number = 8): number {
+    if (totalCols === 6) {
+      // Xoay vòng 3 Dãy: Dãy 1 -> Dãy 2 -> Dãy 3 -> Dãy 1
+      if (colIndex === 0 || colIndex === 1) return colIndex + 2;
+      if (colIndex === 2 || colIndex === 3) return colIndex + 2;
+      if (colIndex === 4 || colIndex === 5) return colIndex - 4;
+      return colIndex;
+    }
     if (colIndex === 0 || colIndex === 1) return colIndex + 2;
     if (colIndex === 2 || colIndex === 3) return colIndex - 2;
     if (colIndex === 4 || colIndex === 5) return colIndex + 2;
@@ -353,11 +478,12 @@ export const seatingService = {
    * Đảo vị trí toàn bộ phân công chỗ ngồi giữa Tuần Chẵn và Tuần Lẻ
    */
   rotateAssignments(
-    assignments: SeatAssignmentWithStudent[]
+    assignments: SeatAssignmentWithStudent[],
+    totalCols: number = 8
   ): SeatAssignmentWithStudent[] {
     return assignments.map((a) => ({
       ...a,
-      colIndex: this.rotateColIndex(a.colIndex),
+      colIndex: this.rotateColIndex(a.colIndex, totalCols),
     }));
   },
 
@@ -368,12 +494,31 @@ export const seatingService = {
     layoutId: string,
     assignments: SeatAssignmentWithStudent[]
   ): Promise<void> {
+    if (sandboxService.isSandboxActive()) {
+      sandboxService.saveSeatingAssignments(
+        assignments.map((a) => ({
+          id: a.id,
+          layoutId: a.layoutId,
+          studentId: a.studentId,
+          rowIndex: a.rowIndex,
+          colIndex: a.colIndex,
+          isHidden: a.isHidden || false,
+          createdAt: a.createdAt,
+        }))
+      );
+      return;
+    }
+
     const { error: delError } = await supabase
       .from('seat_assignments')
       .delete()
       .eq('layout_id', layoutId);
 
     if (delError) throw delError;
+
+    if (assignments.length === 0) {
+      return;
+    }
 
     const rowsToInsert = assignments.map((a) => ({
       layout_id: layoutId,
@@ -388,6 +533,57 @@ export const seatingService = {
       .insert(rowsToInsert);
 
     if (insError) throw insError;
+  },
+
+  /**
+   * Xóa sạch toàn bộ phân công chỗ ngồi của lớp để làm mới sơ đồ bàn học
+   * (Tự động kích hoạt khi danh sách học sinh bị xóa sạch hoặc GVCN muốn đặt lại sơ đồ trống)
+   */
+  async clearClassAssignments(classId: string, layoutId?: string): Promise<void> {
+    const seatingCacheKey = `seating_assignments_${classId}`;
+    try {
+      localStorage.removeItem(seatingCacheKey);
+    } catch {
+      // ignore
+    }
+
+    if (sandboxService.isSandboxActive()) {
+      sandboxService.saveSeatingAssignments([]);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('gvcn:seating-reset', { detail: { classId } }));
+      }
+      return;
+    }
+
+    try {
+      if (layoutId) {
+        const { error } = await supabase
+          .from('seat_assignments')
+          .delete()
+          .eq('layout_id', layoutId);
+        if (error) console.warn('Lỗi xóa seat_assignments theo layoutId:', error.message);
+      } else {
+        const { data: layouts, error: layoutError } = await supabase
+          .from('seat_layouts')
+          .select('id')
+          .eq('class_id', classId);
+
+        if (!layoutError && layouts && layouts.length > 0) {
+          const layoutIds = layouts.map((l) => l.id);
+          const { error } = await supabase
+            .from('seat_assignments')
+            .delete()
+            .in('layout_id', layoutIds);
+          if (error) console.warn('Lỗi xóa seat_assignments theo classId:', error.message);
+        }
+      }
+    } catch (err) {
+      console.warn('Lỗi trong clearClassAssignments:', err);
+    } finally {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('gvcn:seating-reset', { detail: { classId } }));
+      }
+    }
   },
 
   /**
@@ -504,7 +700,12 @@ export const seatingService = {
    */
   async syncToClassSettings(
     classId: string,
-    updates: { rotationEnabled?: boolean; schoolYearStartDate?: string }
+    updates: {
+      rotationEnabled?: boolean;
+      schoolYearStartDate?: string;
+      rows?: number;
+      cols?: number;
+    }
   ): Promise<void> {
     try {
       const { data } = await supabase
@@ -520,6 +721,12 @@ export const seatingService = {
       }
       if (updates.schoolYearStartDate !== undefined) {
         nextSettings.school_year_start_date = updates.schoolYearStartDate;
+      }
+      if (updates.rows !== undefined) {
+        nextSettings.seating_rows = updates.rows;
+      }
+      if (updates.cols !== undefined) {
+        nextSettings.seating_cols = updates.cols;
       }
 
       await supabase
@@ -670,4 +877,192 @@ export const seatingService = {
       totalSickInSeats,
     };
   },
+
+  /**
+   * Lấy cấu hình vị trí Bàn Giáo Viên & Cửa Ra Vào từ cột elements_config bảng classes
+   */
+  async getClassroomElementsConfig(classId: string): Promise<ClassroomElementsConfig | null> {
+    if (sandboxService.isSandboxActive()) {
+      return null;
+    }
+    try {
+      const { data, error } = await supabase
+        .from('classes')
+        .select('elements_config')
+        .eq('id', classId)
+        .maybeSingle();
+
+      if (error || !data || !data.elements_config) {
+        return null;
+      }
+
+      const ec = data.elements_config as Partial<ClassroomElementsConfig>;
+      return {
+        teacherDeskPosition: ['left', 'center', 'right'].includes(ec.teacherDeskPosition as string)
+          ? (ec.teacherDeskPosition as TeacherDeskPosition)
+          : 'right',
+        doorPosition: ['left', 'right'].includes(ec.doorPosition as string)
+          ? (ec.doorPosition as DoorPosition)
+          : 'right',
+        doorAngle:
+          typeof ec.doorAngle === 'number'
+            ? ((ec.doorAngle % 360) + 360) % 360
+            : 180,
+        teacherDeskLabel:
+          typeof ec.teacherDeskLabel === 'string' && ec.teacherDeskLabel.trim()
+            ? ec.teacherDeskLabel.trim()
+            : undefined,
+        teacherDeskWidth:
+          typeof ec.teacherDeskWidth === 'number' && ec.teacherDeskWidth >= 200 && ec.teacherDeskWidth <= 600
+            ? Math.round(ec.teacherDeskWidth)
+            : 384,
+        teacherDeskScale:
+          typeof ec.teacherDeskScale === 'number' && ec.teacherDeskScale >= 70 && ec.teacherDeskScale <= 150
+            ? Math.round(ec.teacherDeskScale)
+            : 100,
+        doorWidth:
+          typeof ec.doorWidth === 'number' && ec.doorWidth >= 100 && ec.doorWidth <= 400
+            ? Math.round(ec.doorWidth)
+            : 180,
+        doorScale:
+          typeof ec.doorScale === 'number' && ec.doorScale >= 70 && ec.doorScale <= 150
+            ? Math.round(ec.doorScale)
+            : 100,
+        studentDeskScale:
+          typeof ec.studentDeskScale === 'number' && ec.studentDeskScale >= 70 && ec.studentDeskScale <= 140
+            ? Math.round(ec.studentDeskScale)
+            : 100,
+        isDimensionsLocked:
+          typeof ec.isDimensionsLocked === 'boolean'
+            ? ec.isDimensionsLocked
+            : false,
+      };
+    } catch (err) {
+      console.warn('Lỗi tải cấu hình elements_config từ Supabase:', err);
+      return null;
+    }
+  },
+
+  /**
+   * Lưu cấu hình vị trí Bàn Giáo Viên & Cửa Ra Vào vào cột elements_config bảng classes
+   */
+  async saveClassroomElementsConfig(
+    classId: string,
+    config: ClassroomElementsConfig
+  ): Promise<boolean> {
+    if (sandboxService.isSandboxActive()) {
+      return true;
+    }
+    try {
+      const { error } = await supabase
+        .from('classes')
+        .update({
+          elements_config: config,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', classId);
+
+      if (error) {
+        console.warn('Lỗi lưu elements_config lên Supabase classes:', error);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.warn('Ngoại lệ khi lưu elements_config lên Supabase:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Đăng ký lắng nghe thay đổi vị trí Bàn Giáo Viên & Cửa Ra Vào theo thời gian thực (Realtime WebSockets)
+   */
+  subscribeToClassroomElements(
+    classId: string,
+    onElementsChange: (config: ClassroomElementsConfig) => void,
+    onStatusChange?: (status: 'connected' | 'connecting' | 'disconnected') => void
+  ) {
+    if (sandboxService.isSandboxActive() || !classId) {
+      if (onStatusChange) onStatusChange('connected');
+      return () => {};
+    }
+
+    if (onStatusChange) onStatusChange('connecting');
+
+    const channelName = `realtime-classroom-elements-${classId}`;
+
+    const channel = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'classes',
+          filter: `id=eq.${classId}`,
+        },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (payload: any) => {
+          const newRow = payload?.new;
+          if (newRow && newRow.elements_config) {
+            const ec = newRow.elements_config as Partial<ClassroomElementsConfig>;
+            const parsedConfig: ClassroomElementsConfig = {
+              teacherDeskPosition: ['left', 'center', 'right'].includes(ec.teacherDeskPosition as string)
+                ? (ec.teacherDeskPosition as TeacherDeskPosition)
+                : 'right',
+              doorPosition: ['left', 'right'].includes(ec.doorPosition as string)
+                ? (ec.doorPosition as DoorPosition)
+                : 'right',
+              doorAngle:
+                typeof ec.doorAngle === 'number'
+                  ? ((ec.doorAngle % 360) + 360) % 360
+                  : 180,
+              teacherDeskLabel:
+                typeof ec.teacherDeskLabel === 'string' && ec.teacherDeskLabel.trim()
+                  ? ec.teacherDeskLabel.trim()
+                  : undefined,
+              teacherDeskWidth:
+                typeof ec.teacherDeskWidth === 'number' && ec.teacherDeskWidth >= 200 && ec.teacherDeskWidth <= 600
+                  ? Math.round(ec.teacherDeskWidth)
+                  : 384,
+              teacherDeskScale:
+                typeof ec.teacherDeskScale === 'number' && ec.teacherDeskScale >= 70 && ec.teacherDeskScale <= 150
+                  ? Math.round(ec.teacherDeskScale)
+                  : 100,
+              doorWidth:
+                typeof ec.doorWidth === 'number' && ec.doorWidth >= 100 && ec.doorWidth <= 400
+                  ? Math.round(ec.doorWidth)
+                  : 180,
+              doorScale:
+                typeof ec.doorScale === 'number' && ec.doorScale >= 70 && ec.doorScale <= 150
+                  ? Math.round(ec.doorScale)
+                  : 100,
+              studentDeskScale:
+                typeof ec.studentDeskScale === 'number' && ec.studentDeskScale >= 70 && ec.studentDeskScale <= 140
+                  ? Math.round(ec.studentDeskScale)
+                  : 100,
+              isDimensionsLocked:
+                typeof ec.isDimensionsLocked === 'boolean'
+                  ? ec.isDimensionsLocked
+                  : false,
+            };
+            onElementsChange(parsedConfig);
+          }
+        }
+      )
+      .subscribe((status) => {
+        if (onStatusChange) {
+          if (status === 'SUBSCRIBED') {
+            onStatusChange('connected');
+          } else if (status === 'TIMED_OUT' || status === 'CHANNEL_ERROR' || status === 'CLOSED') {
+            onStatusChange('disconnected');
+          }
+        }
+      });
+
+    return () => {
+      if (onStatusChange) onStatusChange('disconnected');
+      supabase.removeChannel(channel);
+    };
+  },
 };
+

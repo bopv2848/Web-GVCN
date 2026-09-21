@@ -1,4 +1,4 @@
-﻿import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import {
   getAcademicWeekInfo,
   saveStoredAcademicWeekConfig,
@@ -22,6 +22,18 @@ describe('academicWeekUtils - getAcademicWeekInfo', () => {
     expect(info.academicYear).toBe('2026 - 2027');
     expect(info.weekStartDate).toBe('14/09/2026');
     expect(info.weekEndDate).toBe('20/09/2026');
+    expect(info.appliedDateText).toBe('ngày 14 tháng 9 năm 2026');
+    expect(info.fullAppliedText).toBe('Tuần 2, áp dụng từ ngày 14 tháng 9 năm 2026');
+  });
+
+  it('tính toán Thứ 2 đầu tuần chính xác khi truy cập vào Thứ 3 (15/09/2026 - thời gian thực)', () => {
+    const tuesdayWeek2 = new Date(2026, 8, 15, 14, 30, 0); // 15/09/2026 (Thứ 3)
+    const info = getAcademicWeekInfo(tuesdayWeek2);
+
+    expect(info.weekNumber).toBe(2);
+    expect(info.weekStartDate).toBe('14/09/2026');
+    expect(info.appliedDateText).toBe('ngày 14 tháng 9 năm 2026');
+    expect(info.fullAppliedText).toBe('Tuần 2, áp dụng từ ngày 14 tháng 9 năm 2026');
   });
 
   it('hỗ trợ cấu hình độ lệch tuần bù (+1 tuần): biến Tuần 2 thành Tuần 3', () => {

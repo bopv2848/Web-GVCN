@@ -21,6 +21,7 @@ export interface ClassInfo {
   themeMonth: string;
   bannerUrl?: string;
   logoUrl?: string;
+  isDemo?: boolean;
 }
 
 export interface AuthState {

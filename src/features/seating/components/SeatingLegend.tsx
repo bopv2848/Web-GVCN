@@ -18,7 +18,7 @@ export const SeatingLegend: React.FC<SeatingLegendProps> = ({
   onOpenClusterModal,
 }) => {
   return (
-    <div className="bg-white p-4 md:p-5 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
+    <div className="bg-white p-4 md:p-5 rounded-3xl border border-slate-200/80 shadow-xs space-y-4 print:hidden">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         {/* Tiêu đề & Công tắc bật tắt chế độ giám sát y tế */}
         <div className="flex items-center gap-3">

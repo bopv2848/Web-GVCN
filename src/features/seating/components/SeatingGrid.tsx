@@ -1,18 +1,18 @@
 import React from 'react';
 import { DeskCell } from './DeskCell';
+import { Classroom3DScene } from './Classroom3DScene';
+import { ClassroomFrontElements2D } from './ClassroomFrontElements2D';
 import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
+import { getDeskSupplies } from '../utils/seatingSuppliesUtils';
+import { SeatingPrintLayout, type AisleInfo, type SeatingPrintCustomHeader } from './SeatingPrintLayout';
 import type {
   SeatAssignmentWithStudent,
   SeatingMedicalAnalysis,
+  ClassroomElementsConfig,
 } from '../../../types/seating';
 import type { SourceSeatInfo } from '../hooks/useSeatingManagement';
 
-export interface AisleInfo {
-  name: string;
-  pairIndex: number;
-  cols: number[];
-  subTitle: string;
-}
+export type { AisleInfo };
 
 interface SeatingGridProps {
   isLoading: boolean;
@@ -32,11 +32,25 @@ interface SeatingGridProps {
   selectedSourceSeat: SourceSeatInfo | null;
   draggedSeat: SourceSeatInfo | null;
   dragOverPos: { r: number; c: number } | null;
+  viewMode?: '2d' | '3d';
+  zoomLevel?: number;
+  isFullscreen?: boolean;
+  isLargeTextMode?: boolean;
+  highlightedSeatKey?: string | null;
+  winnerSeatKey?: string | null;
+  onResetView?: () => void;
+  elementsConfig?: ClassroomElementsConfig;
+  customHeader?: SeatingPrintCustomHeader;
+  totalStudentsCount?: number;
+  femaleStudentsCount?: number;
+  onUpdateElementsConfig?: (updates: Partial<ClassroomElementsConfig>) => void;
   onDragStart: (e: React.DragEvent, assignment: SeatAssignmentWithStudent, r: number, c: number) => void;
   onDragOver: (e: React.DragEvent, r: number, c: number) => void;
   onDragLeave: (e: React.DragEvent, r: number, c: number) => void;
   onDrop: (e: React.DragEvent, r: number, c: number, targetAssignment?: SeatAssignmentWithStudent) => void;
   onSeatClick: (r: number, c: number, assignment?: SeatAssignmentWithStudent) => void;
+  classId?: string;
+  calledStudentIds?: Set<string>;
 }
 
 export const SeatingGrid: React.FC<SeatingGridProps> = ({
@@ -57,12 +71,28 @@ export const SeatingGrid: React.FC<SeatingGridProps> = ({
   selectedSourceSeat,
   draggedSeat,
   dragOverPos,
+  viewMode = '3d',
+  zoomLevel = 100,
+  isFullscreen = false,
+  isLargeTextMode = false,
+  highlightedSeatKey = null,
+  winnerSeatKey = null,
+  onResetView,
+  elementsConfig,
+  customHeader,
+  totalStudentsCount,
+  femaleStudentsCount,
+  onUpdateElementsConfig,
   onDragStart,
   onDragOver,
   onDragLeave,
   onDrop,
   onSeatClick,
+  calledStudentIds,
+  classId,
 }) => {
+  const cleanClassName = (className || '6A6').replace(/^lớp\s+/i, '').trim();
+
   if (isLoading) {
     return (
       <div className="p-16 text-center bg-white rounded-3xl border border-slate-200">
@@ -72,74 +102,124 @@ export const SeatingGrid: React.FC<SeatingGridProps> = ({
   }
 
   return (
-    <div className="bg-white p-5 md:p-8 rounded-3xl border border-slate-200/80 shadow-xs space-y-8 overflow-x-auto">
-      {/* Tiêu đề in chuẩn A4 khi bấm In */}
-      <div className="hidden print:block pb-4 border-b border-slate-300 mb-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img
-              src={logoUrl || '/logo-truong-thcs-Tan-Hai.jpg'}
-              alt="Logo Trường"
-              className="w-14 h-14 object-contain rounded-full border border-slate-300"
-            />
-            <div className="text-left">
-              <h1 className="text-sm font-black uppercase text-slate-900">{schoolName}</h1>
-              <p className="text-xs font-bold text-slate-700">{className}</p>
+    <>
+      {/* Bản in A4 chuẩn sắc nét — Tự động hiển thị khi bấm In (Ctrl+P / Nút In trên thanh công cụ) */}
+      <SeatingPrintLayout
+        schoolName={schoolName}
+        className={className}
+        logoUrl={logoUrl}
+        isRotationEnabled={isRotationEnabled}
+        activeWeekMode={activeWeekMode}
+        schoolWeekInfo={schoolWeekInfo}
+        totalRows={totalRows}
+        aisles={aisles}
+        assignmentGrid={assignmentGrid}
+        elementsConfig={elementsConfig}
+        customHeader={customHeader}
+        totalStudentsCount={totalStudentsCount}
+        femaleStudentsCount={femaleStudentsCount}
+      />
+
+      {/* Giao diện tương tác trên màn hình (Ẩn hoàn toàn khi in để tránh vỡ bố cục) */}
+      <div className="print:hidden">
+        {viewMode === '3d' ? (
+          <div className="relative">
+            <div
+              className="seating-zoom-container transition-all duration-200 origin-top"
+              style={{
+                zoom: zoomLevel / 100,
+              }}
+            >
+              <Classroom3DScene
+                schoolName={schoolName}
+                className={className}
+                totalRows={totalRows}
+                aisles={aisles}
+                assignmentGrid={assignmentGrid}
+                medicalAnalysis={medicalAnalysis}
+                clusterDeskKeys={clusterDeskKeys}
+                sickReasonMap={sickReasonMap}
+                isMedicalMode={isMedicalMode}
+                selectedSourceSeat={selectedSourceSeat}
+                draggedSeat={draggedSeat}
+                dragOverPos={dragOverPos}
+                elementsConfig={elementsConfig}
+                onUpdateElementsConfig={onUpdateElementsConfig}
+                onDragStart={onDragStart}
+                onDragOver={onDragOver}
+                onDragLeave={onDragLeave}
+                onDrop={onDrop}
+                onSeatClick={onSeatClick}
+                classId={classId}
+                highlightedSeatKey={highlightedSeatKey}
+                winnerSeatKey={winnerSeatKey}
+                onResetView={onResetView}
+                zoomLevel={zoomLevel}
+                isLargeTextMode={isLargeTextMode}
+                isFullscreen={isFullscreen}
+              />
             </div>
           </div>
-          <div className="text-right">
-            <h2 className="text-sm font-black text-slate-850">
-              {isRotationEnabled
-                ? `SƠ ĐỒ CHỖ NGỒI — ÁP DỤNG ${
-                    activeWeekMode === 'even'
-                      ? 'TUẦN CHẴN (TỔ 3 - 4 - 1 - 2)'
-                      : 'TUẦN LẺ (TỔ 4 - 3 - 2 - 1)'
-                  }`
-                : 'SƠ ĐỒ CHỖ NGỒI HỌC SINH'}
-            </h2>
-            <p className="text-[11px] text-slate-500 font-semibold mt-0.5">
-              GVCN: Thầy Phan Văn Bộ • Năm học: 2026 - 2027 •{' '}
-              {isRotationEnabled
-                ? `Tuần hiện tại: Tuần ${schoolWeekInfo.weekNumber}`
-                : 'Chế độ: Chỗ ngồi cố định'}
-            </p>
-          </div>
-        </div>
+        ) : (
+          <div className="bg-white p-5 md:p-8 rounded-3xl border border-slate-200/80 shadow-xs space-y-8 overflow-x-auto">
+            {/* Khung hiển thị lớp học 2D trên màn hình (Có hỗ trợ Thu phóng) */}
+            <div
+              className="space-y-8 seating-zoom-container transition-all duration-200 origin-top"
+              style={{
+                zoom: zoomLevel / 100,
+              }}
+            >
+              {/* 1. TIÊU ĐỀ SƠ ĐỒ LỚP HỌC (PHÍA TRÊN) - NỀN NHẠT, CHỮ TO RÕ */}
+              <div className="max-w-2xl mx-auto text-center">
+                <div
+                  className={`${
+                    isFullscreen ? 'py-2 px-6 text-lg md:text-xl' : 'py-3 px-8 md:px-12 text-xl md:text-2xl'
+                  } rounded-2xl font-black uppercase tracking-wider flex items-center justify-center gap-3 transition-colors bg-gradient-to-r from-sky-50 via-blue-50 to-indigo-50 border-2 border-blue-200/80 text-blue-950 shadow-xs`}
+                >
+                  <span className={`${isFullscreen ? 'text-xl md:text-2xl' : 'text-2xl md:text-3xl'} filter drop-shadow-xs`}>🗺️</span>
+                  <span>SƠ ĐỒ LỚP {cleanClassName || '6A6'}</span>
+                </div>
+              </div>
+
+      {/* Chỉ dẫn thao tác trên điện thoại */}
+      <div className="md:hidden flex items-center justify-center gap-2 py-2 px-3 bg-slate-100/90 rounded-2xl text-[11px] font-bold text-slate-600 border border-slate-200/80 shadow-2xs">
+        <span>👈</span>
+        <span>Vuốt ngang để xem đủ {aisles.length} dãy bàn học</span>
+        <span>👉</span>
       </div>
 
-      {/* 1. BỤC GIẢNG & BÀN GIÁO VIÊN (PHÍA TRƯỚC) */}
-      <div className="max-w-2xl mx-auto space-y-3 text-center">
-        <div className="py-2.5 px-6 rounded-2xl bg-slate-800 text-white font-black text-xs uppercase tracking-widest shadow-md">
-          🏫 BẢNG LỚP HỌC (TRUNG TÂM PHÒNG HỌC 6A6)
-        </div>
-
-        <div className="flex justify-end pr-4">
-          <div className="w-48 py-2 px-3 rounded-2xl bg-amber-50 border-2 border-amber-300 text-amber-900 font-bold text-xs flex items-center justify-center gap-2 shadow-xs">
-            <span>👩‍🏫</span>
-            <span>Bàn Giáo Viên</span>
-          </div>
-        </div>
-      </div>
-
-      {/* 2. 4 DÃY BÀN HỌC (TỔ 4, TỔ 3, TỔ 2, TỔ 1) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 min-w-[760px]">
+      {/* 2. CÁC DÃY BÀN HỌC */}
+      <div
+        className={`grid grid-cols-1 ${
+          aisles.length === 3 ? 'md:grid-cols-3' : 'md:grid-cols-2 lg:grid-cols-4'
+        } ${isFullscreen ? 'gap-3 sm:gap-4' : 'gap-6'} min-w-[760px]`}
+      >
         {aisles.map((aisle) => (
           <div
             key={aisle.name}
-            className="bg-slate-50/70 p-4 rounded-3xl border border-slate-200/70 space-y-4"
+            className={`${
+              isFullscreen ? 'p-2.5 sm:p-3 space-y-2.5 rounded-2xl' : 'p-4 rounded-3xl space-y-4'
+            } transition-colors bg-slate-50/80 border-2 border-slate-300 shadow-sm hover:border-slate-400`}
           >
             {/* Header Dãy / Tổ */}
-            <div className="text-center pb-2 border-b border-slate-200">
-              <h4 className="font-black text-sm text-slate-850 uppercase tracking-wide">
+            <div className={`text-center ${isFullscreen ? 'pb-1.5' : 'pb-2.5'} border-b-2 border-slate-300`}>
+              <h4 className={`font-black uppercase tracking-wide text-slate-900 ${isFullscreen ? 'text-sm' : 'text-sm md:text-base'}`}>
                 DÃY {aisle.name}
               </h4>
-              <span className="text-[10px] text-slate-400 font-medium">
-                ({aisle.subTitle})
-              </span>
             </div>
 
             {/* 6 Hàng bàn học (Mỗi bàn 2 chỗ ngồi) */}
-            <div className="space-y-3">
+            <div
+              className={isFullscreen ? 'space-y-2' : 'space-y-3'}
+              style={{
+                transform:
+                  elementsConfig?.studentDeskScale && elementsConfig.studentDeskScale !== 100
+                    ? `scale(${elementsConfig.studentDeskScale / 100})`
+                    : undefined,
+                transformOrigin: 'top center',
+                transition: 'transform 0.2s ease-out',
+              }}
+            >
               {Array.from({ length: totalRows }).map((_, rIdx) => {
                 const deskKey = `${rIdx}_${aisle.pairIndex}`;
                 const isDeskInCluster = isMedicalMode && clusterDeskKeys.has(deskKey);
@@ -167,22 +247,51 @@ export const SeatingGrid: React.FC<SeatingGridProps> = ({
                     key={rIdx}
                     className={`p-2 rounded-2xl transition-all ${
                       isDeskInCluster
-                        ? 'bg-rose-100/60 border-2 border-rose-500 ring-2 ring-rose-400/40 shadow-sm'
-                        : 'bg-white/80 border border-slate-200/80 shadow-2xs'
+                        ? 'bg-rose-100/70 border-2 border-rose-500 ring-2 ring-rose-400/40 shadow-sm'
+                        : 'bg-white border-2 border-slate-300 hover:border-slate-400 shadow-xs'
                     }`}
                   >
-                    {/* Nhãn số bàn */}
-                    <div className="flex items-center justify-between px-1 mb-1.5 text-[10px] font-bold text-slate-400">
-                      <span>BÀN {rIdx + 1}</span>
-                      {isDeskInCluster && (
-                        <span className="text-rose-700 font-black text-[9px] uppercase tracking-wider animate-pulse">
-                          🚨 Cụm Lây Nhiễm
-                        </span>
-                      )}
+                    {/* Nhãn số bàn & Cụm đồ dùng học tập 2D */}
+                    <div className="relative flex items-center justify-between px-1 mb-1.5 text-[10px] font-bold text-slate-500 min-h-[24px]">
+                      {/* Góc trái: Số bàn */}
+                      <span className="font-black shrink-0 z-10 px-1.5 py-0.5 rounded text-[10.5px] bg-slate-100/90 text-slate-800 border border-slate-200">
+                        BÀN {rIdx + 1}
+                      </span>
+
+                      {/* Canh giữa bàn học: Cụm đồ dùng học tập 2D */}
+                      {(() => {
+                        const supplies = getDeskSupplies(rIdx, aisle.cols[0]);
+                        return (
+                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <div
+                              className="pointer-events-auto flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100/90 border border-slate-200 shadow-2xs text-[11px] normal-case font-normal select-none"
+                              title={`Đồ dùng học tập Bàn ${rIdx + 1}: ${supplies.label}`}
+                            >
+                              {supplies.items.map((item, idx) => (
+                                <span
+                                  key={idx}
+                                  className="hover:scale-130 transition-transform duration-150 cursor-default inline-block"
+                                >
+                                  {item}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Góc phải: Cụm lây nhiễm (nếu có) */}
+                      <div className="shrink-0 z-10 min-w-[20px] flex justify-end">
+                        {isDeskInCluster && (
+                          <span className="text-rose-700 font-black text-[9px] uppercase tracking-wider animate-pulse">
+                            🚨 Cụm
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     {/* 2 Chỗ ngồi của bàn */}
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-2 gap-2 items-stretch">
                       <DeskCell
                         student={leftAssign?.student}
                         rowIndex={rIdx}
@@ -195,6 +304,12 @@ export const SeatingGrid: React.FC<SeatingGridProps> = ({
                         isSelectedForSwap={isLeftSelected}
                         isDragging={isLeftDragging}
                         isDragOver={isLeftDragOver}
+                        isFullscreen={isFullscreen}
+                        isLargeTextMode={isLargeTextMode}
+                        zoomLevel={zoomLevel}
+                        isHighlighted={highlightedSeatKey ? highlightedSeatKey.split(',').includes(`${rIdx}_${aisle.cols[0]}`) : false}
+                        isWinner={winnerSeatKey ? winnerSeatKey.split(',').includes(`${rIdx}_${aisle.cols[0]}`) : false}
+                        isCalled={leftAssign?.student ? calledStudentIds?.has(leftAssign.student.id) : false}
                         onDragStart={(e) => leftAssign && onDragStart(e, leftAssign, rIdx, aisle.cols[0])}
                         onDragOver={(e) => onDragOver(e, rIdx, aisle.cols[0])}
                         onDragLeave={(e) => onDragLeave(e, rIdx, aisle.cols[0])}
@@ -214,6 +329,12 @@ export const SeatingGrid: React.FC<SeatingGridProps> = ({
                         isSelectedForSwap={isRightSelected}
                         isDragging={isRightDragging}
                         isDragOver={isRightDragOver}
+                        isFullscreen={isFullscreen}
+                        isLargeTextMode={isLargeTextMode}
+                        zoomLevel={zoomLevel}
+                        isHighlighted={highlightedSeatKey ? highlightedSeatKey.split(',').includes(`${rIdx}_${aisle.cols[1]}`) : false}
+                        isWinner={winnerSeatKey ? winnerSeatKey.split(',').includes(`${rIdx}_${aisle.cols[1]}`) : false}
+                        isCalled={rightAssign?.student ? calledStudentIds?.has(rightAssign.student.id) : false}
                         onDragStart={(e) => rightAssign && onDragStart(e, rightAssign, rIdx, aisle.cols[1])}
                         onDragOver={(e) => onDragOver(e, rIdx, aisle.cols[1])}
                         onDragLeave={(e) => onDragLeave(e, rIdx, aisle.cols[1])}
@@ -229,10 +350,17 @@ export const SeatingGrid: React.FC<SeatingGridProps> = ({
         ))}
       </div>
 
-      {/* 3. PHÍA SAU PHÒNG HỌC */}
-      <div className="text-center pt-4 border-t border-slate-200 text-xs font-bold text-slate-400 uppercase tracking-wider">
-        🚪 CỬA RA VÀO PHÍA SAU & KHU VỰC VỆ SINH LỚP HỌC
+      {/* BỤC GIẢNG, BÀN GIÁO VIÊN, CỬA RA VÀO & BẢNG (PHÍA DƯỚI) */}
+      <ClassroomFrontElements2D
+        elementsConfig={elementsConfig}
+        onUpdateElementsConfig={onUpdateElementsConfig}
+        cleanClassName={cleanClassName}
+        isInteractive={true}
+      />
+            </div>
+          </div>
+        )}
       </div>
-    </div>
+    </>
   );
 };

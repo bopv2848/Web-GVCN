@@ -1,4 +1,4 @@
-﻿export interface AcademicWeekCustomConfig {
+export interface AcademicWeekCustomConfig {
   startDate?: string; // e.g. "2026-09-07" (ngày Thứ Hai của tuần 1)
   weekOffset?: number; // Độ lệch tuần: +1, -1, 0 (bù / nghỉ lễ)
   semester1Weeks?: number; // Số tuần thực học HK1 (mặc định: 18)
@@ -12,6 +12,9 @@ export interface AcademicWeekInfo {
   academicYear: string; // Niên khóa (ví dụ: "2026 - 2027")
   weekStartDate: string; // Ngày Thứ Hai của tuần (DD/MM/YYYY)
   weekEndDate: string; // Ngày Chủ Nhật của tuần (DD/MM/YYYY)
+  mondayDate: Date; // Đối tượng Date của ngày Thứ Hai đầu tuần
+  appliedDateText: string; // Chuỗi tiếng Việt: "ngày 14 tháng 9 năm 2026"
+  fullAppliedText: string; // Chuỗi chuẩn: "Tuần 2, áp dụng từ ngày 14 tháng 9 năm 2026"
 }
 
 export const ACADEMIC_WEEK_STORAGE_KEY = 'gvcn_academic_week_config';
@@ -129,6 +132,12 @@ export function getAcademicWeekInfo(
     weekLabel = 'Kỳ nghỉ hè';
   }
 
+  const mondayDay = currentMonday.getDate();
+  const mondayMonth = currentMonday.getMonth() + 1;
+  const mondayYear = currentMonday.getFullYear();
+  const appliedDateText = `ngày ${mondayDay} tháng ${mondayMonth} năm ${mondayYear}`;
+  const fullAppliedText = `Tuần ${weekNumber}, áp dụng từ ngày ${mondayDay} tháng ${mondayMonth} năm ${mondayYear}`;
+
   return {
     weekNumber,
     semester,
@@ -137,5 +146,42 @@ export function getAcademicWeekInfo(
     academicYear,
     weekStartDate,
     weekEndDate,
+    mondayDate: currentMonday,
+    appliedDateText,
+    fullAppliedText,
   };
+}
+
+export interface SchoolWeekDayInfo {
+  day: number; // 2 -> 6 (Thứ 2 đến Thứ 6)
+  name: string; // 'Thứ 2', 'Thứ 3', ...
+  dateStr: string; // '14/09'
+  fullDateStr: string; // '14/09/2026'
+  isToday: boolean;
+}
+
+/**
+ * Lấy danh sách các ngày trong tuần học (Thứ 2 đến Thứ 6) dựa trên ngày Thứ Hai đầu tuần
+ */
+export function getSchoolWeekDays(mondayDate: Date, todayDate: Date = new Date()): SchoolWeekDayInfo[] {
+  const dayNames = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6'];
+  const todayStr = `${todayDate.getFullYear()}-${String(todayDate.getMonth() + 1).padStart(2, '0')}-${String(todayDate.getDate()).padStart(2, '0')}`;
+
+  return dayNames.map((name, index) => {
+    const d = new Date(mondayDate);
+    d.setDate(d.getDate() + index);
+    const day = index + 2; // 2 to 6
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    const dStr = `${yyyy}-${mm}-${dd}`;
+
+    return {
+      day,
+      name,
+      dateStr: `${dd}/${mm}`,
+      fullDateStr: `${dd}/${mm}/${yyyy}`,
+      isToday: dStr === todayStr,
+    };
+  });
 }

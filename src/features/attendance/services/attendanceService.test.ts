@@ -127,4 +127,58 @@ describe('attendanceService Unit Tests', () => {
     expect(report.studentSummaries.length).toBe(47);
     expect(report.groupStats.length).toBe(4);
   });
+
+  describe('Đồng bộ điểm danh theo từng tiết học và buổi học riêng biệt', () => {
+    it('phân biệt chính xác sĩ số có mặt/vắng giữa buổi sáng (Tiết 1..5) và buổi chiều (Tiết 6..8)', async () => {
+      // 1. Khởi tạo phiên sáng: tất cả có mặt
+      const morningSession = await attendanceService.getOrCreateSession(CLASS_6A6_ID, '2026-09-15', 'morning');
+      await attendanceService.markAllPresent(morningSession.id);
+
+      // 2. Khởi tạo phiên chiều: có 2 học sinh xin nghỉ chiều
+      const afternoonSession = await attendanceService.getOrCreateSession(CLASS_6A6_ID, '2026-09-15', 'afternoon');
+      const afternoonRecs = await attendanceService.getSessionRecords(afternoonSession.id, CLASS_6A6_ID);
+      await attendanceService.updateRecordStatus(afternoonRecs[0].id, 'excused_absence', 'Xin về sớm buổi chiều');
+      await attendanceService.updateRecordStatus(afternoonRecs[1].id, 'excused_absence', 'Sốt đi khám chiều');
+
+      // Khi truy vấn Tiết 2 (buổi sáng): Vắng = 0, HD = 47, Buổi Sáng
+      const morningStats = await attendanceService.getTodayClassAttendanceStats(CLASS_6A6_ID, '2026-09-15', 2);
+      expect(morningStats.sessionName).toBe('Sáng');
+      expect(morningStats.total).toBe(47);
+      expect(morningStats.absent).toBe(0);
+      expect(morningStats.present).toBe(47);
+
+      // Khi sang Tiết 6 (buổi chiều): Tự động đồng bộ số liệu riêng của chiều: Vắng = 2, HD = 45, Buổi Chiều
+      const afternoonStats = await attendanceService.getTodayClassAttendanceStats(CLASS_6A6_ID, '2026-09-15', 6);
+      expect(afternoonStats.sessionName).toBe('Chiều');
+      expect(afternoonStats.total).toBe(47);
+      expect(afternoonStats.absent).toBe(2);
+      expect(afternoonStats.present).toBe(45);
+      expect(afternoonStats.absentStudents.length).toBe(2);
+      expect(afternoonStats.absentStudents[0].name).toBe(afternoonRecs[0].studentName);
+    });
+
+    it('tự động phát hiện học sinh xin về sớm từ tiết cụ thể (ví dụ: về sớm từ tiết 4)', async () => {
+      const session = await attendanceService.getOrCreateSession(CLASS_6A6_ID, '2026-09-16', 'morning');
+      const recs = await attendanceService.getSessionRecords(session.id, CLASS_6A6_ID);
+      
+      // Học sinh thứ 3 có ghi chú "Xin về sớm từ tiết 4"
+      await attendanceService.updateRecordStatus(recs[2].id, 'present', 'Xin về sớm từ tiết 4');
+
+      // Ở Tiết 1, 2, 3: Học sinh vẫn đang có mặt (Vắng = 0)
+      const period3Stats = await attendanceService.getTodayClassAttendanceStats(CLASS_6A6_ID, '2026-09-16', 3);
+      expect(period3Stats.absent).toBe(0);
+      expect(period3Stats.present).toBe(47);
+
+      // Khi đến Tiết 4 trở đi: Số liệu tự động cập nhật khớp theo đúng sĩ số riêng của tiết đó (Vắng = 1, HD = 46)
+      const period4Stats = await attendanceService.getTodayClassAttendanceStats(CLASS_6A6_ID, '2026-09-16', 4);
+      expect(period4Stats.absent).toBe(1);
+      expect(period4Stats.present).toBe(46);
+      expect(period4Stats.absentStudents.some((s) => s.name === recs[2].studentName)).toBe(true);
+
+      // Khi sang Tiết 5: Học sinh vẫn vắng
+      const period5Stats = await attendanceService.getTodayClassAttendanceStats(CLASS_6A6_ID, '2026-09-16', 5);
+      expect(period5Stats.absent).toBe(1);
+      expect(period5Stats.present).toBe(46);
+    });
+  });
 });

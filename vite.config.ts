@@ -19,12 +19,18 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          'vendor-supabase': ['@supabase/supabase-js'],
-          'vendor-excel': ['xlsx'],
-          'vendor-pdf': ['jspdf', 'html2canvas'],
-          'vendor-icons': ['lucide-react', '@phosphor-icons/react'],
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
+              return 'vendor-react';
+            }
+            if (id.includes('@supabase')) {
+              return 'vendor-supabase';
+            }
+            if (id.includes('lucide-react') || id.includes('@phosphor-icons')) {
+              return 'vendor-icons';
+            }
+          }
         },
       },
     },

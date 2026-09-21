@@ -191,7 +191,26 @@ export const sandboxService = {
     const next = current.filter((s) => s.id !== studentId);
     if (next.length === current.length) return false;
     this.saveStudents(next);
+
+    // Gỡ học sinh này khỏi sơ đồ chỗ ngồi nếu đang được phân công
+    const { assignments } = this.getSeating();
+    if (assignments.some((a) => a.studentId === studentId)) {
+      this.saveSeatingAssignments(assignments.filter((a) => a.studentId !== studentId));
+    }
+
     return true;
+  },
+
+  deleteAllStudents(): void {
+    this.saveStudents([]);
+    this.saveSeatingAssignments([]);
+    try {
+      localStorage.setItem(SANDBOX_STUDENTS_KEY, JSON.stringify([]));
+      localStorage.setItem(SANDBOX_SEATING_ASSIGNMENTS_KEY, JSON.stringify([]));
+      this.notifyChange('reset');
+    } catch (e) {
+      console.warn('Lỗi xóa tất cả học sinh sandbox:', e);
+    }
   },
 
   getGroups(): Group[] {

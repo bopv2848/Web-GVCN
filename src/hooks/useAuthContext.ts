@@ -11,11 +11,13 @@ export interface AuthContextType {
   isOffline: boolean;
   isSessionExpired: boolean;
   hasNoClass: boolean;
+  isCloudTestMode?: boolean;
   login: (email: string, pass: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshSession: () => Promise<void>;
   updateCurrentClass: (updated: Partial<ClassInfo>) => void;
   updateUserProfile: (updated: Partial<UserProfile>) => Promise<void>;
+  setCloudTestMode?: (enabled: boolean) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);

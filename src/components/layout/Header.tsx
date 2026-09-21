@@ -28,7 +28,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileDrawer }) => {
   const roleBadge = roleLabels[currentRole] || roleLabels.gvcn;
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between h-16 md:h-20 px-4 md:px-8 bg-white/90 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
+    <header className="sticky top-0 z-30 flex items-center justify-between h-16 md:h-20 px-4 md:px-8 bg-white/90 backdrop-blur-md border-b border-slate-200/80 shadow-xs print:hidden">
       {/* Left: Mobile hamburger & Class Info */}
       <div className="flex items-center gap-3 md:gap-4">
         <button
@@ -58,6 +58,11 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileDrawer }) => {
             <h1 className="text-base md:text-xl font-black text-primary tracking-tight">
               {currentClass?.name || 'LỚP 6A6'}
             </h1>
+            {currentClass?.isDemo && (
+              <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 animate-pulse">
+                ☁️ Test Supabase
+              </span>
+            )}
             <span className="hidden sm:inline-block text-xs font-bold text-slate-400">|</span>
             <span className="hidden sm:inline-block text-xs font-semibold text-slate-600">
               {currentClass?.schoolName || 'TRƯỜNG THCS TÂN HẢI'}

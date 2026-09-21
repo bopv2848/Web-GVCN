@@ -3,6 +3,7 @@ import { AuthContext } from '../hooks/useAuthContext';
 import { supabase } from '../services/supabaseClient';
 import { authService, type ClassMembershipData } from '../services/authService';
 import type { UserProfile, ClassInfo } from '../types/auth';
+import { cloudTestService, CLOUD_TEST_CLASS_INFO } from '../features/sandbox';
 
 const fallbackClass: ClassInfo = {
   id: '66666666-6666-6666-6666-666666666666',
@@ -13,11 +14,16 @@ const fallbackClass: ClassInfo = {
   themeTitle: 'CHUYẾN TÀU THANH XUÂN 6A6 • GVCN THẦY PHAN VĂN BỘ',
   themeMonth: 'CHỦ ĐIỂM THÁNG 9: TRUYỀN THỐNG NHÀ TRƯỜNG',
   logoUrl: '/logo-truong-thcs-Tan-Hai.jpg',
+  isDemo: false,
 };
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [currentClass, setCurrentClass] = useState<ClassInfo | null>(fallbackClass);
+  const [productionClass, setProductionClass] = useState<ClassInfo | null>(fallbackClass);
+  const [isCloudTestMode, setIsCloudTestMode] = useState<boolean>(() => cloudTestService.isCloudTestActive());
+  const [currentClass, setCurrentClass] = useState<ClassInfo | null>(() =>
+    cloudTestService.isCloudTestActive() ? CLOUD_TEST_CLASS_INFO : fallbackClass
+  );
   const [membership, setMembership] = useState<ClassMembershipData | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -57,11 +63,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (mem) {
         setMembership(mem);
         userProfile.role = mem.role; // Vai trò lấy từ Database
-        setCurrentClass(mem.classInfo);
+        setProductionClass(mem.classInfo);
+        setCurrentClass(cloudTestService.isCloudTestActive() ? CLOUD_TEST_CLASS_INFO : mem.classInfo);
         setHasNoClass(false);
       } else {
         setMembership(null);
-        setCurrentClass(fallbackClass);
+        setProductionClass(fallbackClass);
+        setCurrentClass(cloudTestService.isCloudTestActive() ? CLOUD_TEST_CLASS_INFO : fallbackClass);
         // Nếu không có membership thì đánh dấu chưa phân lớp (đối với giáo viên mới)
         setHasNoClass(false);
       }
@@ -116,7 +124,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
             setIsAuthenticated(true);
             setUser(initialUser);
-            setCurrentClass(fallbackClass);
+            setProductionClass(fallbackClass);
+            setCurrentClass(cloudTestService.isCloudTestActive() ? CLOUD_TEST_CLASS_INFO : fallbackClass);
             setIsLoading(false);
           }
         }
@@ -235,6 +244,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user]);
 
+  // Lắng nghe sự kiện bật/tắt Cloud Test từ sandbox modal hoặc banner
+  useEffect(() => {
+    const handleCloudTestChange = () => {
+      const active = cloudTestService.isCloudTestActive();
+      setIsCloudTestMode(active);
+      if (active) {
+        setCurrentClass(CLOUD_TEST_CLASS_INFO);
+      } else {
+        setCurrentClass(productionClass || fallbackClass);
+      }
+    };
+    window.addEventListener('gvcn:cloud_test_change', handleCloudTestChange);
+    return () => {
+      window.removeEventListener('gvcn:cloud_test_change', handleCloudTestChange);
+    };
+  }, [productionClass]);
+
+  const setCloudTestMode = useCallback(async (enabled: boolean) => {
+    if (enabled) {
+      await cloudTestService.enableCloudTest();
+      setIsCloudTestMode(true);
+      setCurrentClass(CLOUD_TEST_CLASS_INFO);
+    } else {
+      cloudTestService.disableCloudTest();
+      setIsCloudTestMode(false);
+      setCurrentClass(productionClass || fallbackClass);
+    }
+  }, [productionClass]);
+
   return (
     <AuthContext.Provider
       value={{
@@ -246,11 +284,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isOffline,
         isSessionExpired,
         hasNoClass,
+        isCloudTestMode,
         login,
         logout,
         refreshSession,
         updateCurrentClass,
         updateUserProfile,
+        setCloudTestMode,
       }}
     >
       {children}

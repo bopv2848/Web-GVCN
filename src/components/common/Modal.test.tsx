@@ -70,4 +70,17 @@ describe('Modal Component Tests', () => {
 
     expect(handleClose).toHaveBeenCalledTimes(1);
   });
+
+  it('thêm thuộc tính ẩn khi in và lớp print:hidden khi hideOnPrint là true', () => {
+    render(
+      <Modal isOpen={true} onClose={() => {}} title="Modal ẩn khi in" hideOnPrint={true} className="custom-test-class">
+        <p>Nội dung</p>
+      </Modal>
+    );
+
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveAttribute('data-print-hidden', 'true');
+    expect(dialog.className).toContain('print:hidden');
+    expect(dialog.className).toContain('custom-test-class');
+  });
 });

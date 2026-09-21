@@ -74,6 +74,63 @@ export function getOfficerTaskGuide(role?: string, studentName?: string): Office
     };
   }
 
+  // PHÓ VĂN THỂ MỸ
+  if (normalized.includes('văn thể')) {
+    return {
+      roleTitle: `Nhiệm Vụ Phó Văn Thể Mỹ - ${name}`,
+      badgeLabel: '🎨 Phó Văn Thể Mỹ',
+      icon: '🎨',
+      themeColor: 'sky',
+      motto: 'Khuấy động phong trào, mang niềm vui và năng lượng tích cực đến từng tiết học.',
+      coreTasks: [
+        'Phụ trách tổ chức các bài hát đầu giờ, quản ca và thể dục giữa giờ của lớp.',
+        'Lên kế hoạch tập luyện các tiết mục văn nghệ chào mừng ngày lễ lớn (20/11, 26/3, 8/3...).',
+        'Phối hợp trang trí lớp học, bảng tin và báo tường theo chủ điểm tháng.',
+        'Động viên các bạn tham gia câu lạc bộ thể thao, vẽ tranh và văn nghệ của trường.',
+      ],
+      weeklyFocus: 'Duy trì thói quen hát 1 bài hát vui tươi đầu mỗi buổi học để tạo tinh thần hứng khởi.',
+      handlingTip: 'Tôn trọng sự rụt rè của bạn, khích lệ từng bước nhỏ thay vì ép buộc bạn biểu diễn trước đông người.',
+    };
+  }
+
+  // THỦ QUỸ
+  if (normalized.includes('thủ quỹ')) {
+    return {
+      roleTitle: `Nhiệm Vụ Thủ Quỹ - ${name}`,
+      badgeLabel: '💰 Thủ Quỹ',
+      icon: '💰',
+      themeColor: 'amber',
+      motto: 'Công khai, minh bạch, giữ gìn quỹ lớp cẩn thận đến từng đồng.',
+      coreTasks: [
+        'Thu và quản lý các khoản quỹ tự nguyện của lớp theo thống nhất của GVCN và Ban đại diện cha mẹ học sinh.',
+        'Ghi chép sổ sách thu - chi rõ ràng, chi tiết từng khoản (photo tài liệu, thăm hỏi ốm đau, phần thưởng nề nếp...).',
+        'Báo cáo công khai tài chính định kỳ vào tiết sinh hoạt lớp cuối tháng cho GVCN và cả lớp.',
+        'Giữ tiền cẩn thận, không để tại lớp học sau giờ tan trường.',
+      ],
+      weeklyFocus: 'Rà soát sổ thu chi, lưu trữ đầy đủ hóa đơn/biên nhận các khoản chi phục vụ học tập của lớp.',
+      handlingTip: 'Nguyên tắc vàng: Chỉ chi tiền khi có sự phê duyệt của Thầy GVCN hoặc Lớp trưởng.',
+    };
+  }
+
+  // SAO ĐỎ / ĐỘI CỜ ĐỎ
+  if (normalized.includes('sao đỏ') || normalized.includes('cờ đỏ')) {
+    return {
+      roleTitle: `Nhiệm Vụ Đội Sao Đỏ - ${name}`,
+      badgeLabel: '⭐ Đội Sao Đỏ',
+      icon: '⭐',
+      themeColor: 'emerald',
+      motto: 'Gương mẫu, công tâm, giữ vững nề nếp kỷ cương của lớp và toàn trường.',
+      coreTasks: [
+        'Tham gia làm nhiệm vụ trực cờ đỏ theo lịch phân công của Liên đội nhà trường.',
+        'Theo dõi, chấm điểm nề nếp lớp được phân công trực (đồng phục, khăn quàng, vệ sinh, trật tự).',
+        'Gương mẫu tuyệt đối trong việc chấp hành nội quy trường lớp để làm gương cho các bạn.',
+        'Báo cáo kết quả trực tuần với GVCN và Liên đội một cách khách quan, trung thực.',
+      ],
+      weeklyFocus: 'Đi trực đúng giờ quy định của Liên đội, nhắc nhở nụ cười thân thiện trước khi ghi nhận lỗi.',
+      handlingTip: 'Mục đích của Sao đỏ là giúp bạn tốt lên, không phải săm soi bắt bẻ. Luôn cư xử đúng mực và tôn trọng bạn.',
+    };
+  }
+
   // 4. TỔ TRƯỞNG
   if (normalized.includes('tổ trưởng') || normalized === 'tt') {
     return {

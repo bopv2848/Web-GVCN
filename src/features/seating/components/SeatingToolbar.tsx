@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '../../../components/common/Button';
+import { SeatingZoomControl } from './SeatingZoomControl';
 import type { SeatingMedicalAnalysis } from '../../../types/seating';
+import { pdfExportService } from '../../reports/services/pdfExportService';
 
 interface SeatingToolbarProps {
   isMedicalMode: boolean;
@@ -10,12 +12,33 @@ interface SeatingToolbarProps {
   schoolYearStartDate: string;
   activeWeekMode: 'odd' | 'even';
   isSavingWeek: boolean;
+  canUndo?: boolean;
+  undoActionDescription?: string | null;
+  hasAssignments?: boolean;
+  presetsCount?: number;
+  onOpenPresetsModal?: () => void;
+  viewMode?: '2d' | '3d';
+  onToggleViewMode?: (mode: '2d' | '3d') => void;
+  zoomLevel?: number;
+  onZoomChange?: (zoom: number) => void;
+  onFitScreen?: () => void;
+  onResetZoom?: () => void;
+  totalRows?: number;
+  totalCols?: number;
+  onOpenLayoutConfigModal?: () => void;
   onToggleRotation: (enabled: boolean) => void;
   onSelectWeekMode: (mode: 'odd' | 'even') => void;
   onOpenStartDateModal: () => void;
   onOpenClusterModal: () => void;
   onResetLayout: () => void;
+  onClearLayout: () => void;
+  isFullscreen?: boolean;
+  onToggleFullscreen?: () => void;
+  isRemoteConnected?: boolean;
+  onOpenRemotePairing?: () => void;
+  onUndo?: () => void;
   onSaveCurrentWeekAsBase: () => void;
+  onOpenPrintModal?: () => void;
 }
 
 export const SeatingToolbar: React.FC<SeatingToolbarProps> = ({
@@ -26,13 +49,57 @@ export const SeatingToolbar: React.FC<SeatingToolbarProps> = ({
   schoolYearStartDate,
   activeWeekMode,
   isSavingWeek,
+  canUndo = false,
+  undoActionDescription,
+  hasAssignments = true,
+  presetsCount = 0,
+  onOpenPresetsModal,
+  viewMode = '3d',
+  onToggleViewMode,
   onToggleRotation,
   onSelectWeekMode,
   onOpenStartDateModal,
   onOpenClusterModal,
   onResetLayout,
+  onClearLayout,
+  totalRows,
+  totalCols,
+  onOpenLayoutConfigModal,
+  zoomLevel = 100,
+  onZoomChange,
+  onFitScreen,
+  onResetZoom,
+  isFullscreen = false,
+  onToggleFullscreen,
+  isRemoteConnected = false,
+  onOpenRemotePairing,
+  onUndo,
   onSaveCurrentWeekAsBase,
+  onOpenPrintModal,
 }) => {
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+
+  const handleExportPdf = async () => {
+    const printEl = document.getElementById('seating-print-layout');
+    if (!printEl) {
+      alert('Không tìm thấy sơ đồ lớp để xuất PDF');
+      return;
+    }
+
+    setIsExportingPdf(true);
+    try {
+      await pdfExportService.exportToPdf(printEl, {
+        fileName: `So_Do_Cho_Ngoi_Lop_6A6_${new Date().toISOString().slice(0, 10)}.pdf`,
+        orientation: 'landscape',
+      });
+    } catch (err) {
+      console.error('Lỗi xuất PDF sơ đồ lớp:', err);
+      alert('Có lỗi xảy ra khi xuất PDF. Thầy có thể dùng nút IN SƠ ĐỒ LỚP A4 và chọn "Lưu dưới dạng PDF" của trình duyệt.');
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
   return (
     <div className="space-y-4 print:hidden">
       {/* 1. Header & Actions */}
@@ -40,7 +107,7 @@ export const SeatingToolbar: React.FC<SeatingToolbarProps> = ({
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2.5">
             <h2 className="text-xl md:text-2xl font-black text-slate-850 tracking-tight">
-              Sơ Đồ Chỗ Ngồi Lớp 6A6
+              Phòng Học Lớp 6A6
             </h2>
             {isMedicalMode && medicalAnalysis.totalSickInSeats > 0 && (
               <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-black bg-rose-50 text-rose-700 border border-rose-300 animate-pulse">
@@ -169,22 +236,186 @@ export const SeatingToolbar: React.FC<SeatingToolbarProps> = ({
             </Button>
           )}
 
+          {/* Nút Hoàn Tác khi có lịch sử trước đó */}
+          {canUndo && onUndo && (
+            <Button
+              type="button"
+              variant="outline"
+              size="md"
+              onClick={onUndo}
+              className="text-xs font-black text-amber-800 bg-amber-50 border-amber-300 hover:bg-amber-100 animate-fade-in flex items-center gap-1.5 shadow-xs"
+              title={`Hoàn tác: Khôi phục lại sơ đồ trước khi ${undoActionDescription || 'thao tác'}`}
+            >
+              <span>↩️</span>
+              <span>Hoàn Tác</span>
+            </Button>
+          )}
+
+          {/* Nút Làm Trống Sơ Đồ (Vacate desks) */}
+          <Button
+            type="button"
+            variant="outline"
+            size="md"
+            onClick={onClearLayout}
+            disabled={!hasAssignments}
+            className={`text-xs font-bold transition-all flex items-center gap-1 ${
+              hasAssignments
+                ? 'text-rose-600 border-rose-200 hover:bg-rose-50 hover:border-rose-300'
+                : 'text-slate-400 border-slate-200 cursor-not-allowed opacity-50'
+            }`}
+            title="Chuyển toàn bộ các ô bàn thành ghế trống (danh sách học sinh vẫn được bảo toàn)"
+          >
+            <span>🧹</span>
+            <span>Làm Trống</span>
+          </Button>
+
           <Button
             type="button"
             variant="outline"
             size="md"
             onClick={onResetLayout}
-            className="text-xs font-bold"
+            className="text-xs font-bold flex items-center gap-1"
           >
-            🔄 Sắp Xếp Lại 4 Tổ
+            <span>🔄</span>
+            <span>Sắp Xếp 4 Tổ</span>
+          </Button>
+
+          {/* Bộ chuyển đổi chế độ xem 3D / 2D */}
+          {onToggleViewMode && (
+            <div className="flex items-center bg-slate-100 p-1 rounded-2xl border border-slate-200 text-xs font-black shadow-2xs">
+              <button
+                type="button"
+                onClick={() => onToggleViewMode('3d')}
+                className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
+                  viewMode === '3d'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+                title="Xem không gian phòng học 3D chân thật"
+              >
+                <span>🏛️</span>
+                <span>3D Phòng Học</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onToggleViewMode('2d')}
+                className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
+                  viewMode === '2d'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+                title="Xem sơ đồ dạng phẳng 2D truyền thống"
+              >
+                <span>🗺️</span>
+                <span>2D Phẳng</span>
+              </button>
+            </div>
+          )}
+
+          {/* Nút Trình Chiếu Toàn Màn Hình cho Tiết Sinh Hoạt Lớp (Presentation Fullscreen) */}
+          {onToggleFullscreen && (
+            <button
+              type="button"
+              onClick={onToggleFullscreen}
+              className={`px-3 py-1.5 rounded-2xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs border ${
+                isFullscreen
+                  ? 'bg-blue-600 text-white border-blue-700 ring-2 ring-blue-300 shadow-sm'
+                  : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100 hover:border-slate-400'
+              }`}
+              title="Chế độ Toàn màn hình chuyên dụng cho Tiết Sinh Hoạt Lớp: Tự động ẩn Sidebar/Header và mở rộng sơ đồ chiếm trọn 100% Tivi/Máy chiếu (Phím F)"
+            >
+              <span className="text-sm">{isFullscreen ? '🗗' : '📺'}</span>
+              <span>{isFullscreen ? 'Thu Nhỏ' : 'Trình Chiếu'}</span>
+            </button>
+          )}
+
+          {/* Nút Kết Nối Điều Khiển Từ Xa Bằng Điện Thoại (Remote Deck) */}
+          {onOpenRemotePairing && (
+            <button
+              type="button"
+              onClick={onOpenRemotePairing}
+              className={`px-3 py-1.5 rounded-2xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs border ${
+                isRemoteConnected
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-300 ring-2 ring-emerald-200'
+                  : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100 hover:border-slate-400'
+              }`}
+              title="Kết nối điện thoại để điều khiển từ xa: Bốc thăm, bấm giờ, cộng điểm thưởng trực tiếp không cần đứng cạnh máy tính"
+            >
+              <span className="text-sm">📱</span>
+              <span>{isRemoteConnected ? 'Đã Kết Nối' : 'Điều Khiển'}</span>
+              {isRemoteConnected && (
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              )}
+            </button>
+          )}
+
+          {/* Bộ điều khiển thu phóng tỉ lệ hiển thị sơ đồ chỗ ngồi */}
+          {onZoomChange && (
+            <SeatingZoomControl
+              zoomLevel={zoomLevel}
+              onZoomChange={onZoomChange}
+              onFitScreen={onFitScreen}
+              onResetZoom={onResetZoom}
+              variant="toolbar"
+            />
+          )}
+
+          {onOpenPresetsModal && (
+            <Button
+              type="button"
+              variant="outline"
+              size="md"
+              onClick={onOpenPresetsModal}
+              className="text-xs font-bold flex items-center gap-1.5 text-sky-700 bg-sky-50/80 border-sky-200 hover:bg-sky-100 hover:border-sky-300"
+              title="Quản lý và chuyển đổi các bản mẫu sơ đồ dự phòng (Ôn thi, học nhóm...)"
+            >
+              <span>📑</span>
+              <span>Bản Mẫu</span>
+              {presetsCount > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full bg-sky-600 text-white text-[10px] font-black">
+                  {presetsCount}
+                </span>
+              )}
+            </Button>
+          )}
+
+          {onOpenLayoutConfigModal && (
+            <Button
+              type="button"
+              variant="outline"
+              size="md"
+              onClick={onOpenLayoutConfigModal}
+              className="text-xs font-bold flex items-center gap-1.5 text-amber-900 bg-amber-50/80 border-amber-300 hover:bg-amber-100 hover:border-amber-400 shadow-2xs"
+              title="Tùy chỉnh số dãy bàn (3 hoặc 4 dãy) và số bàn mỗi dãy (4-7 bàn)"
+            >
+              <span>🏛️</span>
+              <span>Cấu Hình Bàn Ghế</span>
+              <span className="px-1.5 py-0.2 rounded-full bg-amber-200/80 text-amber-950 text-[10px] font-black">
+                {totalCols ? totalCols / 2 : 4} Dãy • {totalRows || 6} Bàn
+              </span>
+            </Button>
+          )}
+
+          <Button
+            type="button"
+            variant="outline"
+            size="md"
+            onClick={onOpenPrintModal || handleExportPdf}
+            isLoading={isExportingPdf}
+            className="text-xs font-black border-slate-300 text-slate-800 hover:bg-slate-100 shadow-2xs"
+            title="Tùy chỉnh tiêu đề văn bản hành chính & Tải trực tiếp file PDF A4 khổ ngang sắc nét"
+          >
+            <span>📥</span>
+            <span>XUẤT PDF A4</span>
           </Button>
 
           <Button
             type="button"
             variant="primary"
             size="md"
-            onClick={() => window.print()}
+            onClick={onOpenPrintModal || (() => window.print())}
             className="text-xs font-black shadow-md shadow-primary/20"
+            title="Tùy chỉnh tiêu đề văn bản hành chính & In sơ đồ lớp A4"
           >
             🖨️ IN SƠ ĐỒ LỚP A4
           </Button>

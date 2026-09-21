@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Modal } from '../../../components/common/Modal';
 import { Button } from '../../../components/common/Button';
 import type { TimetableEntry } from '../../../types/timetable';
+import { getSchoolWeekDays, type AcademicWeekInfo } from '../../../utils/academicWeekUtils';
 
 interface TimetablePrintModalProps {
   isOpen: boolean;
@@ -10,6 +11,7 @@ interface TimetablePrintModalProps {
   classNameTitle: string;
   schoolName?: string;
   logoUrl?: string;
+  academicWeek?: AcademicWeekInfo;
 }
 
 export const TimetablePrintModal: React.FC<TimetablePrintModalProps> = ({
@@ -19,14 +21,20 @@ export const TimetablePrintModal: React.FC<TimetablePrintModalProps> = ({
   classNameTitle,
   schoolName = 'TRƯỜNG THCS TÂN HẢI',
   logoUrl = '/logo-truong-thcs-Tan-Hai.jpg',
+  academicWeek,
 }) => {
-  const days = [
-    { day: 2, name: 'Thứ 2' },
-    { day: 3, name: 'Thứ 3' },
-    { day: 4, name: 'Thứ 4' },
-    { day: 5, name: 'Thứ 5' },
-    { day: 6, name: 'Thứ 6' },
-  ];
+  const days = useMemo(() => {
+    if (academicWeek?.mondayDate) {
+      return getSchoolWeekDays(academicWeek.mondayDate);
+    }
+    return [
+      { day: 2, name: 'Thứ 2', dateStr: '', fullDateStr: '', isToday: false },
+      { day: 3, name: 'Thứ 3', dateStr: '', fullDateStr: '', isToday: false },
+      { day: 4, name: 'Thứ 4', dateStr: '', fullDateStr: '', isToday: false },
+      { day: 5, name: 'Thứ 5', dateStr: '', fullDateStr: '', isToday: false },
+      { day: 6, name: 'Thứ 6', dateStr: '', fullDateStr: '', isToday: false },
+    ];
+  }, [academicWeek]);
 
   const morningPeriods = [1, 2, 3, 4, 5];
   const afternoonPeriods = [6, 7, 8];
@@ -61,8 +69,11 @@ export const TimetablePrintModal: React.FC<TimetablePrintModalProps> = ({
               </div>
             </div>
             <div className="text-right">
-              <p className="text-xs text-slate-600 font-semibold">
-                Năm học 2026 - 2027
+              <p className="text-xs font-bold text-amber-900 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 inline-block">
+                {academicWeek?.fullAppliedText || 'Tuần 2, áp dụng từ ngày 14 tháng 9 năm 2026'}
+              </p>
+              <p className="text-xs text-slate-600 font-semibold mt-1">
+                Năm học {academicWeek?.academicYear || '2026 - 2027'}
               </p>
               <p className="text-xs text-slate-500 font-medium">
                 GVCN: Thầy Phan Văn Bộ
@@ -78,7 +89,12 @@ export const TimetablePrintModal: React.FC<TimetablePrintModalProps> = ({
                 <th className="border border-slate-400 p-2 w-14">Tiết</th>
                 {days.map((d) => (
                   <th key={d.day} className="border border-slate-400 p-2 font-black">
-                    {d.name}
+                    <div>{d.name}</div>
+                    {d.dateStr && (
+                      <div className="text-[10px] font-medium text-slate-600">
+                        ({d.dateStr})
+                      </div>
+                    )}
                   </th>
                 ))}
               </tr>

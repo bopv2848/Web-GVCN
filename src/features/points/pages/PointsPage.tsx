@@ -4,10 +4,12 @@ import { useAuth } from '../../../hooks/useAuth';
 import { pointsService, type GroupPointsSummary } from '../services/pointsService';
 import { studentService } from '../../students/services/studentService';
 import { AwardPointsModal } from '../components/AwardPointsModal';
+import { ReverseTransactionModal } from '../components/ReverseTransactionModal';
 import type { PointCategory, PointTransaction } from '../../../types/points';
 import type { Student, Group } from '../../../types/student';
 import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
 import { cn } from '../../../utils/cn';
+import { playPointsChime, playUndoChime } from '../../../utils/soundNotification';
 
 export const PointsPage: React.FC = () => {
   const { currentClass, user } = useAuth();
@@ -21,14 +23,70 @@ export const PointsPage: React.FC = () => {
   const [groups, setGroups] = useState<Group[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isRealtimeActive, setIsRealtimeActive] = useState<boolean>(false);
+  const [realtimeStatus, setRealtimeStatus] = useState<'connected' | 'connecting' | 'error'>('connecting');
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [highlightedTxId, setHighlightedTxId] = useState<string | null>(null);
+
+  // State Modal Hoàn tác giao dịch kèm ghi chú phản hồi cho Ban cán sự
+  const [reversingTx, setReversingTx] = useState<PointTransaction | null>(null);
+  const [isReversing, setIsReversing] = useState<boolean>(false);
+
+  // Thông báo nổi khi có sự kiện Realtime từ Ban cán sự
+  const [realtimeNotification, setRealtimeNotification] = useState<{
+    id: string;
+    type: 'insert' | 'delete';
+    message: string;
+    subtext?: string;
+  } | null>(null);
+  const notificationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const studentsRef = useRef<Student[]>([]);
+  const profilesMapRef = useRef<Record<string, string>>({
+    '601dce7f-13e4-4680-b2f9-f86ed1a17079': 'Thầy Phan Văn Bộ (GVCN)',
+    'dd877932-f537-412d-baf5-018ba482a1e3': 'Lê Ngọc Anh (Lớp trưởng)',
+  });
 
   // Bộ lọc lịch sử sổ cái
   const [filterWeek, setFilterWeek] = useState<'all' | 'this_week' | 'last_week' | 'today'>('this_week');
   const [filterGroup, setFilterGroup] = useState<string>('all');
   const [filterType, setFilterType] = useState<'all' | 'add' | 'subtract' | 'reversal'>('all');
+  const [filterCreator, setFilterCreator] = useState<'all' | 'bancansu' | 'gvcn'>('all');
   const [searchKeyword, setSearchKeyword] = useState<string>('');
+
+  // Nhận diện giao dịch do Ban Cán Sự hay GVCN chấm
+  const isBcsTransaction = useCallback((tx: PointTransaction) => {
+    const by = (tx.createdBy || '').toLowerCase();
+    return (
+      by.includes('bcs') ||
+      by.includes('ban cán sự') ||
+      by.includes('lớp trưởng') ||
+      by.includes('ngọc anh') ||
+      tx.createdBy === 'dd877932-f537-412d-baf5-018ba482a1e3'
+    );
+  }, []);
+
+  const isGvcnTransaction = useCallback((tx: PointTransaction) => {
+    const by = (tx.createdBy || '').toLowerCase();
+    return (
+      by.includes('thầy') ||
+      by.includes('bộ') ||
+      by.includes('gvcn') ||
+      by.includes('giáo viên') ||
+      tx.createdBy === '601dce7f-13e4-4680-b2f9-f86ed1a17079' ||
+      by.includes('dev-gvcn')
+    );
+  }, []);
+
+  // Đếm số lượng giao dịch theo người chấm
+  const creatorCounts = useMemo(() => {
+    let bcs = 0;
+    let gvcn = 0;
+    transactions.forEach((tx) => {
+      if (isBcsTransaction(tx)) bcs++;
+      else if (isGvcnTransaction(tx)) gvcn++;
+    });
+    return { bcs, gvcn, total: transactions.length };
+  }, [transactions, isBcsTransaction, isGvcnTransaction]);
 
   const highlightTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -54,22 +112,31 @@ export const PointsPage: React.FC = () => {
     }
   }, [searchParams, setSearchParams]);
 
+  // Cập nhật studentsRef mỗi khi students thay đổi
+  useEffect(() => {
+    studentsRef.current = students;
+  }, [students]);
+
   // 1. Tải toàn bộ dữ liệu ban đầu
   const loadInitialData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [sumData, txData, catData, stdData, grpData] = await Promise.all([
+      const [sumData, txData, catData, stdData, grpData, profMap] = await Promise.all([
         pointsService.getGroupPointsSummary(classId),
         pointsService.getRecentTransactions(classId, 100),
         pointsService.getCategories(classId),
         studentService.getStudents(classId),
         studentService.getGroups(classId),
+        pointsService.getProfilesMap(),
       ]);
       setGroupSummaries(sumData);
       setTransactions(txData);
       setCategories(catData);
       setStudents(stdData);
       setGroups(grpData);
+      if (profMap) {
+        profilesMapRef.current = { ...profilesMapRef.current, ...profMap };
+      }
     } catch (err) {
       console.error('Lỗi nạp dữ liệu thi đua:', err);
     } finally {
@@ -84,50 +151,115 @@ export const PointsPage: React.FC = () => {
   // 2. Kích hoạt kết nối Realtime WebSockets
   useEffect(() => {
     setIsRealtimeActive(true);
+    setRealtimeStatus('connecting');
 
-    const unsubscribe = pointsService.subscribeToPoints(classId, async (payload) => {
-      if (payload.eventType === 'INSERT' && payload.new) {
-        const newRow = payload.new;
+    const unsubscribe = pointsService.subscribeToPoints(
+      classId,
+      async (payload) => {
+        if (payload.eventType === 'INSERT' && payload.new) {
+          const newRow = payload.new;
 
-        // Tải thông tin chi tiết của học sinh cho dòng mới
-        const studentInfo = students.find((s) => s.id === newRow.student_id);
+          // Tải thông tin chi tiết của học sinh cho dòng mới
+          const studentInfo = studentsRef.current.find((s) => s.id === newRow.student_id);
+          const creatorName =
+            profilesMapRef.current[newRow.created_by] || 'Ban Cán Sự / GVCN';
 
-        const newTx: PointTransaction = {
-          id: newRow.id,
-          studentId: newRow.student_id,
-          studentName: studentInfo?.fullName || 'Học sinh',
-          groupName: studentInfo?.groupName || undefined,
-          points: newRow.points,
-          stars: newRow.stars,
-          reason: newRow.reason,
-          note: newRow.note,
-          occurredAt: newRow.occurred_at,
-          createdBy: newRow.created_by,
-          reversalOfId: newRow.reversal_of_id,
-        };
+          const newTx: PointTransaction = {
+            id: newRow.id,
+            studentId: newRow.student_id,
+            studentName: studentInfo?.fullName || 'Học sinh',
+            groupName: studentInfo?.groupName || undefined,
+            points: newRow.points,
+            stars: newRow.stars,
+            reason: newRow.reason,
+            note: newRow.note,
+            occurredAt: newRow.occurred_at,
+            createdBy: creatorName,
+            reversalOfId: newRow.reversal_of_id,
+          };
 
-        // Chèn giao dịch mới lên đầu danh sách
-        setTransactions((prev) => [newTx, ...prev.filter((t) => t.id !== newTx.id)]);
+          // Chèn giao dịch mới lên đầu danh sách
+          setTransactions((prev) => [newTx, ...prev.filter((t) => t.id !== newTx.id)]);
 
-        // Cập nhật lại bảng xếp hạng 4 Tổ tức thì
-        const updatedSummaries = await pointsService.getGroupPointsSummary(classId);
-        setGroupSummaries(updatedSummaries);
+          // Cập nhật lại bảng xếp hạng 4 Tổ tức thì
+          const updatedSummaries = await pointsService.getGroupPointsSummary(classId);
+          setGroupSummaries(updatedSummaries);
 
-        // Hiệu ứng phát sáng
-        setHighlightedTxId(newTx.id);
-        if (highlightTimeoutRef.current) clearTimeout(highlightTimeoutRef.current);
-        highlightTimeoutRef.current = setTimeout(() => {
-          setHighlightedTxId(null);
-        }, 3000);
+          // Phân biệt giao dịch hoàn tác hay giao dịch chấm điểm mới
+          const isReversalTx = Boolean(newRow.reversal_of_id) || (newRow.reason || '').includes('[HOÀN TÁC]');
+
+          if (isReversalTx) {
+            playUndoChime();
+            setRealtimeNotification({
+              id: newRow.id,
+              type: 'delete',
+              message: `↩️ ${creatorName} đã hoàn tác giao dịch điểm của ${
+                studentInfo?.fullName || 'học sinh'
+              }`,
+              subtext: newRow.note ? `Lý do phản hồi: "${newRow.note}"` : newRow.reason,
+            });
+          } else {
+            playPointsChime();
+            const sign = newRow.points > 0 ? '+' : '';
+            setRealtimeNotification({
+              id: newRow.id,
+              type: 'insert',
+              message: `${creatorName} vừa chấm ${sign}${newRow.points} điểm cho ${
+                studentInfo?.fullName || 'học sinh'
+              }`,
+              subtext: newRow.reason,
+            });
+          }
+
+          if (notificationTimeoutRef.current) clearTimeout(notificationTimeoutRef.current);
+          notificationTimeoutRef.current = setTimeout(() => {
+            setRealtimeNotification(null);
+          }, 5000);
+
+          // Hiệu ứng phát sáng
+          setHighlightedTxId(newTx.id);
+          if (highlightTimeoutRef.current) clearTimeout(highlightTimeoutRef.current);
+          highlightTimeoutRef.current = setTimeout(() => {
+            setHighlightedTxId(null);
+          }, 3500);
+        } else if (payload.eventType === 'DELETE' && payload.old) {
+          const deletedId = payload.old.id;
+
+          setTransactions((prev) => prev.filter((t) => t.id !== deletedId));
+
+          const updatedSummaries = await pointsService.getGroupPointsSummary(classId);
+          setGroupSummaries(updatedSummaries);
+
+          playUndoChime();
+          setRealtimeNotification({
+            id: `del-${deletedId}`,
+            type: 'delete',
+            message: 'Một giao dịch chấm điểm vừa được hoàn tác / thu hồi từ xa.',
+          });
+          if (notificationTimeoutRef.current) clearTimeout(notificationTimeoutRef.current);
+          notificationTimeoutRef.current = setTimeout(() => {
+            setRealtimeNotification(null);
+          }, 4000);
+        }
+      },
+      (status) => {
+        if (status === 'SUBSCRIBED') {
+          setRealtimeStatus('connected');
+        } else if (status === 'TIMED_OUT' || status === 'CHANNEL_ERROR') {
+          setRealtimeStatus('error');
+        } else {
+          setRealtimeStatus('connecting');
+        }
       }
-    });
+    );
 
     return () => {
       setIsRealtimeActive(false);
       unsubscribe();
       if (highlightTimeoutRef.current) clearTimeout(highlightTimeoutRef.current);
+      if (notificationTimeoutRef.current) clearTimeout(notificationTimeoutRef.current);
     };
-  }, [classId, students]);
+  }, [classId]);
 
   // Xác định khoảng thời gian theo bộ lọc tuần
   const getFilterDateRange = useCallback((filter: 'all' | 'this_week' | 'last_week' | 'today') => {
@@ -192,9 +324,27 @@ export const PointsPage: React.FC = () => {
         if (!nameMatch && !reasonMatch && !noteMatch) return false;
       }
 
+      // 5. Lọc theo Người thực hiện (Ban Cán Sự vs GVCN)
+      if (filterCreator === 'bancansu') {
+        if (!isBcsTransaction(tx)) return false;
+      } else if (filterCreator === 'gvcn') {
+        if (!isGvcnTransaction(tx)) return false;
+      }
+
       return true;
     });
-  }, [transactions, filterWeek, filterGroup, filterType, searchKeyword, getFilterDateRange, students]);
+  }, [
+    transactions,
+    filterWeek,
+    filterGroup,
+    filterType,
+    filterCreator,
+    searchKeyword,
+    getFilterDateRange,
+    students,
+    isBcsTransaction,
+    isGvcnTransaction,
+  ]);
 
   // Tổng điểm của các giao dịch đang hiển thị theo bộ lọc
   const totalFilteredPoints = useMemo(() => {
@@ -205,20 +355,44 @@ export const PointsPage: React.FC = () => {
     filterWeek !== 'this_week' ||
     filterGroup !== 'all' ||
     filterType !== 'all' ||
+    filterCreator !== 'all' ||
     Boolean(searchKeyword.trim());
 
-  // 3. Hoàn tác giao dịch
-  const handleReverse = async (tx: PointTransaction) => {
-    const confirmReversal = window.confirm(
-      `Thầy/Cô có chắc chắn muốn hoàn tác giao dịch "${tx.reason}" (${tx.points > 0 ? '+' : ''}${tx.points}đ) của em ${tx.studentName}?`
-    );
-    if (!confirmReversal) return;
+  // 3. Hoàn tác giao dịch kèm lý do phản hồi cho Ban cán sự
+  const handleConfirmReverse = async (reason: string) => {
+    if (!reversingTx) return;
+    setIsReversing(true);
 
     try {
-      await pointsService.reverseTransaction(tx.id, 'GVCN yêu cầu hủy kết quả');
+      const res = await pointsService.reverseTransaction(reversingTx.id, reason);
+      if (res) {
+        // Cập nhật lại số liệu tức thì
+        const [sumData, txData] = await Promise.all([
+          pointsService.getGroupPointsSummary(classId),
+          pointsService.getRecentTransactions(classId, 100),
+        ]);
+        setGroupSummaries(sumData);
+        setTransactions(txData);
+
+        playUndoChime();
+        setRealtimeNotification({
+          id: `rev-${reversingTx.id}-${Date.now()}`,
+          type: 'delete',
+          message: `Đã hoàn tác giao dịch của em ${reversingTx.studentName}`,
+          subtext: `Lý do phản hồi: "${reason}"`,
+        });
+        if (notificationTimeoutRef.current) clearTimeout(notificationTimeoutRef.current);
+        notificationTimeoutRef.current = setTimeout(() => {
+          setRealtimeNotification(null);
+        }, 5000);
+
+        setReversingTx(null);
+      }
     } catch (err: unknown) {
       const error = err as { message?: string };
       alert('Lỗi hoàn tác: ' + (error.message || 'Không thể hoàn tác'));
+    } finally {
+      setIsReversing(false);
     }
   };
 
@@ -233,23 +407,77 @@ export const PointsPage: React.FC = () => {
             <h2 className="text-xl md:text-2xl font-black text-slate-850 tracking-tight">
               Tích Điểm & Sổ Cái Thi Đua 6A6
             </h2>
-            {isRealtimeActive ? (
+            {isRealtimeActive && realtimeStatus === 'connected' && (
               <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-black bg-emerald-50 text-emerald-700 border border-emerald-300 animate-pulse">
                 <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                <span>Realtime Live</span>
+                <span>Realtime Live (Đã đồng bộ)</span>
               </span>
-            ) : (
+            )}
+            {isRealtimeActive && realtimeStatus === 'connecting' && (
+              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-300 animate-pulse">
+                <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                <span>Đang kết nối WebSocket...</span>
+              </span>
+            )}
+            {(!isRealtimeActive || realtimeStatus === 'error') && (
               <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-500">
                 <span className="w-2 h-2 rounded-full bg-slate-400"></span>
-                <span>Ngoại tuyến</span>
+                <span>Ngoại tuyến (Chế độ cục bộ)</span>
               </span>
             )}
           </div>
           <p className="text-xs text-slate-500 font-semibold mt-1">
-            Sổ cái minh bạch Append-only • Ban Cán Sự và GVCN cùng tham gia chấm điểm nề nếp
+            Sổ cái minh bạch Append-only • Đồng bộ tức thì giữa Điện thoại Ban Cán Sự & Máy tính GVCN
           </p>
         </div>
       </div>
+
+      {/* Thông báo nổi Realtime Toast khi có điểm mới hoặc thu hồi */}
+      {realtimeNotification && (
+        <div
+          className={cn(
+            'fixed top-5 right-5 z-50 flex items-start gap-3 p-4 rounded-2xl shadow-xl border backdrop-blur-md transition-all duration-300 max-w-md animate-bounce',
+            realtimeNotification.type === 'insert'
+              ? 'bg-slate-900/95 text-white border-emerald-500/80 shadow-emerald-950/20'
+              : 'bg-slate-900/95 text-white border-amber-500/80 shadow-amber-950/20'
+          )}
+        >
+          <span className="text-2xl mt-0.5">
+            {realtimeNotification.type === 'insert' ? '⭐' : '↩️'}
+          </span>
+          <div className="flex-1">
+            <div className="flex items-center justify-between gap-2">
+              <span
+                className={cn(
+                  'text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md',
+                  realtimeNotification.type === 'insert'
+                    ? 'bg-emerald-500/20 text-emerald-300'
+                    : 'bg-amber-500/20 text-amber-300'
+                )}
+              >
+                {realtimeNotification.type === 'insert'
+                  ? '⚡ Ban Cán Sự vừa ghi điểm'
+                  : '⚡ Hoàn tác giao dịch'}
+              </span>
+              <button
+                type="button"
+                onClick={() => setRealtimeNotification(null)}
+                className="text-slate-400 hover:text-white text-xs font-bold px-1"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="text-sm font-bold mt-1 text-white">
+              {realtimeNotification.message}
+            </p>
+            {realtimeNotification.subtext && (
+              <p className="text-xs text-slate-300 mt-1 italic">
+                "{realtimeNotification.subtext}"
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Bảng Xếp Hạng Thi Đua 4 Tổ */}
       <div>
@@ -400,6 +628,73 @@ export const PointsPage: React.FC = () => {
               </select>
             </div>
 
+            {/* Lọc theo Người thực hiện (Ban Cán Sự vs GVCN) */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-500">
+                👤 Người chấm:
+              </span>
+              <div className="inline-flex p-0.5 bg-slate-200/70 rounded-xl border border-slate-200/80">
+                <button
+                  type="button"
+                  onClick={() => setFilterCreator('all')}
+                  className={cn(
+                    'px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer',
+                    filterCreator === 'all'
+                      ? 'bg-white text-slate-850 shadow-xs font-black'
+                      : 'text-slate-600 hover:text-slate-900'
+                  )}
+                >
+                  Tất cả ({creatorCounts.total})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterCreator('bancansu')}
+                  className={cn(
+                    'px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1',
+                    filterCreator === 'bancansu'
+                      ? 'bg-blue-600 text-white shadow-xs font-black'
+                      : 'text-blue-700 hover:bg-blue-50/80'
+                  )}
+                  title="Chỉ xem các lượt điểm do Ban Cán Sự lớp chấm để duyệt lại tính công tâm"
+                >
+                  <span>⭐ Ban Cán Sự</span>
+                  <span
+                    className={cn(
+                      'text-[10px] px-1.5 py-0.2 rounded-full font-black',
+                      filterCreator === 'bancansu'
+                        ? 'bg-blue-800 text-white'
+                        : 'bg-blue-100 text-blue-800'
+                    )}
+                  >
+                    {creatorCounts.bcs}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterCreator('gvcn')}
+                  className={cn(
+                    'px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1',
+                    filterCreator === 'gvcn'
+                      ? 'bg-slate-800 text-white shadow-xs font-black'
+                      : 'text-slate-700 hover:bg-slate-100'
+                  )}
+                  title="Chỉ xem các lượt điểm do GVCN chấm"
+                >
+                  <span>👨‍🏫 GVCN</span>
+                  <span
+                    className={cn(
+                      'text-[10px] px-1.5 py-0.2 rounded-full font-black',
+                      filterCreator === 'gvcn'
+                        ? 'bg-slate-950 text-white'
+                        : 'bg-slate-100 text-slate-700'
+                    )}
+                  >
+                    {creatorCounts.gvcn}
+                  </span>
+                </button>
+              </div>
+            </div>
+
             {/* Thống kê kết quả & Nút đặt lại */}
             <div className="ml-auto flex items-center gap-2 text-xs font-bold">
               <span className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200/80">
@@ -417,6 +712,7 @@ export const PointsPage: React.FC = () => {
                     setFilterWeek('this_week');
                     setFilterGroup('all');
                     setFilterType('all');
+                    setFilterCreator('all');
                     setSearchKeyword('');
                   }}
                   className="px-2.5 py-1 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer border border-transparent hover:border-rose-200"
@@ -428,6 +724,29 @@ export const PointsPage: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Banner hỗ trợ rà soát công tâm khi lọc điểm Ban Cán Sự */}
+        {filterCreator === 'bancansu' && (
+          <div className="flex items-center justify-between p-3.5 rounded-2xl bg-blue-50 border border-blue-200 text-blue-900 text-xs font-medium">
+            <div className="flex items-center gap-2.5">
+              <span className="text-xl">⭐</span>
+              <div>
+                <p className="font-bold text-blue-950">
+                  Chế độ kiểm duyệt: Đang hiển thị {filteredTransactions.length} lượt chấm do Ban Cán Sự lớp thực hiện
+                </p>
+                <p className="text-blue-700 text-[11px] mt-0.5">
+                  Thầy/Cô rà soát tính công tâm trước khi xếp loại tuần. Bấm nút <strong>↩️ Hoàn tác</strong> nếu học sinh chấm sai hoặc chưa chuẩn xác.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setFilterCreator('all')}
+              className="text-blue-700 hover:text-blue-900 underline font-bold text-xs shrink-0 ml-3 cursor-pointer"
+            >
+              Hiển thị tất cả
+            </button>
+          </div>
+        )}
 
         {isLoading ? (
           <div className="py-12 text-center">
@@ -448,6 +767,7 @@ export const PointsPage: React.FC = () => {
                 setFilterWeek('all');
                 setFilterGroup('all');
                 setFilterType('all');
+                setFilterCreator('all');
                 setSearchKeyword('');
               }}
               className="px-3 py-1.5 bg-white border border-slate-300 rounded-xl font-bold text-xs hover:bg-slate-100 cursor-pointer shadow-2xs"
@@ -496,6 +816,26 @@ export const PointsPage: React.FC = () => {
                             {groupName}
                           </span>
                         )}
+
+                        {/* Huy hiệu Người thực hiện (Ban cán sự vs GVCN) */}
+                        {isBcsTransaction(tx) ? (
+                          <span
+                            className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1"
+                            title={`Chấm bởi: ${tx.createdBy}`}
+                          >
+                            <span>⭐</span>
+                            <span>{tx.createdBy.includes('(') ? tx.createdBy.split('(')[0].trim() : (tx.createdBy || 'Ban Cán Sự')}</span>
+                          </span>
+                        ) : (
+                          <span
+                            className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200 flex items-center gap-1"
+                            title={`Chấm bởi: ${tx.createdBy}`}
+                          >
+                            <span>👨‍🏫</span>
+                            <span>GVCN</span>
+                          </span>
+                        )}
+
                         <span className="text-[10px] sm:text-xs text-slate-400">
                           {new Date(tx.occurredAt).toLocaleTimeString('vi-VN', {
                             hour: '2-digit',
@@ -531,9 +871,9 @@ export const PointsPage: React.FC = () => {
                     {/* Nút Hoàn tác (Chỉ GVCN & Admin) */}
                     {(user?.role === 'gvcn' || user?.role === 'admin') && !isReversal && (
                       <button
-                        onClick={() => handleReverse(tx)}
+                        onClick={() => setReversingTx(tx)}
                         className="px-2.5 py-1 text-xs font-bold text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                        title="Hoàn tác giao dịch này"
+                        title="Hoàn tác giao dịch này và gửi phản hồi cho Ban cán sự"
                       >
                         ↩️ Hoàn tác
                       </button>
@@ -567,6 +907,15 @@ export const PointsPage: React.FC = () => {
         groups={groups}
         categories={categories}
         groupSummaries={groupSummaries}
+      />
+
+      {/* Modal Hoàn tác giao dịch kèm lý do phản hồi cho Ban cán sự */}
+      <ReverseTransactionModal
+        isOpen={Boolean(reversingTx)}
+        onClose={() => setReversingTx(null)}
+        transaction={reversingTx}
+        onConfirm={handleConfirmReverse}
+        isLoading={isReversing}
       />
     </div>
   );

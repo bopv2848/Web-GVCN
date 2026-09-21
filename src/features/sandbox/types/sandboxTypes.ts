@@ -30,3 +30,21 @@ export interface SandboxEventDetail {
   timestamp: string;
   action?: 'enabled' | 'disabled' | 'reset' | 'cleared';
 }
+
+export type AppDataMode = 'production' | 'cloud_test' | 'offline_sandbox';
+
+export interface CloudTestStats {
+  totalStudents: number;
+  totalGroups: number;
+  totalPointTransactions: number;
+  totalAttendanceSessions: number;
+  isLoading: boolean;
+  error?: string | null;
+  lastCheckedAt: string | null;
+}
+
+export interface CloudTestEventDetail {
+  active: boolean;
+  timestamp: string;
+  action?: 'enabled' | 'disabled' | 'reset' | 'cleared';
+}

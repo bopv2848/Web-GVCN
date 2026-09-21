@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { attendanceService } from '../services/attendanceService';
 import { sortVietnameseList } from '../../../utils/vietnameseNameSort';
+import { playAttendanceChime } from '../../../utils/soundNotification';
 import type {
   AttendanceSession,
   AttendanceRecord,
@@ -38,24 +39,36 @@ export const useDailyAttendance = (classId: string, todayStr: string) => {
   }, []);
 
   // 1. Tải phiên điểm danh ngày
-  const loadDailySession = useCallback(async () => {
-    setIsLoadingDaily(true);
-    try {
-      const sess = await attendanceService.getOrCreateSession(classId, selectedDate, selectedType);
-      setSession(sess);
-
-      const recs = await attendanceService.getSessionRecords(sess.id, classId);
-      setRecords(recs);
-    } catch (err) {
-      console.error('Lỗi nạp phiên điểm danh ngày:', err);
-    } finally {
-      setIsLoadingDaily(false);
-    }
-  }, [classId, selectedDate, selectedType]);
-
   useEffect(() => {
-    loadDailySession();
-  }, [loadDailySession]);
+    let isCancelled = false;
+
+    const run = async () => {
+      setIsLoadingDaily(true);
+      try {
+        const sess = await attendanceService.getOrCreateSession(classId, selectedDate, selectedType);
+        if (isCancelled) return;
+        setSession(sess);
+
+        const recs = await attendanceService.getSessionRecords(sess.id, classId);
+        if (isCancelled) return;
+        setRecords(recs);
+      } catch (err) {
+        if (!isCancelled) {
+          console.error('Lỗi nạp phiên điểm danh ngày:', err);
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsLoadingDaily(false);
+        }
+      }
+    };
+
+    run();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [classId, selectedDate, selectedType]);
 
   // 2. Kích hoạt Realtime WebSockets cho phiên ngày
   useEffect(() => {
@@ -80,6 +93,7 @@ export const useDailyAttendance = (classId: string, todayStr: string) => {
           )
         );
 
+        playAttendanceChime();
         setRecentlyUpdatedId(updatedRow.id);
         if (highlightTimeoutRef.current) clearTimeout(highlightTimeoutRef.current);
         highlightTimeoutRef.current = setTimeout(() => {

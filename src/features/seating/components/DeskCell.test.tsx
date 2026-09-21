@@ -40,10 +40,12 @@ describe('DeskCell Component', () => {
       />
     );
 
-    const studentEl = screen.getByText('Phan Minh Khang');
+    const studentEl = screen.getByText('Minh Khang');
     expect(studentEl).toBeInTheDocument();
-    expect(screen.getByText('Tổ 1')).toBeInTheDocument();
-    expect(screen.getByText('Lớp phó')).toBeInTheDocument();
+    expect(screen.getByText('Phan')).toBeInTheDocument();
+    expect(screen.getByText('LP')).toBeInTheDocument();
+    expect(screen.getByTitle('Ban cán sự: Lớp phó')).toBeInTheDocument();
+    expect(screen.getByTitle('Tổ 1 (Màu Xanh dương)')).toBeInTheDocument();
 
     // Click ghế
     fireEvent.click(studentEl);
@@ -78,5 +80,36 @@ describe('DeskCell Component', () => {
 
     expect(screen.getByText(/Nghỉ ốm/i)).toBeInTheDocument();
     expect(screen.getByText(/Sốt cao 39 độ/i)).toBeInTheDocument();
+  });
+
+  it('áp dụng kiểu dáng chữ to viền rõ nét khi bật isFullscreen', () => {
+    const { container } = render(
+      <DeskCell
+        student={mockStudent}
+        rowIndex={0}
+        colIndex={0}
+        isMedicalMode={false}
+        isFullscreen={true}
+      />
+    );
+
+    // Thẻ học sinh có viền 3px và nền trắng
+    const cardEl = container.firstChild as HTMLElement;
+    expect(cardEl).toHaveClass('border-[3px]');
+    expect(cardEl).toHaveClass('bg-white');
+  });
+
+  it('hiển thị biểu tượng micro khi học sinh đã được gọi phát biểu (isCalled = true)', () => {
+    render(
+      <DeskCell
+        student={mockStudent}
+        rowIndex={0}
+        colIndex={0}
+        isMedicalMode={false}
+        isCalled={true}
+      />
+    );
+
+    expect(screen.getByTitle('Đã được bốc thăm phát biểu trong buổi học này')).toBeInTheDocument();
   });
 });

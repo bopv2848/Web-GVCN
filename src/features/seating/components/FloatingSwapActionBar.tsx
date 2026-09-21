@@ -17,7 +17,7 @@ export const FloatingSwapActionBar: React.FC<FloatingSwapActionBarProps> = ({
   if (!selectedSourceSeat) return null;
 
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900/95 text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-4 border border-slate-700 backdrop-blur-md max-w-lg w-[90%] sm:w-auto animate-pulse">
+    <div className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900/95 text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-4 border border-slate-700 backdrop-blur-md max-w-lg w-[90%] sm:w-auto animate-pulse print:hidden">
       <span className="text-xl">🔄</span>
       <div className="min-w-0">
         <p className="text-xs font-black truncate">

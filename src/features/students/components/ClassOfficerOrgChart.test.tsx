@@ -99,4 +99,61 @@ describe('ClassOfficerOrgChart Component', () => {
       expect(handleSelect).toHaveBeenCalledWith(mockStudents[0]);
     }
   });
+
+  it('4. Tách riêng 2 thẻ Thủ Quỹ và Đội Sao Đỏ và hiển thị nút Thêm nhiệm vụ mới', () => {
+    const handleSelect = vi.fn();
+    render(
+      <ClassOfficerOrgChart
+        students={mockStudents}
+        groups={mockGroups}
+        onSelectOfficer={handleSelect}
+      />
+    );
+
+    // Xác nhận có thẻ Thủ Quỹ và Đội Sao Đỏ riêng biệt
+    expect(screen.getByText('Thủ Quỹ')).toBeInTheDocument();
+    expect(screen.getByText('Đội Sao Đỏ')).toBeInTheDocument();
+    expect(screen.getByText('Thêm Nhiệm Vụ Mới')).toBeInTheDocument();
+  });
+
+  it('5. Mở modal phân công cán sự khi nhấn vào thẻ chưa phân công', () => {
+    const handleSelect = vi.fn();
+    render(
+      <ClassOfficerOrgChart
+        students={mockStudents}
+        groups={mockGroups}
+        onSelectOfficer={handleSelect}
+      />
+    );
+
+    // Bấm vào thẻ Thủ Quỹ (chưa phân công)
+    const thuQuyCard = screen.getByText('Thủ Quỹ').closest('div');
+    expect(thuQuyCard).toBeInTheDocument();
+    if (thuQuyCard) {
+      fireEvent.click(thuQuyCard);
+    }
+
+    // Modal Phân Công Chức Vụ hiển thị
+    expect(screen.getByText(/Phân Công Chức Vụ: Thủ Quỹ/i)).toBeInTheDocument();
+  });
+
+  it('6. Mở modal thêm nhiệm vụ mới khi bấm vào thẻ Thêm nhiệm vụ mới', () => {
+    const handleSelect = vi.fn();
+    render(
+      <ClassOfficerOrgChart
+        students={mockStudents}
+        groups={mockGroups}
+        onSelectOfficer={handleSelect}
+      />
+    );
+
+    const addCard = screen.getByText('Thêm Nhiệm Vụ Mới').closest('div');
+    expect(addCard).toBeInTheDocument();
+    if (addCard) {
+      fireEvent.click(addCard);
+    }
+
+    // Modal Thêm Chức Danh / Nhiệm Vụ Mới hiển thị
+    expect(screen.getByText(/Thêm Chức Danh \/ Nhiệm Vụ Mới Cho Lớp/i)).toBeInTheDocument();
+  });
 });

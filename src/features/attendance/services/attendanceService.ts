@@ -18,6 +18,12 @@ import type {
   EpidemicSickStudent,
 } from '../../../types/attendance';
 
+const isUuid = (str?: string | null): boolean =>
+  !!str && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+
+// Bộ nhớ đệm giữ Promise đang chạy để chống race condition khi React 18 mount đồng thời
+const inFlightSessionPromises = new Map<string, Promise<AttendanceSession>>();
+
 export const attendanceService = {
   /**
    * Lấy hoặc tự động khởi tạo phiên điểm danh theo ngày và buổi
@@ -29,102 +35,171 @@ export const attendanceService = {
   ): Promise<AttendanceSession> {
     const targetClassId = classId || CLASS_6A6_ID;
 
-    if (sandboxService.isSandboxActive()) {
-      const sessions = sandboxService.getAttendanceSessions();
-      const existing = sessions.find((s) => s.sessionDate === date && s.sessionType === type);
-      if (existing) {
-        return existing;
-      }
-      const newSession: AttendanceSession = {
-        id: `att-mock-session-${date}-${type}`,
-        classId: targetClassId,
-        sessionDate: date,
-        sessionType: type,
-        isLocked: false,
-        createdBy: 'Thầy Phan Văn Bộ (GVCN)',
-        createdAt: new Date().toISOString(),
-      };
-      return newSession;
+    const cacheKey = `${targetClassId}_${date}_${type}`;
+    const existingPromise = inFlightSessionPromises.get(cacheKey);
+    if (existingPromise) {
+      return existingPromise;
     }
 
-    // 1. Kiểm tra phiên đã có trên Supabase chưa
-    try {
-      const { data: existingSession, error: checkError } = await supabase
-        .from('attendance_sessions')
-        .select('*')
-        .eq('class_id', targetClassId)
-        .eq('session_date', date)
-        .eq('session_type', type)
-        .maybeSingle();
-
-      if (!checkError && existingSession) {
-        await this.ensureAllStudentsHaveRecords(existingSession.id, targetClassId);
-        return {
-          id: existingSession.id,
-          classId: existingSession.class_id,
-          sessionDate: existingSession.session_date,
-          sessionType: existingSession.session_type as SessionType,
-          isLocked: existingSession.is_locked,
-          createdBy: existingSession.created_by,
-          createdAt: existingSession.created_at,
+    const sessionTask = (async (): Promise<AttendanceSession> => {
+      if (sandboxService.isSandboxActive()) {
+        const sessions = sandboxService.getAttendanceSessions();
+        const existing = sessions.find((s) => s.sessionDate === date && s.sessionType === type);
+        if (existing) {
+          return existing;
+        }
+        const newSession: AttendanceSession = {
+          id: `att-mock-session-${date}-${type}`,
+          classId: targetClassId,
+          sessionDate: date,
+          sessionType: type,
+          isLocked: false,
+          createdBy: 'Thầy Phan Văn Bộ (GVCN)',
+          createdAt: new Date().toISOString(),
         };
+        return newSession;
       }
-    } catch {
-      // Supabase offline/error
-    }
 
-    // 2. Xác định userId
-    let userId = 'dev-gvcn-001';
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user?.id) userId = user.id;
-    } catch {
-      // Không có Supabase session
-    }
+      // 1. Kiểm tra phiên đã có trên Supabase chưa
+      try {
+        const { data: existingSession, error: checkError } = await supabase
+          .from('attendance_sessions')
+          .select('*')
+          .eq('class_id', targetClassId)
+          .eq('session_date', date)
+          .eq('session_type', type)
+          .maybeSingle();
 
-    // 3. Cố gắng tạo phiên mới trên Supabase
-    try {
-      const { data: newSession, error: createError } = await supabase
-        .from('attendance_sessions')
-        .insert({
+        if (!checkError && existingSession) {
+          await this.ensureAllStudentsHaveRecords(existingSession.id, targetClassId);
+          return {
+            id: existingSession.id,
+            classId: existingSession.class_id,
+            sessionDate: existingSession.session_date,
+            sessionType: existingSession.session_type as SessionType,
+            isLocked: existingSession.is_locked,
+            createdBy: existingSession.created_by,
+            createdAt: existingSession.created_at,
+          };
+        }
+      } catch {
+        // Supabase offline/error
+      }
+
+      // 2. Xác định userId hợp lệ (chỉ truyền UUID để tránh lỗi Postgres 22P02)
+      let userId: string | undefined = undefined;
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user?.id && isUuid(user.id)) userId = user.id;
+      } catch {
+        // Không có Supabase session
+      }
+
+      // 3. Cố gắng tạo phiên mới trên Supabase
+      try {
+        const insertPayload: Record<string, unknown> = {
           class_id: targetClassId,
           session_date: date,
           session_type: type,
           is_locked: false,
-          created_by: userId,
-        })
-        .select()
-        .single();
-
-      if (!createError && newSession) {
-        await this.ensureAllStudentsHaveRecords(newSession.id, targetClassId);
-        return {
-          id: newSession.id,
-          classId: newSession.class_id,
-          sessionDate: newSession.session_date,
-          sessionType: newSession.session_type as SessionType,
-          isLocked: newSession.is_locked,
-          createdBy: newSession.created_by,
-          createdAt: newSession.created_at,
         };
-      }
-    } catch {
-      // Bỏ qua lỗi Supabase
-    }
+        if (userId) {
+          insertPayload.created_by = userId;
+        }
 
-    // 4. Dự phòng phiên cục bộ (Local fallback)
-    const localSessionId = `session-${targetClassId}-${date}-${type}`;
-    const localSession: AttendanceSession = {
-      id: localSessionId,
-      classId: targetClassId,
-      sessionDate: date,
-      sessionType: type,
-      isLocked: false,
-      createdBy: userId,
-      createdAt: new Date().toISOString(),
-    };
-    await this.ensureAllStudentsHaveRecords(localSessionId, targetClassId);
-    return localSession;
+        const { data: newSession, error: createError } = await supabase
+          .from('attendance_sessions')
+          .insert(insertPayload)
+          .select()
+          .single();
+
+        if (!createError && newSession) {
+          await this.ensureAllStudentsHaveRecords(newSession.id, targetClassId);
+          return {
+            id: newSession.id,
+            classId: newSession.class_id,
+            sessionDate: newSession.session_date,
+            sessionType: newSession.session_type as SessionType,
+            isLocked: newSession.is_locked,
+            createdBy: newSession.created_by,
+            createdAt: newSession.created_at,
+          };
+        }
+
+        // Nếu insert gặp lỗi (ví dụ: 409 Conflict hoặc race condition tạo phiên trùng), query lại ngay
+        if (createError) {
+          const { data: retrySession } = await supabase
+            .from('attendance_sessions')
+            .select('*')
+            .eq('class_id', targetClassId)
+            .eq('session_date', date)
+            .eq('session_type', type)
+            .maybeSingle();
+
+          if (retrySession) {
+            await this.ensureAllStudentsHaveRecords(retrySession.id, targetClassId);
+            return {
+              id: retrySession.id,
+              classId: retrySession.class_id,
+              sessionDate: retrySession.session_date,
+              sessionType: retrySession.session_type as SessionType,
+              isLocked: retrySession.is_locked,
+              createdBy: retrySession.created_by,
+              createdAt: retrySession.created_at,
+            };
+          }
+        }
+      } catch {
+        // Cố gắng query lại phiên vừa tạo trước khi rơi vào local fallback
+        try {
+          const { data: retrySession } = await supabase
+            .from('attendance_sessions')
+            .select('*')
+            .eq('class_id', targetClassId)
+            .eq('session_date', date)
+            .eq('session_type', type)
+            .maybeSingle();
+
+          if (retrySession) {
+            await this.ensureAllStudentsHaveRecords(retrySession.id, targetClassId);
+            return {
+              id: retrySession.id,
+              classId: retrySession.class_id,
+              sessionDate: retrySession.session_date,
+              sessionType: retrySession.session_type as SessionType,
+              isLocked: retrySession.is_locked,
+              createdBy: retrySession.created_by,
+              createdAt: retrySession.created_at,
+            };
+          }
+        } catch {
+          // Supabase hoàn toàn offline
+        }
+      }
+
+      // 4. Dự phòng phiên cục bộ (Local fallback) khi mất mạng
+      const localSessionId = `session-${targetClassId}-${date}-${type}`;
+      const localSession: AttendanceSession = {
+        id: localSessionId,
+        classId: targetClassId,
+        sessionDate: date,
+        sessionType: type,
+        isLocked: false,
+        createdBy: userId || '601dce7f-13e4-4680-b2f9-f86ed1a17079',
+        createdAt: new Date().toISOString(),
+      };
+      await this.ensureAllStudentsHaveRecords(localSessionId, targetClassId);
+      return localSession;
+    })();
+
+    inFlightSessionPromises.set(cacheKey, sessionTask);
+    try {
+      return await sessionTask;
+    } finally {
+      setTimeout(() => {
+        inFlightSessionPromises.delete(cacheKey);
+      }, 500);
+    }
   },
 
   /**
@@ -135,28 +210,32 @@ export const attendanceService = {
     const students = await studentService.getStudents(targetClassId);
     if (!students || students.length === 0) return;
 
-    // 1. Thử lưu vào Supabase nếu kết nối tốt
-    try {
-      const { data: existingRecords } = await supabase
-        .from('attendance_records')
-        .select('student_id')
-        .eq('session_id', sessionId);
+    // 1. Thử lưu vào Supabase CHỈ KHI sessionId là UUID hợp lệ
+    if (isUuid(sessionId)) {
+      try {
+        const { data: existingRecords } = await supabase
+          .from('attendance_records')
+          .select('student_id')
+          .eq('session_id', sessionId);
 
-      if (existingRecords) {
-        const existingStudentIds = new Set(existingRecords.map((r) => r.student_id));
-        const missingStudents = students.filter((s) => !existingStudentIds.has(s.id));
+        if (existingRecords) {
+          const existingStudentIds = new Set(existingRecords.map((r) => r.student_id));
+          const missingStudents = students.filter(
+            (s) => !existingStudentIds.has(s.id) && isUuid(s.id)
+          );
 
-        if (missingStudents.length > 0) {
-          const recordsToInsert = missingStudents.map((s) => ({
-            session_id: sessionId,
-            student_id: s.id,
-            status: 'present',
-          }));
-          await supabase.from('attendance_records').insert(recordsToInsert);
+          if (missingStudents.length > 0) {
+            const recordsToInsert = missingStudents.map((s) => ({
+              session_id: sessionId,
+              student_id: s.id,
+              status: 'present',
+            }));
+            await supabase.from('attendance_records').insert(recordsToInsert);
+          }
         }
+      } catch {
+        // Supabase offline
       }
-    } catch {
-      // Supabase offline
     }
 
     // 2. Đảm bảo lưu đầy đủ vào localStorage
@@ -192,45 +271,48 @@ export const attendanceService = {
     }
     let dbRecords: AttendanceRecord[] = [];
 
-    try {
-      const { data, error } = await supabase
-        .from('attendance_records')
-        .select(`
-          id,
-          session_id,
-          student_id,
-          status,
-          note,
-          updated_at,
-          student:student_id (
+    // Chỉ truy vấn Supabase nếu sessionId là UUID hợp lệ
+    if (isUuid(sessionId)) {
+      try {
+        const { data, error } = await supabase
+          .from('attendance_records')
+          .select(`
             id,
-            full_name,
-            gender,
-            class_role,
-            group:group_id (
-              name
+            session_id,
+            student_id,
+            status,
+            note,
+            updated_at,
+            student:student_id (
+              id,
+              full_name,
+              gender,
+              class_role,
+              group:group_id (
+                name
+              )
             )
-          )
-        `)
-        .eq('session_id', sessionId);
+          `)
+          .eq('session_id', sessionId);
 
-      if (!error && data && data.length > 0) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        dbRecords = data.map((item: any) => ({
-          id: item.id,
-          sessionId: item.session_id,
-          studentId: item.student_id,
-          studentName: item.student?.full_name || 'Học sinh',
-          gender: item.student?.gender || 'Nam',
-          classRole: item.student?.class_role || 'Thành viên',
-          groupName: item.student?.group?.name || 'Chưa chia tổ',
-          status: item.status as AttendanceStatus,
-          note: item.note,
-          updatedAt: item.updated_at,
-        }));
+        if (!error && data && data.length > 0) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          dbRecords = data.map((item: any) => ({
+            id: item.id,
+            sessionId: item.session_id,
+            studentId: item.student_id,
+            studentName: item.student?.full_name || 'Học sinh',
+            gender: item.student?.gender || 'Nam',
+            classRole: item.student?.class_role || 'Thành viên',
+            groupName: item.student?.group?.name || 'Chưa chia tổ',
+            status: item.status as AttendanceStatus,
+            note: item.note,
+            updatedAt: item.updated_at,
+          }));
+        }
+      } catch {
+        // Supabase offline
       }
-    } catch {
-      // Supabase offline
     }
 
     if (dbRecords.length > 0) {
@@ -312,19 +394,29 @@ export const attendanceService = {
       }
       return;
     }
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      await supabase
-        .from('attendance_records')
-        .update({
-          status,
-          note: note !== undefined ? note : null,
-          updated_by: user?.id || null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', recordId);
-    } catch {
-      // Supabase offline
+
+    if (isUuid(recordId)) {
+      try {
+        let userUuid: string | null = null;
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user?.id && isUuid(user.id)) userUuid = user.id;
+        } catch {
+          // Ignored
+        }
+
+        await supabase
+          .from('attendance_records')
+          .update({
+            status,
+            note: note !== undefined ? note : null,
+            updated_by: userUuid,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', recordId);
+      } catch {
+        // Supabase offline
+      }
     }
 
     // Đồng bộ localStorage
@@ -360,24 +452,39 @@ export const attendanceService = {
     } catch {
       // Bỏ qua lỗi lưu
     }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('gvcn:attendance-changed', {
+        detail: { recordId, status, note }
+      }));
+    }
   },
 
   /**
    * Điểm danh nhanh 1 chạm: Đánh dấu tất cả học sinh trong phiên là "Có mặt"
    */
   async markAllPresent(sessionId: string) {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      await supabase
-        .from('attendance_records')
-        .update({
-          status: 'present',
-          updated_by: user?.id || null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('session_id', sessionId);
-    } catch {
-      // Supabase offline
+    if (isUuid(sessionId)) {
+      try {
+        let userUuid: string | null = null;
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user?.id && isUuid(user.id)) userUuid = user.id;
+        } catch {
+          // Ignored
+        }
+
+        await supabase
+          .from('attendance_records')
+          .update({
+            status: 'present',
+            updated_by: userUuid,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('session_id', sessionId);
+      } catch {
+        // Supabase offline
+      }
     }
 
     // Đồng bộ localStorage
@@ -398,6 +505,12 @@ export const attendanceService = {
     } catch {
       // Bỏ qua lỗi lưu
     }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('gvcn:attendance-changed', {
+        detail: { sessionId, action: 'markAllPresent' }
+      }));
+    }
   },
 
   /**
@@ -410,24 +523,41 @@ export const attendanceService = {
     status: AttendanceStatus,
     note?: string | null
   ) {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      const payload: Record<string, unknown> = {
-        status,
-        updated_by: user?.id || null,
-        updated_at: new Date().toISOString(),
-      };
-      if (note !== undefined) {
-        payload.note = note;
-      }
+    if (isUuid(sessionId)) {
+      try {
+        let userUuid: string | null = null;
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user?.id && isUuid(user.id)) userUuid = user.id;
+        } catch {
+          // Ignored
+        }
 
-      await supabase
-        .from('attendance_records')
-        .update(payload)
-        .eq('session_id', sessionId)
-        .eq('group_name', groupName);
-    } catch {
-      // Supabase offline
+        const payload: Record<string, unknown> = {
+          status,
+          updated_by: userUuid,
+          updated_at: new Date().toISOString(),
+        };
+        if (note !== undefined) {
+          payload.note = note;
+        }
+
+        // Lấy danh sách ID học sinh trong tổ để cập nhật chính xác theo student_id
+        const students = await studentService.getStudents(CLASS_6A6_ID);
+        const groupStudentIds = students
+          .filter((s) => s.groupName === groupName && isUuid(s.id))
+          .map((s) => s.id);
+
+        if (groupStudentIds.length > 0) {
+          await supabase
+            .from('attendance_records')
+            .update(payload)
+            .eq('session_id', sessionId)
+            .in('student_id', groupStudentIds);
+        }
+      } catch {
+        // Supabase offline
+      }
     }
 
     // Đồng bộ localStorage
@@ -454,6 +584,12 @@ export const attendanceService = {
     } catch {
       // Bỏ qua lỗi lưu
     }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('gvcn:attendance-changed', {
+        detail: { sessionId, groupName, status }
+      }));
+    }
   },
 
   /**
@@ -463,24 +599,34 @@ export const attendanceService = {
     sessionId: string,
     recordsToRestore: Array<{ id: string; status: AttendanceStatus; note?: string | null }>
   ) {
-    // 1. Cập nhật Supabase đồng thời song song
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      await Promise.all(
-        recordsToRestore.map((r) =>
-          supabase
-            .from('attendance_records')
-            .update({
-              status: r.status,
-              note: r.note !== undefined ? r.note : null,
-              updated_by: user?.id || null,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', r.id)
-        )
-      );
-    } catch {
-      // Supabase offline
+    // 1. Cập nhật Supabase đồng thời song song nếu là UUID hợp lệ
+    const validUuidRecords = recordsToRestore.filter((r) => isUuid(r.id));
+    if (validUuidRecords.length > 0 && isUuid(sessionId)) {
+      try {
+        let userUuid: string | null = null;
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user?.id && isUuid(user.id)) userUuid = user.id;
+        } catch {
+          // Ignored
+        }
+
+        await Promise.all(
+          validUuidRecords.map((r) =>
+            supabase
+              .from('attendance_records')
+              .update({
+                status: r.status,
+                note: r.note !== undefined ? r.note : null,
+                updated_by: userUuid,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', r.id)
+          )
+        );
+      } catch {
+        // Supabase offline
+      }
     }
 
     // 2. Cập nhật localStorage
@@ -832,13 +978,23 @@ export const attendanceService = {
    * Cập nhật nhanh ghi chú chuyên cần cho 1 học sinh
    */
   async updateRecordNote(recordId: string, note: string | null) {
-    const { data: { user } } = await supabase.auth.getUser();
+    if (!isUuid(recordId)) {
+      return null;
+    }
+
+    let userUuid: string | null = null;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.id && isUuid(user.id)) userUuid = user.id;
+    } catch {
+      // Ignored
+    }
 
     const { data, error } = await supabase
       .from('attendance_records')
       .update({
         note: note !== undefined ? note : null,
-        updated_by: user?.id || null,
+        updated_by: userUuid,
         updated_at: new Date().toISOString(),
       })
       .eq('id', recordId)
@@ -1002,6 +1158,228 @@ export const attendanceService = {
     } catch (err) {
       console.error('Lỗi kiểm tra cảnh báo dịch bệnh:', err);
       return defaultAlert;
+    }
+  },
+
+  /**
+   * Lấy số liệu điểm danh theo thời gian thực đồng bộ theo từng tiết học / buổi học riêng biệt
+   * Hỗ trợ trường hợp học sinh có mặt buổi sáng nhưng xin về sớm buổi chiều (hoặc nghỉ từ tiết cụ thể)
+   */
+  async getTodayClassAttendanceStats(
+    classId: string,
+    dateStr?: string,
+    period?: number | null,
+    forcedSessionType?: SessionType
+  ): Promise<{
+    total: number;
+    present: number;
+    absent: number;
+    excused: number;
+    unexcused: number;
+    sessionType: SessionType;
+    sessionName: string;
+    absentStudents: Array<{ id: string; name: string; reason?: string }>;
+  }> {
+    const today = dateStr || new Date().toISOString().split('T')[0];
+    const targetClassId = classId || CLASS_6A6_ID;
+
+    // Xác định buổi học (Sáng vs Chiều):
+    // Tiết 1..5: Sáng; Tiết 6..8: Chiều
+    let sessionType: SessionType = forcedSessionType || 'morning';
+    if (!forcedSessionType) {
+      if (period !== undefined && period !== null) {
+        sessionType = period > 5 ? 'afternoon' : 'morning';
+      } else {
+        const currentHour = new Date().getHours();
+        sessionType = currentHour >= 12 ? 'afternoon' : 'morning';
+      }
+    }
+
+    const sessionName = sessionType === 'morning' ? 'Sáng' : 'Chiều';
+
+    try {
+      const session = await this.getOrCreateSession(targetClassId, today, sessionType);
+      const records = await this.getSessionRecords(session.id, targetClassId);
+
+      if (records && records.length > 0) {
+        const total = records.length;
+
+        // Lọc các học sinh vắng trong phiên này
+        const absentRecs = records.filter(
+          (r) => r.status === 'excused_absence' || r.status === 'unexcused_absence'
+        );
+
+        // Kiểm tra xem trong buổi học hiện tại, có em nào có ghi chú xin về sớm từ tiết này không
+        // Ví dụ: trong phiên sáng nhưng có ghi chú "về sớm từ tiết 4", và hiện tại period >= 4
+        const additionalEarlyLeaveRecs = period
+          ? records.filter((r) => {
+              if (r.status === 'present' && r.note) {
+                const noteLower = r.note.toLowerCase();
+                const match = noteLower.match(/(?:về sớm|nghỉ|vắng)\s+từ\s+tiết\s+(\d+)/i);
+                if (match && match[1]) {
+                  const leavePeriod = parseInt(match[1], 10);
+                  return period >= leavePeriod;
+                }
+              }
+              return false;
+            })
+          : [];
+
+        const allAbsentIds = new Set([
+          ...absentRecs.map((r) => r.id),
+          ...additionalEarlyLeaveRecs.map((r) => r.id),
+        ]);
+
+        const excused =
+          records.filter((r) => allAbsentIds.has(r.id) && r.status === 'excused_absence').length +
+          additionalEarlyLeaveRecs.length;
+        const unexcused = records.filter(
+          (r) => allAbsentIds.has(r.id) && r.status === 'unexcused_absence'
+        ).length;
+        const absent = allAbsentIds.size;
+        const present = Math.max(0, total - absent);
+
+        const absentStudentsMap = new Map<string, { id: string; name: string; reason?: string }>();
+        absentRecs.forEach((r) => {
+          absentStudentsMap.set(r.studentId, {
+            id: r.studentId,
+            name: r.studentName,
+            reason: r.note || (r.status === 'excused_absence' ? 'Có phép' : 'Không phép'),
+          });
+        });
+        additionalEarlyLeaveRecs.forEach((r) => {
+          if (!absentStudentsMap.has(r.studentId)) {
+            absentStudentsMap.set(r.studentId, {
+              id: r.studentId,
+              name: r.studentName,
+              reason: r.note || 'Xin về sớm',
+            });
+          }
+        });
+        const absentStudents = Array.from(absentStudentsMap.values());
+
+        return {
+          total,
+          present,
+          absent,
+          excused,
+          unexcused,
+          sessionType,
+          sessionName,
+          absentStudents,
+        };
+      }
+    } catch (err) {
+      console.warn('Lỗi lấy thống kê điểm danh hôm nay:', err);
+    }
+
+    // Dự phòng (Fallback): Lấy tổng số học sinh của lớp thực tế
+    try {
+      const students = await studentService.getStudents(targetClassId);
+      const total = students.length > 0 ? students.length : 47;
+      return {
+        total,
+        present: total,
+        absent: 0,
+        excused: 0,
+        unexcused: 0,
+        sessionType,
+        sessionName,
+        absentStudents: [],
+      };
+    } catch {
+      return {
+        total: 47,
+        present: 47,
+        absent: 0,
+        excused: 0,
+        unexcused: 0,
+        sessionType,
+        sessionName,
+        absentStudents: [],
+      };
+    }
+  },
+
+  /**
+   * Ghi nhận vắng nhanh / về sớm từ 1 tiết cụ thể trực tiếp từ Bảng lớp học
+   */
+  async quickRecordAbsence(options: {
+    classId: string;
+    studentId: string;
+    startPeriod: number;
+    reason: string;
+    sessionType?: SessionType;
+    dateStr?: string;
+  }): Promise<boolean> {
+    const { classId, studentId, startPeriod, reason, sessionType, dateStr } = options;
+    const targetClassId = classId || CLASS_6A6_ID;
+    const today = dateStr || new Date().toISOString().split('T')[0];
+    const sessType = sessionType || (startPeriod > 5 ? 'afternoon' : 'morning');
+
+    try {
+      const session = await this.getOrCreateSession(targetClassId, today, sessType);
+      const records = await this.getSessionRecords(session.id, targetClassId);
+      const targetRecord = records.find((r) => r.studentId === studentId);
+
+      if (!targetRecord) {
+        console.warn('Không tìm thấy bản ghi điểm danh cho học sinh:', studentId);
+        return false;
+      }
+
+      // Nếu vắng từ tiết đầu tiên của buổi: Đánh dấu vắng có phép ngay
+      // Nếu vắng từ các tiết sau: Vẫn giữ 'present' cho các tiết trước, ghi chú "Xin về sớm từ tiết X: [Lý do]"
+      const isFirstPeriodOfSession = sessType === 'morning' ? startPeriod <= 1 : startPeriod <= 6;
+      const status: AttendanceStatus = isFirstPeriodOfSession ? 'excused_absence' : 'present';
+      const note = isFirstPeriodOfSession
+        ? reason
+        : `Xin về sớm từ tiết ${startPeriod}: ${reason}`;
+
+      await this.updateRecordStatus(targetRecord.id, status, note);
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('gvcn:attendance-changed'));
+      }
+      return true;
+    } catch (err) {
+      console.error('Lỗi ghi nhận vắng nhanh:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Hủy ghi nhận vắng / Cho học sinh quay trở lại lớp học
+   */
+  async cancelQuickAbsence(options: {
+    classId: string;
+    studentId: string;
+    sessionType?: SessionType;
+    dateStr?: string;
+  }): Promise<boolean> {
+    const { classId, studentId, sessionType, dateStr } = options;
+    const targetClassId = classId || CLASS_6A6_ID;
+    const today = dateStr || new Date().toISOString().split('T')[0];
+    const sessType = sessionType || 'morning';
+
+    try {
+      const session = await this.getOrCreateSession(targetClassId, today, sessType);
+      const records = await this.getSessionRecords(session.id, targetClassId);
+      const targetRecord = records.find((r) => r.studentId === studentId);
+
+      if (!targetRecord) {
+        console.warn('Không tìm thấy bản ghi điểm danh để phục hồi:', studentId);
+        return false;
+      }
+
+      await this.updateRecordStatus(targetRecord.id, 'present', '');
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('gvcn:attendance-changed'));
+      }
+      return true;
+    } catch (err) {
+      console.error('Lỗi hủy vắng:', err);
+      return false;
     }
   },
 };

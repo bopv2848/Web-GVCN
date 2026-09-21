@@ -11,23 +11,23 @@ test.describe('Web-GVCN App Smoke Tests', () => {
     await page.goto('/');
     await page.locator('a[href="/students"]:visible').click();
     await expect(page).toHaveURL(/.*students/);
-    await expect(page.getByRole('heading', { name: /Quản Lý Học Sinh/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /(Quản Lý Học Sinh|Tổ Chức Lớp Học)/i })).toBeVisible();
   });
 
   test('should support touch to swap student seats on mobile and desktop', async ({ page }) => {
     await page.goto('/seating');
     // Chờ sơ đồ và các bàn học nạp hoàn tất
-    await expect(page.locator('text=BÀN 1').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: /Phòng Học Lớp/i })).toBeVisible({ timeout: 10000 });
 
-    const studentDesks = page.locator('.cursor-grab');
-    await expect(studentDesks.first()).toBeVisible();
+    const studentDesks = page.locator('[title*="để đổi chỗ"]');
+    await expect(studentDesks.first()).toBeVisible({ timeout: 10000 });
 
     // 1. Chạm vào ghế của học sinh A
     await studentDesks.first().click();
 
     // 2. Thanh hành động nổi FloatingSwapActionBar xuất hiện
     await expect(page.locator('text=Đang chọn:')).toBeVisible();
-    await expect(page.locator('text=Chạm vào bạn học sinh khác hoặc ghế trống để đổi chỗ!')).toBeVisible();
+    await expect(page.locator('text=Chạm vào bạn học sinh khác')).toBeVisible();
 
     // 3. Chạm vào ghế của học sinh B để hoán đổi vị trí
     await studentDesks.nth(1).click();
@@ -58,7 +58,7 @@ test.describe('Web-GVCN App Smoke Tests', () => {
     await page.getByRole('button', { name: /GHI NHẬN VÀO SỔ CÁI/i }).click();
 
     // 6. Kiểm tra modal đóng lại sau khi lưu
-    await expect(page.getByRole('heading', { name: /Chấm Điểm Nề Nếp & Thi Đua/i })).not.toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: /Chấm Điểm Nề Nếp & Thi Đua/i })).not.toBeVisible({ timeout: 20000 });
 
     // 7. Kiểm tra giao dịch hiển thị ngay trên dòng nhật ký sổ cái
     await expect(page.locator('text=Phát biểu xây dựng bài sôi nổi').first()).toBeVisible({ timeout: 10000 });

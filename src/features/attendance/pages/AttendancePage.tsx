@@ -108,28 +108,28 @@ export const AttendancePage: React.FC = () => {
         </div>
 
         {/* Tab chuyển đổi Điểm danh ngày vs Báo cáo tháng */}
-        <div className="flex p-1 bg-slate-100 rounded-2xl border border-slate-200">
+        <div className="flex w-full sm:w-auto p-1 bg-slate-100 rounded-2xl border border-slate-200">
           <button
             type="button"
             onClick={() => setActiveTab('daily')}
-            className={`px-4 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+            className={`flex-1 sm:flex-initial text-center px-4 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
               activeTab === 'daily'
                 ? 'bg-white text-primary shadow-xs font-black'
                 : 'text-slate-600 hover:text-slate-800'
             }`}
           >
-            ⚡ Điểm danh hàng ngày
+            ⚡ Điểm danh ngày
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('monthly')}
-            className={`px-4 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+            className={`flex-1 sm:flex-initial text-center px-4 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
               activeTab === 'monthly'
                 ? 'bg-white text-primary shadow-xs font-black'
                 : 'text-slate-600 hover:text-slate-800'
             }`}
           >
-            📊 Thống kê & Báo cáo Tháng
+            📊 Báo cáo tháng
           </button>
         </div>
       </div>

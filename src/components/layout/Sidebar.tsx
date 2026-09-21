@@ -27,7 +27,7 @@ export const Sidebar: React.FC = () => {
   };
 
   return (
-    <aside className="hidden md:flex flex-col w-64 lg:w-72 h-screen sticky top-0 bg-primary text-slate-100 border-r border-indigo-950/60 select-none">
+    <aside className="hidden md:flex flex-col w-64 lg:w-72 h-screen sticky top-0 bg-primary text-slate-100 border-r border-indigo-950/60 select-none print:hidden">
       {/* Brand Header */}
       <div className="flex items-center gap-3 p-6 border-b border-indigo-900/50">
         <div className="w-10 h-10 rounded-2xl bg-accent text-slate-950 flex items-center justify-center font-black text-xl shadow-lg shadow-amber-500/20">
@@ -60,9 +60,17 @@ export const Sidebar: React.FC = () => {
               )}
             >
               <div className="flex items-center gap-3">
-                <span className={cn('text-lg transition-transform group-hover:scale-110', isActionItem && !active && 'animate-pulse')}>
-                  {item.iconName}
-                </span>
+                {item.iconUrl ? (
+                  <img
+                    src={item.iconUrl}
+                    alt={item.label}
+                    className="w-5 h-5 rounded-md object-cover shadow-2xs border border-white/20 transition-transform group-hover:scale-110 shrink-0"
+                  />
+                ) : (
+                  <span className={cn('text-lg transition-transform group-hover:scale-110', isActionItem && !active && 'animate-pulse')}>
+                    {item.iconName}
+                  </span>
+                )}
                 <span className={cn('truncate', isActionItem && 'font-black text-amber-100')}>
                   {item.label}
                 </span>

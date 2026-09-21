@@ -37,6 +37,9 @@ const AttendancePage = lazy(() =>
 const SeatingPage = lazy(() =>
   import('../features/seating/pages/SeatingPage').then((m) => ({ default: m.SeatingPage }))
 );
+const SeatingRemotePage = lazy(() =>
+  import('../features/seating/pages/SeatingRemotePage').then((m) => ({ default: m.SeatingRemotePage }))
+);
 const TimetablePage = lazy(() =>
   import('../features/timetable/pages/TimetablePage').then((m) => ({ default: m.TimetablePage }))
 );
@@ -79,6 +82,9 @@ export const AppRoutes: React.FC = () => {
 
         {/* Public Report Verification Route (Xác thực báo cáo điện tử qua quét mã QR) */}
         <Route path="/verify-report" element={<VerifyReportPage />} />
+
+        {/* Public Seating Remote Controller Route (Quét QR điều khiển TV từ xa) */}
+        <Route path="/seating/remote" element={<SeatingRemotePage />} />
 
         {/* Protected Routes (Yêu cầu đăng nhập hợp lệ qua Supabase Auth) */}
         <Route element={<ProtectedRoute />}>

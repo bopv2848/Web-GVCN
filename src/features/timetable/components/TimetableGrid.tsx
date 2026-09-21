@@ -1,25 +1,37 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import type { TimetableEntry } from '../../../types/timetable';
 import { timetableService } from '../services/timetableService';
+import { getSchoolWeekDays, type AcademicWeekInfo } from '../../../utils/academicWeekUtils';
+import type { TimetableWeeklyOverride } from '../types/timetableOverrideTypes';
+import { AlertTriangle } from 'lucide-react';
 
 interface TimetableGridProps {
   entries: TimetableEntry[];
   sessionFilter: 'all' | 'morning' | 'afternoon';
   onSelectEntry: (entry: TimetableEntry) => void;
+  academicWeek?: AcademicWeekInfo;
+  overrides?: Record<string, TimetableWeeklyOverride>;
 }
 
 export const TimetableGrid: React.FC<TimetableGridProps> = ({
   entries,
   sessionFilter,
   onSelectEntry,
+  academicWeek,
+  overrides = {},
 }) => {
-  const days = [
-    { day: 2, name: 'Thứ 2' },
-    { day: 3, name: 'Thứ 3' },
-    { day: 4, name: 'Thứ 4' },
-    { day: 5, name: 'Thứ 5' },
-    { day: 6, name: 'Thứ 6' },
-  ];
+  const days = useMemo(() => {
+    if (academicWeek?.mondayDate) {
+      return getSchoolWeekDays(academicWeek.mondayDate);
+    }
+    return [
+      { day: 2, name: 'Thứ 2', dateStr: '', fullDateStr: '', isToday: false },
+      { day: 3, name: 'Thứ 3', dateStr: '', fullDateStr: '', isToday: false },
+      { day: 4, name: 'Thứ 4', dateStr: '', fullDateStr: '', isToday: false },
+      { day: 5, name: 'Thứ 5', dateStr: '', fullDateStr: '', isToday: false },
+      { day: 6, name: 'Thứ 6', dateStr: '', fullDateStr: '', isToday: false },
+    ];
+  }, [academicWeek]);
 
   const morningPeriods = [
     { period: 1, display: 1, time: '07:00 - 07:45' },
@@ -49,29 +61,72 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
       );
     }
 
-    const color = timetableService.getSubjectColor(entry.subjectName);
+    const ov = overrides[entry.id];
+    const isOverridden = Boolean(ov && (ov.note || ov.overrideRoom || ov.overrideTeacher || ov.overrideSubject || ov.isConflict));
+    const isConflict = Boolean(ov?.isConflict);
+
+    const displaySubject = ov?.overrideSubject || entry.subjectName;
+    const displayTeacher = ov?.overrideTeacher || entry.teacherName;
+    const displayRoom = ov?.overrideRoom || entry.roomName || 'P.6A6';
+
+    const color = timetableService.getSubjectColor(displaySubject);
 
     return (
       <div
         onClick={() => onSelectEntry(entry)}
-        className={`h-full min-h-[72px] p-2.5 rounded-xl border ${color.borderClass} ${color.badgeBg} hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer flex flex-col justify-between`}
+        className={`h-full min-h-[76px] p-2.5 rounded-xl border ${color.borderClass} ${color.badgeBg} ${
+          isConflict
+            ? 'ring-2 ring-rose-500 border-rose-400 bg-rose-50/70'
+            : isOverridden
+            ? 'ring-1.5 ring-amber-400 border-amber-300 shadow-xs'
+            : ''
+        } hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer flex flex-col justify-between relative group`}
       >
         <div>
+          {/* Cảnh báo xung đột nếu có */}
+          {isConflict && (
+            <div className="mb-1 text-[9px] font-black text-rose-700 bg-rose-100/90 px-1.5 py-0.5 rounded border border-rose-300 flex items-center gap-1 animate-pulse">
+              <AlertTriangle className="w-2.5 h-2.5 text-rose-600 shrink-0" />
+              <span className="truncate">{ov?.conflictReason || 'Xung đột!'}</span>
+            </div>
+          )}
+
           <div className="flex items-center justify-between gap-1">
             <span className={`text-xs md:text-sm font-black truncate ${color.badgeText}`}>
-              {entry.subjectName}
+              {displaySubject}
             </span>
+            {isOverridden && !isConflict && (
+              <span className="text-[9px] font-black bg-amber-200 text-amber-900 px-1 rounded shadow-2xs">
+                Tuần này
+              </span>
+            )}
           </div>
-          {entry.lessonTopic && (
+
+          {/* Ghi chú nhanh tuần nếu có */}
+          {ov?.note ? (
+            <p className="text-[10px] font-black text-amber-800 bg-amber-100/80 px-1.5 py-0.5 rounded mt-1 line-clamp-1 border border-amber-200" title={ov.note}>
+              📌 {ov.note}
+            </p>
+          ) : entry.lessonTopic ? (
             <p className="text-[11px] font-medium text-slate-650 mt-1 line-clamp-1">
               {entry.lessonTopic}
             </p>
-          )}
+          ) : null}
         </div>
 
         <div className="mt-1.5 pt-1 border-t border-black/5 flex items-center justify-between text-[10px] text-slate-500 font-semibold">
-          <span className="truncate">{entry.teacherName ? entry.teacherName.split(' ')[0] : 'GV'}</span>
-          <span className="text-slate-400">P.6A6</span>
+          <span className={`truncate ${ov?.overrideTeacher ? 'text-emerald-700 font-black' : ''}`} title={displayTeacher}>
+            {displayTeacher ? displayTeacher.split(' ')[0] : 'GV'}
+          </span>
+          <span
+            className={`px-1 py-0.2 rounded ${
+              ov?.overrideRoom
+                ? 'bg-blue-100 text-blue-700 font-black border border-blue-200'
+                : 'text-slate-400'
+            }`}
+          >
+            {displayRoom}
+          </span>
         </div>
       </div>
     );
@@ -81,11 +136,27 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
     <div className="overflow-x-auto custom-scrollbar">
       <div className="min-w-[760px] bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden">
         {/* Header Ngày trong tuần */}
-        <div className="grid grid-cols-6 bg-slate-50 border-b border-slate-200 text-center text-xs font-black text-slate-700 py-3.5 px-3">
-          <div className="text-slate-400">Tiết / Giờ</div>
+        <div className="grid grid-cols-6 bg-slate-50 border-b border-slate-200 text-center text-xs font-black text-slate-700 py-3 px-3">
+          <div className="text-slate-400 flex items-center justify-center">Tiết / Giờ</div>
           {days.map((d) => (
-            <div key={d.day} className="text-primary font-black">
-              {d.name}
+            <div
+              key={d.day}
+              className={`flex flex-col items-center justify-center gap-0.5 ${
+                d.isToday ? 'text-emerald-700' : 'text-primary'
+              }`}
+            >
+              <span className="font-black text-xs md:text-sm">{d.name}</span>
+              {d.dateStr && (
+                <span
+                  className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
+                    d.isToday
+                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs'
+                      : 'text-slate-400 font-medium'
+                  }`}
+                >
+                  {d.dateStr} {d.isToday && '• Hôm nay'}
+                </span>
+              )}
             </div>
           ))}
         </div>

@@ -11,31 +11,35 @@ export const AppLayout: React.FC = () => {
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
 
   return (
-    <div className="flex h-screen w-full bg-slate-100/80 overflow-hidden font-sans">
+    <div className="flex h-screen w-full bg-slate-100/80 overflow-hidden font-sans print:h-auto print:overflow-visible print:bg-white print:block">
       {/* Desktop Sidebar */}
-      <Sidebar />
+      <div className="print:hidden">
+        <Sidebar />
+      </div>
 
       {/* Main Content Area */}
-      <div className="flex flex-col flex-1 min-w-0 h-full overflow-hidden">
-        <OfflineBanner />
-        <SandboxBanner />
-        <Header onOpenMobileDrawer={() => setIsMobileDrawerOpen(true)} />
+      <div className="flex flex-col flex-1 min-w-0 h-full overflow-hidden print:h-auto print:overflow-visible print:block">
+        <div className="print:hidden">
+          <OfflineBanner />
+          <SandboxBanner />
+          <Header onOpenMobileDrawer={() => setIsMobileDrawerOpen(true)} />
+        </div>
 
-        <main className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8 pb-24 md:pb-8">
-          <div className="max-w-7xl mx-auto">
+        <main className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8 pb-24 md:pb-8 print:p-0 print:m-0 print:overflow-visible print:h-auto print:block">
+          <div className="max-w-7xl mx-auto print:max-w-none print:w-full print:m-0 print:p-0">
             <Outlet />
           </div>
         </main>
       </div>
 
       {/* Mobile Drawer */}
-      <MobileDrawer
-        isOpen={isMobileDrawerOpen}
-        onClose={() => setIsMobileDrawerOpen(false)}
-      />
-
-      {/* Mobile Bottom Navigation */}
-      <BottomNav onOpenMobileDrawer={() => setIsMobileDrawerOpen(true)} />
+      <div className="print:hidden">
+        <MobileDrawer
+          isOpen={isMobileDrawerOpen}
+          onClose={() => setIsMobileDrawerOpen(false)}
+        />
+        <BottomNav onOpenMobileDrawer={() => setIsMobileDrawerOpen(true)} />
+      </div>
     </div>
   );
 };

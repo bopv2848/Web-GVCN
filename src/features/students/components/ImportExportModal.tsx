@@ -10,6 +10,9 @@ interface ImportExportModalProps {
   onSuccess: () => void;
   students: Student[];
   classId: string;
+  className?: string;
+  onOpenDeleteAll?: () => void;
+  canDeleteAll?: boolean;
 }
 
 export const ImportExportModal: React.FC<ImportExportModalProps> = ({
@@ -18,24 +21,41 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
   onSuccess,
   students,
   classId,
+  className = 'Lớp',
+  onOpenDeleteAll,
+  canDeleteAll = false,
 }) => {
   const [file, setFile] = useState<File | null>(null);
   const [parsedResult, setParsedResult] = useState<ParsedExcelResult | null>(null);
   const [strategy, setStrategy] = useState<'skip' | 'update'>('skip');
+  const [clearBeforeImport, setClearBeforeImport] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [isDownloadingTemplate, setIsDownloadingTemplate] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleExport = async () => {
     setIsExporting(true);
     try {
-      await excelParser.exportToExcel(students, '6A6');
+      await excelParser.exportToExcel(students, className);
     } catch (err) {
       console.error('Lỗi xuất Excel:', err);
       alert('Không thể xuất file Excel. Vui lòng thử lại sau!');
     } finally {
       setIsExporting(false);
+    }
+  };
+
+  const handleDownloadTemplate = async () => {
+    setIsDownloadingTemplate(true);
+    try {
+      await excelParser.downloadTemplate(className);
+    } catch (err) {
+      console.error('Lỗi tải tệp mẫu:', err);
+      alert('Không thể tải tệp mẫu. Vui lòng thử lại!');
+    } finally {
+      setIsDownloadingTemplate(false);
     }
   };
 
@@ -63,11 +83,13 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
 
     setIsProcessing(true);
     setErrorMessage('');
+    const effectiveClear = canDeleteAll ? clearBeforeImport : false;
     try {
       const result = await studentService.batchImportStudents(
         classId,
         parsedResult.validRows,
-        strategy
+        strategy,
+        effectiveClear
       );
       setImportResult(result);
       onSuccess();
@@ -94,32 +116,55 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
           </button>
         </div>
 
-        {/* Export Action Card */}
-        <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl flex items-center justify-between gap-4 mb-6">
+        {/* Export & Template Actions Card */}
+        <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
             <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">
-              Xuất danh sách hiện tại ({students.length} học sinh)
+              Xuất danh sách ({students.length} học sinh) & Tệp mẫu
             </h4>
             <p className="text-xs text-slate-500 mt-0.5">
-              Tải tệp Excel .xlsx có định dạng chuẩn, điểm số và trạng thái phụ huynh.
+              Định dạng 4 cột chuẩn: <strong>STT, Họ và tên, Giới tính, Ngày sinh</strong>. Tổ & chức vụ xếp trên ứng dụng.
             </p>
-          </div>
-          <Button
-            onClick={handleExport}
-            disabled={isExporting}
-            variant="outline"
-            size="sm"
-            className="whitespace-nowrap font-bold"
-          >
-            {isExporting ? (
-              <span className="flex items-center gap-1.5">
-                <span className="animate-spin inline-block w-3 h-3 border-2 border-slate-700 border-t-transparent rounded-full" />
-                Đang xuất...
-              </span>
-            ) : (
-              '📥 Xuất Excel'
+            {canDeleteAll && onOpenDeleteAll && students.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenDeleteAll();
+                }}
+                className="text-[11px] font-bold text-rose-600 hover:text-rose-800 hover:underline flex items-center gap-1 mt-2 transition-colors"
+              >
+                <span>🗑️ Xóa toàn bộ {students.length} học sinh hiện tại để nạp mới...</span>
+              </button>
             )}
-          </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={handleDownloadTemplate}
+              disabled={isDownloadingTemplate}
+              variant="outline"
+              size="sm"
+              className="whitespace-nowrap font-bold text-xs"
+            >
+              {isDownloadingTemplate ? 'Đang tải...' : '📄 Tải tệp mẫu'}
+            </Button>
+            <Button
+              onClick={handleExport}
+              disabled={isExporting}
+              variant="primary"
+              size="sm"
+              className="whitespace-nowrap font-black text-xs"
+            >
+              {isExporting ? (
+                <span className="flex items-center gap-1.5">
+                  <span className="animate-spin inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full" />
+                  Đang xuất...
+                </span>
+              ) : (
+                '📥 Xuất Excel'
+              )}
+            </Button>
+          </div>
         </div>
 
         {/* Error Alert */}
@@ -182,7 +227,7 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
                   {file ? file.name : 'Bấm vào đây để chọn tệp Excel (.xlsx, .xls) hoặc CSV'}
                 </span>
                 <span className="text-[11px] text-slate-400 mt-1 block">
-                  Tự động nhận diện các cột: Họ và tên, Giới tính, Ngày sinh, Tổ, Chức vụ, Năng khiếu
+                  Tệp mẫu chuẩn 4 cột: <strong>STT, Họ và tên, Giới tính, Ngày sinh</strong> (Tổ và chức vụ Thầy/Cô sẽ xếp trên app sau)
                 </span>
               </label>
             </div>
@@ -205,12 +250,35 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
                       value={strategy}
                       onChange={(e) => setStrategy(e.target.value as 'skip' | 'update')}
                       className="text-xs font-bold px-2.5 py-1.5 rounded-xl border border-slate-300 bg-white"
+                      disabled={clearBeforeImport}
                     >
                       <option value="skip">Bỏ qua học sinh trùng</option>
                       <option value="update">Cập nhật đè dữ liệu mới</option>
                     </select>
                   </div>
                 </div>
+
+                {/* Option to clear old list before import - Chỉ hiển thị cho GVCN / Admin */}
+                {canDeleteAll && students.length > 0 && (
+                  <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-2xl">
+                    <label className="flex items-start gap-2.5 cursor-pointer select-none text-xs">
+                      <input
+                        type="checkbox"
+                        checked={clearBeforeImport}
+                        onChange={(e) => setClearBeforeImport(e.target.checked)}
+                        className="w-4 h-4 rounded text-rose-600 focus:ring-rose-500 border-slate-300 mt-0.5 cursor-pointer"
+                      />
+                      <div>
+                        <span className="font-black text-rose-700 block">
+                          Xóa sạch toàn bộ {students.length} học sinh cũ trước khi nạp danh sách mới này
+                        </span>
+                        <span className="text-[11px] text-slate-600 block mt-0.5 leading-relaxed">
+                          (Khuyên dùng khi bắt đầu năm học mới: Lớp học sẽ được làm mới 100%, chỉ chứa danh sách học sinh trong tệp vừa tải lên).
+                        </span>
+                      </div>
+                    </label>
+                  </div>
+                )}
 
                 {/* Preview Table */}
                 <div className="max-h-52 overflow-y-auto rounded-2xl border border-slate-200 custom-scrollbar text-xs">
@@ -221,8 +289,6 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
                         <th className="p-2.5">Họ và tên</th>
                         <th className="p-2.5">Giới tính</th>
                         <th className="p-2.5">Ngày sinh</th>
-                        <th className="p-2.5">Tổ</th>
-                        <th className="p-2.5">Chức vụ</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -232,8 +298,6 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
                           <td className="p-2.5 font-bold text-slate-800">{row.fullName}</td>
                           <td className="p-2.5">{row.gender}</td>
                           <td className="p-2.5 text-slate-500">{row.birthDate || '-'}</td>
-                          <td className="p-2.5">{row.groupName || '-'}</td>
-                          <td className="p-2.5 text-slate-500">{row.classRole}</td>
                         </tr>
                       ))}
                     </tbody>

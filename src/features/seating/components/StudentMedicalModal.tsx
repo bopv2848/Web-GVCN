@@ -24,7 +24,7 @@ export const StudentMedicalModal: React.FC<StudentMedicalModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs print:hidden"
       onClick={onClose}
     >
       <div
