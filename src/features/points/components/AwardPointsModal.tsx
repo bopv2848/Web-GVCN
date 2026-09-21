@@ -159,13 +159,18 @@ export const AwardPointsModal: React.FC<AwardPointsModalProps> = ({
               <select
                 value={selectedStudentId}
                 onChange={(e) => setSelectedStudentId(e.target.value)}
+                disabled={students.length === 0}
                 className="w-full px-4 py-3 rounded-xl border border-slate-300 text-xs sm:text-sm font-bold text-slate-850 bg-slate-50 focus:bg-white focus:border-primary outline-none"
               >
-                {students.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.fullName} ({s.groupName || 'Chưa chia tổ'})
-                  </option>
-                ))}
+                {students.length === 0 ? (
+                  <option value="">⏳ Đang nạp danh sách học sinh...</option>
+                ) : (
+                  students.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.fullName} ({s.groupName || 'Chưa chia tổ'})
+                    </option>
+                  ))
+                )}
               </select>
             </div>
           )}
